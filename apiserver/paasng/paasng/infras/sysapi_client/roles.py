@@ -78,6 +78,8 @@ class ClientPermChecker:
             ClientAction.MANAGE_AI_AGENT_PROCESS: False,
             # 创建 AppSpark 应用只给 APP_SPARK，AIDEV 也不能调。
             ClientAction.CREATE_APP_SPARK_APP: False,
+            # 云 API 管理（查询网关 / MCP Server 与接口、申请权限）只给 AIDEV 和 APP_SPARK。
+            ClientAction.MANAGE_CLOUD_API: False,
         }
         basic_reader_perms = nobody_perms | {
             ClientAction.READ_APPLICATIONS: True,
@@ -102,12 +104,15 @@ class ClientPermChecker:
             ClientAction.DEPLOY_APPLICATIONS: True,
             ClientAction.READ_AI_AGENT_APP: True,
             ClientAction.MANAGE_AI_AGENT_PROCESS: True,
+            ClientAction.MANAGE_CLOUD_API: True,
         }
         # AppSpark 只拿发布所需的几个动作，不继承基础管理角色的通用应用管理权限。
         app_spark_perms = nobody_perms | {
             ClientAction.UPLOAD_SOURCE_PACKAGE: True,
             ClientAction.DEPLOY_APPLICATIONS: True,
             ClientAction.CREATE_APP_SPARK_APP: True,
+            # AppSpark 打包应用时需要知道可调用的网关接口，并为其申请权限。
+            ClientAction.MANAGE_CLOUD_API: True,
         }
 
         return {

@@ -43,6 +43,12 @@ class TestClientPermChecker:
         assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.MANAGE_AI_AGENT_PROCESS) is True
         assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.MANAGE_AI_AGENT_PROCESS) is False
         assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.MANAGE_AI_AGENT_PROCESS) is False
+        # 云 API 管理（查询网关 / MCP Server 与接口、申请权限）只给 AIDEV 与 AppSpark
+        assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.MANAGE_CLOUD_API) is True
+        assert perm_checker.role_can_do(ClientRole.APP_SPARK, ClientAction.MANAGE_CLOUD_API) is True
+        assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.MANAGE_CLOUD_API) is False
+        assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.MANAGE_CLOUD_API) is False
+        assert perm_checker.role_can_do(ClientRole.NOBODY, ClientAction.MANAGE_CLOUD_API) is False
 
     @pytest.mark.parametrize(
         ("action", "expected"),

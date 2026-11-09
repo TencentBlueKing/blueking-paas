@@ -41,7 +41,7 @@ class StubSupervisor:
         self._outcomes = list(outcomes)
         self.calls = 0
 
-    async def launch(self) -> LaunchResult:
+    async def restart(self) -> LaunchResult:
         self.calls += 1
         outcome = self._outcomes.pop(0) if self._outcomes else make_launched()
         if isinstance(outcome, Exception):
@@ -70,7 +70,7 @@ async def test_a_listening_app_hands_back_its_port_and_no_address() -> None:
     "error",
     [
         pytest.param(AppLaunchFailed("The application did not listen before the deadline."), id="did-not-listen"),
-        pytest.param(AppLaunchConflict("An application launch is already in progress."), id="already-in-progress"),
+        pytest.param(AppLaunchConflict("The application port is owned by another process."), id="port-taken"),
     ],
 )
 async def test_a_failure_is_reported_rather_than_raised(error: Exception) -> None:

@@ -29,12 +29,14 @@ from app_spark_api.agent.conversations.entities import (
     ConversationHistoryResponse,
     ConversationResponse,
     PreviewResponse,
+    PreviewStartResponse,
     RunStopResponse,
     RuntimeStateResponse,
     StartRunRequest,
     UiEventPageResponse,
     UiEventRecord,
 )
+from app_spark_api.agent.conversations.lifecycle import start
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError
 from app_spark_api.core.shortcuts import aget_project_or_404
@@ -150,7 +152,7 @@ async def start_run(
 
     # 所有 ORM 操作都必须在返回 StreamingHttpResponse 之前做完：生成器要跑到 run 结束为止，
     # 中途碰 ORM 会把一条数据库连接钉在一次可能长达数分钟的 run 上。
-    run = await services.start_run(
+    run = await start.start_run(
         conversation,
         content=payload.content,
         credential=get_user_credential(request),
@@ -325,6 +327,32 @@ async def get_preview(
         direct=False,
         dev_server_status=dev_server_status,
     )
+
+
+@router.post(
+    "{number}/preview/start/",
+    response={**ERROR_RESPONSES, HTTPStatus.ACCEPTED: PreviewStartResponse},
+    url_name="conversations-preview-start",
+    summary="拉起会话工作区应用的预览",
+)
+async def start_preview(
+    request: HttpRequest,
+    number: int,
+    project_id: str = PROJECT_ID,
+):
+    """把这个会话的工作区应用拉起来，不等它就绪就返回 202。
+
+    给「进入一个已有代码的项目」用：查看会话不会拉 Runtime，没有一轮对话，模型也就不会去拉起应用，
+    预览会一直空着。前端绑定活跃会话后调一次，之后照常轮询预览接口的 `dev_server_status`。
+
+    - 会按需拉起 Runtime 并恢复工作区文件和会话上下文，和发起一轮对话时一样，所以可能要等几秒；
+    - 应用已在跑就不动它，重复调用也只会有一次启动；
+    - 已结束的会话返回 409，项目下另一个会话占着 workspace 也是 409；
+    - 端口被别的进程占着返回 409（`PREVIEW_PORT_TAKEN`）。
+    """
+    conversation = await _get_conversation(request, project_id, number)
+    outcome = await start.start_preview(conversation, credential=get_user_credential(request))
+    return Status(HTTPStatus.ACCEPTED, PreviewStartResponse(outcome=str(outcome)))
 
 
 @router.api_operation(

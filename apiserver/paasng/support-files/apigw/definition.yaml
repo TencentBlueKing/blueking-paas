@@ -85,6 +85,9 @@ grant_permissions:
     grant_dimension: "resource"
     resource_names:
       - "uni_apps_query_by_username"
+      - "get_deployment_result"
+      - "uni_apps_query_by_id"
+      - "shim_plugins_center_sync_members"
   - bk_app_code: bk_vision
     grant_dimension: "resource"
     resource_names:
@@ -125,6 +128,7 @@ grant_permissions:
       - "list_detailed_bk_plugins"
       - "list_bk_plugin_logs_cloned"
       - "list_bk_plugin_tags"
+      - "search_structured_log"
   - bk_app_code: bk_aidev
     grant_dimension: "resource"
     resource_names:
@@ -148,6 +152,9 @@ grant_permissions:
       - "sys_update_process"
       - "sys_list_processes"
       - "uni_apps_list_minimal"
+      - "build_sandbox_image"
+      - "get_sandbox_image_by_build_id"
+      - "grant_agent_sandbox_api_permissions"
   - bk_app_code: bk_dbm
     grant_dimension: "resource"
     resource_names:
@@ -168,6 +175,18 @@ grant_permissions:
     grant_dimension: "resource"
     resource_names:
       - "get_minimal_app_list"
+  - bk_app_code: bk_sops
+    grant_dimension: "resource"
+    resource_names:
+      - "create_light_applications"
+      - "get_light_applications"
+      - "patch_light_applications"
+      - "delete_light_applications"
+      - "retrieve_bk_plugin"
+      - "list_detailed_bk_plugins"
+      - "list_bk_plugin_tags"
+      - "list_bk_plugin_logs_cloned"
+      - "search_structured_log"
 
 strategies: []
 

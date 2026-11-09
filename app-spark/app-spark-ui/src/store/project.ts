@@ -107,6 +107,9 @@ export const useProjectStore = defineStore('project', () => {
   let enterToken = 0;
   // 只认最后一次「拉起预览」：换了会话再回来的旧请求，不能把新会话的标记清掉。
   let previewStartGeneration = 0;
+  // 还没返回的那次「拉起预览」请求。和代数分开记：切走再回来时界面已经不认它，但它在后端还在
+  // 拉 Runtime，发消息照样要等它。
+  let previewStartInFlight: { projectId: string; number: number; done: Promise<void> } | null = null;
   // 正在读的那一轮 SSE。切项目、换会话都会把消息列表换掉，不中断的话后续事件会写进新列表。
   // 后端这一轮不靠这条连接：abort、刷新页面、网络中断都只让当前页面停止读取，这一轮在 Runtime 里
   // 照常跑完；切回来靠轮询补已入库的内容。
@@ -769,6 +772,9 @@ export const useProjectStore = defineStore('project', () => {
    * 查看会话不会拉 Runtime，没有一轮对话模型也不会去启动应用，进入一个已有代码的项目时预览就会
    * 一直空着。和拉历史并行发：要先拉 Runtime、恢复工作区，比拉历史慢得多。应用已在跑后端不会动它，
    * 每次进入都发也安全。失败只记日志，预览面板照常按状态显示，不影响对话。
+   *
+   * 对话要等它：两者都会去拉同一个 Runtime，E2B 多 worker 下后到的那个会被 AGENT_WORKSPACE_BUSY
+   * 拒掉，见 sendMessage。
    */
   const startPreviewInBackground = (state: RuntimeStateResponse) => {
     if (!state.is_live || !projectId.value) return;
@@ -781,7 +787,7 @@ export const useProjectStore = defineStore('project', () => {
       && conversationNumber.value === state.number
     );
     previewStarting.value = true;
-    startConversationPreview(id, state.number)
+    const done = startConversationPreview(id, state.number)
       .then(() => {
         if (!stillHere()) return;
         // 后端已经把 Runtime 拉起来了，下一轮不用再等准备运行环境。
@@ -792,10 +798,12 @@ export const useProjectStore = defineStore('project', () => {
         console.warn('[project] 拉起预览失败', error);
       })
       .finally(() => {
+        if (previewStartInFlight?.done === done) previewStartInFlight = null;
         if (generation !== previewStartGeneration) return;
         previewStarting.value = false;
         previewStartSeq.value += 1;
       });
+    previewStartInFlight = { projectId: id, number: state.number, done };
   };
 
   /** 项目里还活着的那个会话，一个都没有则返回 null。 */
@@ -1083,6 +1091,14 @@ export const useProjectStore = defineStore('project', () => {
       .catch(() => undefined);
 
     try {
+      // 「拉起预览」还在拉这个会话的 Runtime 时先等它回来，失败也照常发。两边同时拉，跨 worker 时
+      // 后到的这一轮会被 AGENT_WORKSPACE_BUSY 拒掉。它回来时 Runtime 已经起来并恢复好，这一轮
+      // 本来也要做这些，几乎不多等。
+      const pendingPreview = previewStartInFlight;
+      if (pendingPreview?.projectId === runProjectId && pendingPreview.number === runNumber) {
+        await pendingPreview.done;
+        if (!stillCurrent()) return;
+      }
       const response = await startConversationRun(
         runProjectId,
         runNumber,

@@ -33,6 +33,7 @@ from app_spark_api.core.projects import constants, services, tasks
 from app_spark_api.core.projects.models import Project, ProjIntRenaming
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.publication.models import PublicationTask
+from app_spark_api.publication.steps import MSG_PROJECT_DELETED
 from app_spark_api.repository.git.models import ProjectSourcePackage
 from tests.helpers import create_user
 from tests.repository.storage.fake_bkrepo import SOURCE_PACKAGES_BUCKET
@@ -624,7 +625,7 @@ async def test_deleting_a_project_ends_its_running_publication(aapi_client, bk_u
     # 任务结束后，准备任务不会再把已删除的项目部署上去。
     assert response.status_code == HTTPStatus.NO_CONTENT
     await task.arefresh_from_db()
-    assert (task.status, task.error) == ("failed", "Project deleted")
+    assert (task.status, task.error) == ("failed", MSG_PROJECT_DELETED)
 
 
 async def test_deleting_a_project_deletes_its_source_packages(aapi_client, bk_user, deletion_provider, fake_bkrepo):
@@ -784,12 +785,14 @@ async def test_a_timed_out_repository_cleanup_is_retryable(aapi_client, bk_user,
         await asyncio.sleep(60)
 
     monkeypatch.setattr(services, "adelete_project_repository", wait_for_repository)
-    monkeypatch.setattr(constants, "DELETE_PROJECT_TIMEOUT_SECONDS", 0.01)
+    # 超时罩住整个删除流程。仓库之前还有通知后台任务、关会话、清会话数据这几步，要给它们留够时间，
+    # 否则超时落在前面那几步上，测的就不是仓库了。
+    monkeypatch.setattr(constants, "DELETE_PROJECT_TIMEOUT_SECONDS", 1)
     started_at = asyncio.get_running_loop().time()
 
     response = await delete_via_api(aapi_client, "spark-demo")
 
-    assert asyncio.get_running_loop().time() - started_at < 1
+    assert asyncio.get_running_loop().time() - started_at < 5
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
     assert "repository" in response.json()["detail"]
     project = await Project.objects.aget(pk="spark-demo")

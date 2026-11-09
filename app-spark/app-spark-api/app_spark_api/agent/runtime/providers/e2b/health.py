@@ -48,14 +48,14 @@ async def read_agent_health(
 
 async def probe_agent_health(
     handle: AgentRuntimeHandle, *, timeout_seconds: float = constants.HEALTH_PROBE_TIMEOUT_SECONDS
-) -> bool:
-    """Tell whether the Runtime behind ``handle`` answers ``/health`` yet.
+) -> RuntimeHealth | None:
+    """Probe a starting Runtime's ``/health``, kept apart from the reads of a reused one.
 
     :param handle: Where the Runtime should be reachable.
     :param timeout_seconds: Upper bound on this one probe.
-    :return: Whether it answered with a usable health snapshot.
+    :return: Its health snapshot once it answers, None until then.
     """
-    return await read_agent_health(handle, timeout_seconds=timeout_seconds) is not None
+    return await read_agent_health(handle, timeout_seconds=timeout_seconds)
 
 
 def port_headers(sandbox: AsyncSandbox) -> dict[str, str]:

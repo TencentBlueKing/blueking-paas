@@ -476,9 +476,12 @@ async def start_run(
     health = await client.health()
     health = await _resume_if_cold(conversation, client, health)
     logger.info(
-        "Conversation %s runtime health at %s: context_version=%s dev_server_status=%s running=%s",
+        "Conversation %s runtime health at %s: model_ready=%s model=%s context_version=%s "
+        "dev_server_status=%s running=%s",
         conversation.id,
         client.handle.base_url,
+        health.model_ready,
+        health.model,
         health.context_version,
         health.dev_server_status,
         health.running,

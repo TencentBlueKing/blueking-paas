@@ -105,7 +105,8 @@ class E2BSandboxRecord(TimestampedModel):
     # ``expired`` (found gone), ``failed`` (provisioning raised), ``abandoned`` (the worker never
     # came back: the claim was never bound, or it was bound but the Agent was never recorded as
     # started), ``unhealthy`` (replaced at the start of a turn because its Agent did not answer
-    # /health), ``recycled`` (replaced at the start of a turn because it reached its maximum
+    # /health), ``model_unready`` (replaced at the start of a turn because its Agent reported no
+    # usable model), ``recycled`` (replaced at the start of a turn because it reached its maximum
     # lifetime).
     stopped_at = models.DateTimeField(verbose_name="停止或失效时间", null=True, default=None)
     stop_reason = models.CharField(verbose_name="停止原因", max_length=32, blank=True, default="")

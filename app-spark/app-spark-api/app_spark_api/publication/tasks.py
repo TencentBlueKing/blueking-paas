@@ -17,24 +17,25 @@
 """发布在 Celery 上的两段：准备部署（打包、上传、提交部署），以及轮询部署结果。
 
 准备任务只做一次：重复投递、worker 崩溃后的重投都被 steps.prepare_deployment 的认领挡住，崩溃的那次由查询
-发布状态时的兜底判失败。轮询每个任务查一次结果，没结束就隔几秒再投递一次自己；只读不写开发者中心，
-重复执行没有副作用，记录结果那一步自己保证只生效一次（见 steps.afinish_task）。
+发布状态时的兜底判失败。轮询交给 blue_krill 的 poll_task：每轮是一条 Celery 消息，间隔、总超时和出错重试
+的进度都随消息带着，不落库。
 """
 
 import logging
 
 from asgiref.sync import async_to_sync
+from blue_krill.async_utils.poll_task import (
+    CallbackHandler,
+    CallbackResult,
+    CallbackStatus,
+    PollingResult,
+    TaskPoller,
+)
 
 from app_spark_api.celery import app
 from app_spark_api.infras.bk_paas import BkPaaSClient, BkPaaSConfigurationError
 from app_spark_api.publication import steps
-from app_spark_api.publication.constants import (
-    DEPLOY_POLL_INTERVAL_SECONDS,
-    POLL_MAX_RETRIES,
-    POLL_RETRY_COUNTDOWN_SECONDS,
-    PublicationTaskStatus,
-)
-from app_spark_api.publication.models import PublicationTask
+from app_spark_api.publication.constants import DEPLOY_POLL_INTERVAL_SECONDS, DEPLOY_TIMEOUT, POLL_MAX_RETRIES
 
 logger = logging.getLogger(__name__)
 
@@ -54,39 +55,54 @@ def prepare_publication_deployment(task_id: int) -> None:
     if not async_to_sync(aprepare_once)(task_id):
         return
 
-    # 部署已经提交，投递失败也不能撤回；查询发布状态时会发现轮询停了，再投递一次。
+    # 部署已经提交，投递失败也不能撤回；轮询没起来时，查询发布状态的兜底会在部署超时后判失败。
     try:
-        schedule_deployment_poll(task_id, DEPLOY_POLL_INTERVAL_SECONDS)
+        schedule_deployment_poll(task_id)
     except Exception:
         logger.exception("Queueing the first poll of publication task %s failed", task_id)
 
 
-def schedule_deployment_poll(task_id: int, countdown: float = 0) -> None:
-    """投递一次对发布任务部署结果的查询。
+def schedule_deployment_poll(task_id: int) -> None:
+    """开始轮询发布任务的部署结果。
 
     :raises Exception: 投递失败（如 RabbitMQ 不可用），由调用方决定怎么收场。
     """
-    poll_publication_deployment.apply_async(args=(task_id,), countdown=countdown)
+    DeploymentPoller.start({"task_id": task_id}, DeploymentPollHandler)
 
 
-@app.task(bind=True, acks_late=True, reject_on_worker_lost=True, ignore_result=True, max_retries=POLL_MAX_RETRIES)
-def poll_publication_deployment(self, task_id: int) -> None:
-    """查看一次发布任务的部署，没结束就再投递下一次查询。"""
-    try:
-        countdown = async_to_sync(apoll_once)(task_id)
-    except Exception as exc:
-        # 业务失败已经记成任务失败，到这里的是查询本身出了错（多半是数据库或网络抖动），稍后再查。
-        logger.exception("Polling publication task %s failed; retrying", task_id)
-        raise self.retry(exc=exc, countdown=POLL_RETRY_COUNTDOWN_SECONDS) from exc
+class DeploymentPoller(TaskPoller):
+    """Look at a submitted deployment every few seconds until it ends."""
 
-    if countdown is None:
-        return
+    # 轮询在提交部署后马上开始，总超时从开始轮询算起，就是部署超时。
+    overall_timeout_seconds = int(DEPLOY_TIMEOUT.total_seconds())
+    default_retry_delay_seconds = DEPLOY_POLL_INTERVAL_SECONDS
+    max_retries_on_error = POLL_MAX_RETRIES
 
-    # 投递失败时不重试：重试本身也要投递。任务会停在原地，查询发布状态时会被重新投递。
-    try:
-        schedule_deployment_poll(task_id, countdown)
-    except Exception:
-        logger.exception("Queueing the next poll of publication task %s failed", task_id)
+    def query(self) -> PollingResult:
+        """Look at the deployment once."""
+        # 等访问地址的轮数要跨轮累计，放在随消息带到下一轮的数据里。
+        last = self.metadata.last_polling_data or {}
+        outcome = async_to_sync(apoll_once)(self.params["task_id"], last.get("access_url_polls", 0))
+        if outcome.finished:
+            return PollingResult.done()
+
+        return PollingResult.doing({"access_url_polls": outcome.access_url_polls})
+
+
+class DeploymentPollHandler(CallbackHandler):
+    """Record why polling gave up; a deployment that ended was already recorded by the poll itself."""
+
+    def handle(self, result: CallbackResult, poller: TaskPoller) -> None:
+        """Fail the task when polling timed out or kept erroring."""
+        if not result.is_exception:
+            return
+
+        if result.status == CallbackStatus.TIMEOUT:
+            error = steps.make_deploy_timeout_message()
+        else:
+            error = steps.MSG_POLL_FAILED
+
+        async_to_sync(steps.afail_task_by_id)(poller.params["task_id"], error)
 
 
 async def aprepare_once(task_id: int) -> bool:
@@ -99,14 +115,14 @@ async def aprepare_once(task_id: int) -> bool:
         return await steps.prepare_deployment(task_id, client)
 
 
-async def apoll_once(task_id: int) -> float | None:
-    """查看一次部署；返回多少秒后再查，任务结束时为 None。"""
+async def apoll_once(task_id: int, access_url_polls: int = 0) -> steps.PollOutcome:
+    """查看一次部署。"""
     client = await abuild_client_or_fail_task(task_id)
     if client is None:
-        return None
+        return steps.PollOutcome(finished=True)
 
     async with client:
-        return await steps.poll_deployment(task_id, client)
+        return await steps.poll_deployment(task_id, client, access_url_polls=access_url_polls)
 
 
 async def abuild_client_or_fail_task(task_id: int) -> BkPaaSClient | None:
@@ -117,7 +133,5 @@ async def abuild_client_or_fail_task(task_id: int) -> BkPaaSClient | None:
     except BkPaaSConfigurationError:
         logger.exception("Publication task %s cannot reach the developer center", task_id)
 
-    task = await PublicationTask.objects.filter(pk=task_id).afirst()
-    if task is not None:
-        await steps.afinish_task(task, PublicationTaskStatus.FAILED, error=steps.MSG_NOT_CONFIGURED)
+    await steps.afail_task_by_id(task_id, steps.MSG_NOT_CONFIGURED)
     return None

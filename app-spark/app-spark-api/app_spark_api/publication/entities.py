@@ -79,13 +79,13 @@ class PublicationFailureResponse(Schema):
 
 
 class UnseenResultResponse(Schema):
-    """用户还没看过的最近一次任务结果，结果页只展示一次。"""
+    """发布面板打开时要主动展开的最近一次任务结果，用户点开看过后不再出现。"""
 
     kind: str = Field(description="任务类型")
     status: str = Field(description="任务结果：successful 或 failed")
 
 
-class DevCenterLinksResponse(Schema):
+class BkPaaSLinksResponse(Schema):
     """开发者中心里管理该应用的页面。"""
 
     logs: str = Field(description="日志查询")
@@ -100,10 +100,12 @@ class PublicationResponse(Schema):
     online: OnlineVersionResponse | None = Field(description="线上版本，未发布时为空")
     task: PublicationTaskResponse | None = Field(description="进行中的任务，没有时为空")
     last_failure: PublicationFailureResponse | None = Field(description="最近一次失败")
-    unseen_result: UnseenResultResponse | None = Field(description="还没看过的最近一次任务结果，确认看过后为空")
+    unseen_result: UnseenResultResponse | None = Field(
+        description="不为空时前端主动展开最近一次任务结果；用户点开看过（DELETE unseen-result/）或有任务进行中时为空"
+    )
     app_code: str | None = Field(description="已创建的开发者中心应用 ID（即项目 ID）；为空表示下次发布会新建应用")
     default_app_name: str | None = Field(description="首次发布时预填的应用名称，可在发布时修改；已创建应用后为空")
-    dev_center_links: DevCenterLinksResponse | None = Field(description="开发者中心页面链接，首次发布创建应用后才有")
+    bkpaas_links: BkPaaSLinksResponse | None = Field(description="开发者中心页面链接，首次发布创建应用后才有")
     latest_version_id: str | None = Field(
         description="不指定版本时会发布的最新版本；为空表示还没有可发布的版本，发布按钮应禁用"
     )
@@ -134,9 +136,9 @@ class PublicationResponse(Schema):
         if state.unseen_result is not None:
             unseen_result = UnseenResultResponse(**attrs.asdict(state.unseen_result))
 
-        dev_center_links = None
+        bkpaas_links = None
         if state.console_links is not None:
-            dev_center_links = DevCenterLinksResponse(**attrs.asdict(state.console_links))
+            bkpaas_links = BkPaaSLinksResponse(**attrs.asdict(state.console_links))
 
         return cls(
             online=online,
@@ -145,6 +147,6 @@ class PublicationResponse(Schema):
             unseen_result=unseen_result,
             app_code=state.app_code,
             default_app_name=state.default_app_name,
-            dev_center_links=dev_center_links,
+            bkpaas_links=bkpaas_links,
             latest_version_id=state.latest_version_id,
         )

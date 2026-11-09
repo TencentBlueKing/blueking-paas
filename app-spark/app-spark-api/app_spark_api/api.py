@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import logging
+from functools import partial
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
@@ -24,7 +25,7 @@ from blue_krill.web.std_error import APIError
 from django.core.exceptions import PermissionDenied
 from django.db import connections
 from django.http import Http404
-from ninja import NinjaAPI, Router
+from ninja import Router
 from ninja.errors import AuthenticationError, HttpError, ValidationError
 
 from app_spark_api.agent.conversations.api import router as conversations_router
@@ -48,7 +49,6 @@ from app_spark_api.agent.runtime import (
     ModelNotAvailableError,
 )
 from app_spark_api.core.projects.api import router as projects_router
-from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.api import router as accounts_router
 from app_spark_api.infras.bk_access_token import AccessTokenError
 from app_spark_api.infras.bkaidev import BkAidevGatewayError
@@ -57,6 +57,8 @@ from app_spark_api.publication.api import router as publication_router
 from app_spark_api.repository.git.api import router as git_repository_router
 from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError, RepoServerConfigurationError
 from app_spark_api.repository.storage.exceptions import StorageConfigurationError
+from app_spark_api.utils.api_errors.error_codes import error_codes
+from app_spark_api.utils.api_errors.hooks import AppSparkNinjaAPI, handle_validation_error
 
 if TYPE_CHECKING:
     from django.http import HttpRequest, HttpResponse
@@ -76,7 +78,7 @@ root_router.add_router("/projects/{project_id}/publication/", publication_router
 # project-scoped prefix is also what keeps it visibly out of the user-facing surface.
 root_router.add_router("/internal/conversations/", conversation_state_router)
 
-api = NinjaAPI(title="App Spark API", urls_namespace="api")
+api = AppSparkNinjaAPI(title="App Spark API", urls_namespace="api")
 api.add_router("", root_router)
 
 
@@ -108,7 +110,6 @@ _EXCEPTION_ERROR_CODES: dict[type[Exception], APIError] = {
     AuthenticationError: error_codes.AUTHENTICATION_REQUIRED,
     PermissionDenied: error_codes.PERMISSION_DENIED,
     Http404: error_codes.RESOURCE_NOT_FOUND,
-    ValidationError: error_codes.VALIDATION_ERROR,
     Exception: error_codes.INTERNAL_SERVER_ERROR,
 }
 _HTTP_ERROR_CODES: dict[int, APIError] = {
@@ -162,3 +163,5 @@ def handle_exception(request: HttpRequest, exc: Exception) -> HttpResponse:
 
 for exception_type in (*_EXCEPTION_ERROR_CODES, HttpError):
     api.exception_handler(exception_type)(handle_exception)
+
+api.exception_handler(ValidationError)(partial(handle_validation_error, api=api))

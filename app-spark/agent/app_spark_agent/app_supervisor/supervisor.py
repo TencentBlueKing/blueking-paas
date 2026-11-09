@@ -116,7 +116,16 @@ class AppSupervisor:
         #
         # 排队而不是冲突：控制面的 ensure_running 可能正在为刚打开的项目装依赖，用户这时发消息、
         # 模型 launch，报冲突会白白用掉它本轮的额度。等前一次结束再重启，新代码照样能加载。
+        #
+        # 等锁不另设时限：持锁的一方自己有界（SYNC_TIMEOUT_SECONDS + LISTEN_TIMEOUT_SECONDS），
+        # 而它装的依赖正是这次重启也要装的。只记下等了多久，launch_app 慢的时候查得到原因。
+        waited_since = time.monotonic() if self._lock.locked() else None
         async with self._lock:
+            if waited_since is not None:
+                logger.info(
+                    "Restart waited %.1fs for an application start already in progress",
+                    time.monotonic() - waited_since,
+                )
             self._refuse_foreign_port()
 
             # 已是监督器进程：再次 launch 一律先停再拉，好加载新代码。

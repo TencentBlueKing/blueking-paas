@@ -18,7 +18,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 
 import attrs
@@ -28,6 +30,7 @@ from app_spark_api.agent.conversations.exceptions import ConversationClosedError
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.conversations.services import terminate_runtime
 from app_spark_api.agent.runtime import AgentBusyError, AgentUnavailableError
+from app_spark_api.agent.runtime.client import CONTEXT_TIMEOUT_SECONDS
 
 if TYPE_CHECKING:
     from app_spark_api.agent.runtime import AgentRuntimeClient, RuntimeHealth
@@ -35,6 +38,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 CLOSED_MESSAGE = "Conversation {id} has been closed and cannot be advanced"
+
+# How long a request turned down by a concurrent resume waits for it to finish. A resume is the
+# files and then the context, each bounded on the Runtime client by CONTEXT_TIMEOUT_SECONDS.
+CONCURRENT_RESUME_WAIT_SECONDS = 2 * CONTEXT_TIMEOUT_SECONDS
+CONCURRENT_RESUME_POLL_SECONDS = 0.5
 
 
 async def reject_if_closed_meanwhile(conversation: Conversation) -> None:
@@ -97,11 +105,15 @@ async def resume_if_cold(
     left to notice the difference itself.
 
     Two requests can find the same Runtime cold -- entering a Project starts the preview, and the
-    user's first message is close behind. The Runtime serializes the restores and turns down the
-    late one, and that is not a failure here: whoever got there first did exactly this. The late
-    request reads the Runtime again and carries on from what it now holds.
+    user's first message is close behind. The Runtime takes the restores one at a time and turns
+    the late one down rather than queueing it, and that is not a failure here: whoever got there
+    first is doing exactly this. Being turned down only says the other restore has started, not
+    that it has finished -- it may still be putting the files back, seconds away from the context
+    -- so the late request waits for the Runtime to stop reading as cold, see
+    :func:`_wait_for_concurrent_resume`.
 
     :return: The health to start the run against, unchanged when there was nothing to resume.
+    :raises AgentBusyError: If the Runtime stayed occupied and cold for longer than a resume takes.
     :raises AgentUnavailableError: If a checkpoint exists but its files could not be restored.
     """
     if not _is_cold(health):
@@ -109,16 +121,84 @@ async def resume_if_cold(
 
     try:
         return await _resume(conversation, client, health)
-    except AgentBusyError, AgentUnavailableError:
+    except AgentBusyError as exc:
+        return await _wait_for_concurrent_resume(conversation, client, exc)
+    except AgentUnavailableError as exc:
+        return await _resumed_by_someone_else(conversation, client, exc)
+
+
+async def _wait_for_concurrent_resume(
+    conversation: Conversation,
+    client: AgentRuntimeClient,
+    refusal: AgentBusyError,
+) -> RuntimeHealth:
+    """Wait out the request that is resuming the Runtime, after it turned this one's restore down.
+
+    Waiting is bounded by :data:`CONCURRENT_RESUME_WAIT_SECONDS`. A Runtime that falls idle while
+    still cold had its restore given up -- the other request failed, or let go between the files
+    and the context -- and is resumed here once, so a real failure is reported as itself rather
+    than as the refusal that started the wait. A Runtime that cannot be reached any more, as
+    after the conversation is closed and its Runtime taken down, ends the wait with that error.
+
+    :param refusal: What the Runtime answered this request's own restore with, raised when the
+        wait runs out.
+    :raises AgentBusyError: If the Runtime is still occupied and cold when the wait runs out, or
+        turns the retried resume down too, as one without a Git workspace does.
+    :raises AgentUnavailableError: If the Runtime cannot be reached, or the retried resume fails.
+    """
+    deadline = time.monotonic() + CONCURRENT_RESUME_WAIT_SECONDS
+    retried = False
+    while True:
         current = await client.health()
-        if _is_cold(current):
-            raise
-        logger.info(
-            "Conversation %s was resumed by a concurrent request, continuing at context version %d",
-            conversation.id,
-            current.context_version,
-        )
-        return current
+        if not _is_cold(current):
+            _log_resumed_concurrently(conversation, current)
+            return current
+
+        if not current.running and not retried:
+            retried = True
+            logger.info(
+                "Conversation %s found its Runtime cold and idle after a refused restore, resuming it again",
+                conversation.id,
+            )
+            try:
+                return await _resume(conversation, client, current)
+            except AgentBusyError as exc:
+                # Someone took the Runtime again in between, which is the wait this already is.
+                refusal = exc
+            except AgentUnavailableError as exc:
+                return await _resumed_by_someone_else(conversation, client, exc)
+        elif not current.running or time.monotonic() >= deadline:
+            raise refusal
+
+        await asyncio.sleep(CONCURRENT_RESUME_POLL_SECONDS)
+
+
+async def _resumed_by_someone_else(
+    conversation: Conversation,
+    client: AgentRuntimeClient,
+    failure: AgentUnavailableError,
+) -> RuntimeHealth:
+    """Return the Runtime as another request resumed it, or raise the failure of this one's restore.
+
+    A restore the Runtime took but could not do. The one such answer that is not a real failure is
+    a context whose If-Match another request has just moved past, and that request has finished
+    by then, so a single read tells the two apart.
+
+    :raises AgentUnavailableError: ``failure``, if the Runtime is still cold.
+    """
+    current = await client.health()
+    if _is_cold(current):
+        raise failure
+    _log_resumed_concurrently(conversation, current)
+    return current
+
+
+def _log_resumed_concurrently(conversation: Conversation, health: RuntimeHealth) -> None:
+    logger.info(
+        "Conversation %s was resumed by a concurrent request, continuing at context version %d",
+        conversation.id,
+        health.context_version,
+    )
 
 
 def _is_cold(health: RuntimeHealth) -> bool:
@@ -203,7 +283,7 @@ async def _restore_files(conversation: Conversation, client: AgentRuntimeClient)
     archived context is returned.
 
     :raises AgentUnavailableError: If the Runtime cannot restore the checkpoint's commit.
-    :raises AgentBusyError: If a run is occupying the Runtime.
+    :raises AgentBusyError: If a run is occupying the Runtime, or it has no Git workspace.
     :raises ConversationStateError: If the newest archived context cannot be read back.
     """
     checkpoint = await checkpoints.alatest(conversation.id)

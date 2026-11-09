@@ -41,7 +41,7 @@ from app_spark_api.agent.runtime import AgentWorkspaceSavePendingError
 
 if TYPE_CHECKING:
     from app_spark_api.agent.conversations.models import Conversation
-    from app_spark_api.agent.runtime import AgentRun, PreviewStartOutcome
+    from app_spark_api.agent.runtime import AgentRun, AgentRuntimeClient, PreviewStartOutcome, RuntimeHealth
     from app_spark_api.infras.bk_access_token import UserCredential
 
 logger = logging.getLogger(__name__)
@@ -86,19 +86,7 @@ async def start_run(
     # 也不该在历史里留一条没有回答的输入。
     forwarded_model_id = await resolve_run_model_id(model_id, credential)
 
-    client = await open_client(conversation, credential=credential)
-
-    # 先回库确认会话还活着，再读 client。open_client 要花好几秒，这中间会话可能已被关掉；
-    # 确认没过会收掉刚拉起来的 Runtime 并返回 409。先碰 client.handle 会把这次拒绝变成 500。
-    await reject_if_closed_meanwhile(conversation)
-
-    logger.info(
-        "Conversation %s is using the Agent Runtime at %s",
-        conversation.id,
-        client.handle.base_url,
-    )
-    health = await client.health()
-    health = await resume_if_cold(conversation, client, health)
+    client, health = await _open_resumed_client(conversation, credential)
     logger.info(
         "Conversation %s runtime health at %s: model_ready=%s model=%s context_version=%s "
         "dev_server_status=%s running=%s",
@@ -154,10 +142,11 @@ async def start_preview(
 ) -> PreviewStartOutcome:
     """Bring the conversation's Runtime up if needed, and ask it to start the workspace application.
 
-    The one read-side action that does provision a Runtime. Opening a conversation stays free;
+    The one read-side action that does provision a Runtime. Reading a conversation stays free;
     this is for a client that has decided the user is about to look at the preview -- typically
     on entering a Project whose code was written in an earlier session, when no turn is coming
-    that would make the model launch it.
+    that would make the model launch it. The web client calls it on entering any live
+    conversation, so that cost is paid for browsing too; see the preview section of docs/misc.md.
 
     The Runtime is resumed the way a turn resumes it, files and context both, before the start
     is asked for: the application is started from whatever is on disk, and a Runtime warmed here
@@ -182,10 +171,30 @@ async def start_preview(
     if not conversation.is_live:
         raise ConversationClosedError(CLOSED_MESSAGE.format(id=conversation.id))
 
-    client = await open_client(conversation, credential=credential)
-    await reject_if_closed_meanwhile(conversation)
-    await resume_if_cold(conversation, client, await client.health())
+    client, _health = await _open_resumed_client(conversation, credential)
 
     outcome = await client.start_preview()
     logger.info("Conversation %s asked its Agent Runtime to start the preview: %s", conversation.id, outcome)
     return outcome
+
+
+async def _open_resumed_client(
+    conversation: Conversation, credential: UserCredential | None
+) -> tuple[AgentRuntimeClient, RuntimeHealth]:
+    """Bring the conversation's Runtime up and resume it if cold, for :func:`start_run` and :func:`start_preview`.
+
+    :return: The client, and the health to work against once any resume is done.
+    """
+    client = await open_client(conversation, credential=credential)
+
+    # 先回库确认会话还活着，再读 client。open_client 要花好几秒，这中间会话可能已被关掉；
+    # 确认没过会收掉刚拉起来的 Runtime 并返回 409。先碰 client.handle 会把这次拒绝变成 500。
+    await reject_if_closed_meanwhile(conversation)
+
+    logger.info(
+        "Conversation %s is using the Agent Runtime at %s",
+        conversation.id,
+        client.handle.base_url,
+    )
+    health = await resume_if_cold(conversation, client, await client.health())
+    return client, health

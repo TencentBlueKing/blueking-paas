@@ -237,9 +237,9 @@ class AgentRuntimeClient:
 
         :param commit: The checkpoint's commit SHA.
         :return: What the Runtime did, as one of its ``RestoreOutcome`` values.
-        :raises AgentBusyError: If a run is occupying the Runtime.
-        :raises AgentUnavailableError: If the Runtime cannot be reached, has no Git workspace,
-            or cannot reach that commit.
+        :raises AgentBusyError: If a run is occupying the Runtime, or it has no Git workspace --
+            the Runtime answers both with ``409``.
+        :raises AgentUnavailableError: If the Runtime cannot be reached or cannot reach that commit.
         """
         async with self._restoring(
             f"the workspace to {commit}", timeout_seconds=self._context_timeout_seconds

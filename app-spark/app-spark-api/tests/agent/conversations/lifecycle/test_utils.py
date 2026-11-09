@@ -250,34 +250,63 @@ async def test_a_runtime_with_entries_of_its_own_is_not_cold(conversation, healt
 # What the Runtime reads once the request that won the race has resumed it.
 RESUMED_HEALTH = attrs.evolve(COLD_HEALTH, context_version=2, log_seq=3, ui_event_seq=5)
 
+# Another request holds the Runtime for its own resume, and has not got as far as the context.
+COLD_BUSY_HEALTH = attrs.evolve(COLD_HEALTH, running=True)
+
+BUSY = AgentBusyError("An Agent run is already in progress.")
+
 
 @attrs.define
-class LateClient(RecordingClient):
-    """A Runtime another request resumed between this one's ``/health`` and its own restore.
+class ScriptedRuntime(RecordingClient):
+    """A Runtime another request is resuming, answering this one from a script.
 
-    The Runtime serializes restores, so the late one is turned down -- the way a real Runtime
-    answers an ``If-Match: 0`` it has moved past -- and ``/health`` then reads ``after``.
+    The Runtime takes one restore at a time and turns the others down rather than queueing them.
+    Each restore, whichever half it is, raises the next of ``refusals`` and goes through once they
+    run out. ``/health`` reads ``healths`` in turn and keeps repeating the last one.
     """
 
-    refusal: Exception = attrs.field(factory=lambda: AgentUnavailableError("restore the context (412)"))
-    after: RuntimeHealth = RESUMED_HEALTH
+    refusals: list[Exception] = attrs.field(factory=list)
+    healths: list[RuntimeHealth] = attrs.field(factory=lambda: [RESUMED_HEALTH])
 
-    async def restore_context(self, document: dict[str, Any], **_cursors: int) -> int:
-        raise self.refusal
+    async def restore_workspace(self, commit: str) -> str:
+        self._refuse()
+        return await super().restore_workspace(commit)
+
+    async def restore_context(
+        self, document: dict[str, Any], *, if_match: int, log_seq: int, ui_event_seq: int
+    ) -> int:
+        self._refuse()
+        return await super().restore_context(document, if_match=if_match, log_seq=log_seq, ui_event_seq=ui_event_seq)
 
     async def restore_cursors(self, *, log_seq: int, ui_event_seq: int) -> None:
-        raise self.refusal
+        self._refuse()
+        await super().restore_cursors(log_seq=log_seq, ui_event_seq=ui_event_seq)
 
     async def health(self) -> RuntimeHealth:
-        return self.after
+        return self.healths.pop(0) if len(self.healths) > 1 else self.healths[0]
+
+    def _refuse(self) -> None:
+        if self.refusals:
+            raise self.refusals.pop(0)
+
+
+@pytest.fixture
+def no_poll_delay(monkeypatch) -> None:
+    monkeypatch.setattr(lifecycle_utils, "CONCURRENT_RESUME_POLL_SECONDS", 0)
+
+
+async def store_a_checkpoint(conversation: Conversation) -> str:
+    """Store what makes a cold start put the files back before the context."""
+    await conversation_state.asave_context(conversation.id, {"context_version": 2, "messages": []})
+    return await record_checkpoint(conversation, context_version=2)
 
 
 @pytest.mark.parametrize(
     ("stored", "refusal"),
     [
         pytest.param("context", AgentUnavailableError("412"), id="context-version-moved"),
-        pytest.param("context", AgentBusyError("already holds a conversation"), id="context-already-held"),
-        pytest.param("cursors", AgentBusyError("already holds history"), id="numbering-already-adopted"),
+        pytest.param("context", BUSY, id="context-already-held"),
+        pytest.param("cursors", BUSY, id="numbering-already-adopted"),
     ],
 )
 async def test_a_runtime_resumed_by_a_concurrent_request_is_taken_as_it_is(conversation, stored, refusal):
@@ -290,15 +319,56 @@ async def test_a_runtime_resumed_by_a_concurrent_request_is_taken_as_it_is(conve
         await conversation_state.asave_context(conversation.id, {"context_version": 2, "messages": []})
     else:
         await store_entries(conversation, log_seq=3, ui_event_seq=5)
-    client = LateClient(refusal=refusal)
+    client = ScriptedRuntime(refusals=[refusal])
 
-    assert await resume(conversation, client) == client.after
+    assert await resume(conversation, client) == RESUMED_HEALTH
 
 
 async def test_a_restore_refused_on_a_runtime_still_cold_is_a_failure(conversation):
     """Nobody else resumed it, so the refusal is the Runtime's real answer."""
     await conversation_state.asave_context(conversation.id, {"context_version": 2, "messages": []})
-    client = LateClient(after=COLD_HEALTH)
+    client = ScriptedRuntime(refusals=[AgentUnavailableError("restore the context (412)")], healths=[COLD_HEALTH])
 
     with pytest.raises(AgentUnavailableError, match="412"):
+        await resume(conversation, client)
+
+
+async def test_a_request_turned_down_while_files_come_back_waits_for_the_resume(conversation, no_poll_delay):
+    """Turned down only says the other resume has started: the Runtime reads cold until it is done."""
+    await store_a_checkpoint(conversation)
+    client = ScriptedRuntime(refusals=[BUSY], healths=[COLD_BUSY_HEALTH, COLD_BUSY_HEALTH, RESUMED_HEALTH])
+
+    assert await resume(conversation, client) == RESUMED_HEALTH
+    assert not client.touched
+
+
+async def test_a_resume_that_never_finishes_fails_the_waiting_request(conversation, monkeypatch):
+    monkeypatch.setattr(lifecycle_utils, "CONCURRENT_RESUME_WAIT_SECONDS", 0)
+    await store_a_checkpoint(conversation)
+    client = ScriptedRuntime(refusals=[BUSY], healths=[COLD_BUSY_HEALTH])
+
+    with pytest.raises(AgentBusyError):
+        await resume(conversation, client)
+
+
+async def test_a_resume_given_up_by_the_other_request_is_done_here(conversation):
+    """The Runtime fell idle while still cold: the request holding it failed, and this one takes over."""
+    commit = await store_a_checkpoint(conversation)
+    client = ScriptedRuntime(refusals=[BUSY], healths=[COLD_HEALTH])
+
+    health = await resume(conversation, client)
+
+    assert client.workspaces == [commit]
+    assert health.context_version == 2
+
+
+async def test_a_resume_taken_over_reports_its_own_failure(conversation):
+    """What fails the turn is why the files cannot come back, not the refusal that started the wait."""
+    await store_a_checkpoint(conversation)
+    client = ScriptedRuntime(
+        refusals=[BUSY, AgentUnavailableError("The workspace could not be restored (422)")],
+        healths=[COLD_HEALTH],
+    )
+
+    with pytest.raises(AgentUnavailableError, match="422"):
         await resume(conversation, client)

@@ -33,6 +33,9 @@ _CHANNEL_PATHS = {
 
 CONTEXT_PATH = "context"
 CHECKPOINT_PATH = "checkpoint"
+# Read rather than written, but hung off the same conversation-scoped root: the Runtime holds one
+# address and one token, and the control plane checks the token against that conversation here too.
+ATTACHMENTS_PATH = "attachments"
 
 
 class ControlPlaneError(RuntimeError):
@@ -138,6 +141,26 @@ class ControlPlaneClient:
         :raises ControlPlaneError: If the control plane cannot be reached or refused the write.
         """
         await self._send("PUT", CHECKPOINT_PATH, checkpoint)
+
+    async def get_attachment(self, attachment_id: str) -> tuple[bytes, str]:
+        """Download one of the conversation's image attachments.
+
+        :param attachment_id: The attachment's ID, as carried by an app-spark-attachment:// reference.
+        :return: The image bytes and their media type.
+        :raises ControlPlaneError: If the control plane cannot be reached or refused, with
+            status_code set when it answered; 404 means the conversation has no such attachment.
+        """
+        path = f"{ATTACHMENTS_PATH}/{attachment_id}/content"
+        try:
+            response = await self._client.get(path)
+        except httpx2.HTTPError as exc:
+            raise ControlPlaneError(f"could not reach the control plane at {path}: {exc}") from exc
+
+        if response.status_code != HTTPStatus.OK:
+            raise _response_error(path, response)
+
+        media_type = response.headers.get("content-type", "").partition(";")[0].strip()
+        return response.content, media_type
 
     async def aclose(self) -> None:
         """Release the underlying connection pool."""

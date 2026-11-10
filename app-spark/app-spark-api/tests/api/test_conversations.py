@@ -44,7 +44,9 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+import attrs
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from app_spark_api.agent.conversations import checkpoints
 from app_spark_api.agent.conversations import services as conversation_services
@@ -853,6 +855,43 @@ async def test_a_turn_on_the_built_in_model_runs_like_one_without_a_model(aapi_c
 
     assert response.status_code == HTTPStatus.OK, response.content
     assert event_types(await collect_events(response))[-1] == "RUN_FINISHED"
+
+
+@pytest.mark.usefixtures("project", "chat_agent")
+async def test_an_attached_image_reaches_the_model_as_bytes(aapi_client, settings, tmp_path, monkeypatch):
+    """Upload, send, then the Runtime fetches the bytes back through the internal endpoint.
+
+    fake:chat echoes the prompt, and the fake model renders an image as its type and size, so
+    the reply says whether the model got the picture itself rather than a reference or a
+    placeholder.
+    """
+    settings.AGENT_ATTACHMENT_STORAGE = {"backend": "host_tmp_path", "root": str(tmp_path / "attachments")}
+
+    async def list_vision_models(credential: Any) -> model_catalog_services.ModelCatalog:
+        catalog = model_catalog_services._build_direct_catalog(
+            model_catalog_services.structure_direct_model_config(settings.AGENT_DIRECT_MODEL_CONFIG)
+        )
+        return attrs.evolve(catalog, models=[attrs.evolve(model, supports_vision=True) for model in catalog.models])
+
+    # direct 的内置模型不报 supports_vision，这里只放开图片校验，模型本身仍是 fake:chat。
+    monkeypatch.setattr(conversation_services, "list_models", list_vision_models)
+    state = await create_conversation(aapi_client)
+    image = b"\x89PNG\r\n\x1a\n" + b"\x00" * 120
+    uploaded = await aapi_client.post(
+        f"/api/projects/{PROJECT_ID}/conversations/{state['number']}/attachments/",
+        {"file": SimpleUploadedFile("shot.png", image)},
+    )
+    assert uploaded.status_code == HTTPStatus.CREATED, uploaded.content
+
+    response = await aapi_client.post(
+        f"/api/projects/{PROJECT_ID}/conversations/{state['number']}/runs/",
+        data={"content": "copy this", "attachment_ids": [json.loads(uploaded.content)["id"]]},
+        content_type="application/json",
+    )
+
+    assert response.status_code == HTTPStatus.OK, response.content
+    reply = assistant_reply(await collect_events(response))
+    assert f"copy this [image image/png {len(image)} bytes]" in reply
 
 
 @pytest.fixture()

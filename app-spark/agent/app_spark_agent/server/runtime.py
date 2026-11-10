@@ -19,6 +19,7 @@ from pydantic_ai import Agent
 from app_spark_agent import settings
 from app_spark_agent.agent import create_agent
 from app_spark_agent.app_supervisor import AppSupervisor, PreviewStarter
+from app_spark_agent.attachments import AttachmentImages, build_control_plane_fetcher
 from app_spark_agent.git.saver import WorkspaceSaver
 from app_spark_agent.replication import ControlPlaneClient, StateReplicator
 from app_spark_agent.server.lifecycle import RuntimeLifecycle
@@ -163,6 +164,8 @@ class ConversationRuntime:
         ``POST /preview/start``.
     :param replicator: Pushes the durable state to the control plane, or ``None`` when this
         Runtime has no control plane and its state directory is all there is.
+    :param attachment_images: Resolves image attachment references for each model request. Held
+        here, like launch_tool, so its cache outlives a run and an injected agent still gets it.
     :param saver: Persists the workspace files to the Project's Git repository, or ``None`` when
         this Runtime has no repository configured and the workspace is local-only.
     :param runs: The run in progress, driven as a task of its own rather than by a request.
@@ -179,6 +182,7 @@ class ConversationRuntime:
     launch_tool: LaunchTool
     preview_starter: PreviewStarter
     replicator: StateReplicator | None
+    attachment_images: AttachmentImages
     saver: WorkspaceSaver | None = None
     runs: RunSupervisor = field(default_factory=RunSupervisor)
 
@@ -268,6 +272,12 @@ class ConversationRuntime:
                 extra_tools=[launch_tool.as_tool()],
             )
 
+        # 附件和状态回写走同一个控制面：没有控制面的本地形态里，图片一律换成占位。
+        attachment_images = AttachmentImages(
+            build_control_plane_fetcher(control_plane) if control_plane is not None else None,
+            recent_turns=settings.ATTACHMENT_IMAGE_TURNS,
+        )
+
         return cls(
             agent=agent,
             context_store=context_store,
@@ -280,6 +290,7 @@ class ConversationRuntime:
             launch_tool=launch_tool,
             preview_starter=PreviewStarter(app_supervisor),
             replicator=replicator,
+            attachment_images=attachment_images,
             saver=saver,
         )
 

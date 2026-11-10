@@ -38,3 +38,27 @@ class RunNotFoundError(Exception):
 
 class RunNotInProgressError(Exception):
     """这一轮属于这个会话，但此刻没有在跑：已经结束了，或者它所在的 Runtime 已经不在了。"""
+
+
+class AttachmentNotFoundError(Exception):
+    """附件不存在，或者不属于这个会话。两种情况对调用方是一回事，不区分。"""
+
+
+class AttachmentAlreadyUsedError(Exception):
+    """附件已经被某一轮对话引用过，一张附件只能随一轮发出。"""
+
+
+class AttachmentTooLargeError(Exception):
+    """上传的文件超过了单个附件的大小上限。"""
+
+
+class AttachmentTypeUnsupportedError(Exception):
+    """上传的文件按文件头识别不是允许的图片类型。"""
+
+
+class AttachmentStorageError(Exception):
+    """附件存储写不进去或读不出来。与请求内容无关，稍后重试可能恢复。"""
+
+
+class ModelImageInputUnsupportedError(Exception):
+    """这一轮带了图片，但本轮所用的模型不支持图片输入。"""

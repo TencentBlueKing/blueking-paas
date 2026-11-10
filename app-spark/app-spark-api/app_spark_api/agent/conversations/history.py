@@ -35,15 +35,17 @@ from typing import TYPE_CHECKING
 
 import attrs
 from asgiref.sync import sync_to_async
+from django.db.models import Prefetch
 
 from app_spark_api.agent.conversations import state
+from app_spark_api.agent.conversations.attachments import build_attachment_response
 from app_spark_api.agent.conversations.entities import (
     ConversationHistoryRecord,
     UiEventRecord,
     UserMessageHistoryRecord,
 )
 from app_spark_api.agent.conversations.exceptions import InvalidHistoryCursorError
-from app_spark_api.agent.conversations.models import ConversationUserMessage
+from app_spark_api.agent.conversations.models import ConversationAttachment, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationUiEvent
 
 if TYPE_CHECKING:
@@ -147,10 +149,15 @@ def read_page(
     page_events = list(events.filter(seq__gte=start_seq).order_by("seq"))
     # 下界取 `start_seq - 1` 那一组输入的**整组之前**，而不是 `start_seq` 本身：发起这一轮的用户
     # 输入挂在上一轮最后一个事件后面，它和这一轮在界面上是同一个气泡对，不能被分到两页去。
-    page_messages = list(messages.filter(after_seq__gte=max(start_seq - 1, 0)).order_by("after_seq", "id"))
+    # 附件一次预取，不按消息逐条查；按上传顺序排，和用户添加图片的顺序一致。
+    page_messages = list(
+        messages.filter(after_seq__gte=max(start_seq - 1, 0))
+        .order_by("after_seq", "id")
+        .prefetch_related(Prefetch("attachments", queryset=ConversationAttachment.objects.order_by("created_at")))
+    )
 
     return HistoryPage(
-        records=_merge(page_events, page_messages),
+        records=_merge(page_events, page_messages, project_id=conversation.project_id, number=conversation.number),
         next_cursor=encode_cursor(start_seq) if _has_older(events, messages, start_seq) else None,
         last_seq=state.last_seq(conversation.id, state.UI_EVENT_CHANNEL),
     )
@@ -229,6 +236,9 @@ def _has_older(
 def _merge(
     events: list[ConversationUiEvent],
     messages: list[ConversationUserMessage],
+    *,
+    project_id: str,
+    number: int,
 ) -> list[ConversationHistoryRecord]:
     """把两条流合成一条，用户输入插在它创建时记录的 UI event 游标之后。
 
@@ -237,7 +247,9 @@ def _merge(
     UI event 的 seq 是 Runtime 跨重启延续的顺序，旧会话没有用户消息也仍然可以完整读取。
 
     :param events: 本页事件，按 seq 正序。
-    :param messages: 本页用户输入，按 ``(after_seq, id)`` 正序。
+    :param messages: 本页用户输入，按 ``(after_seq, id)`` 正序，附件已预取。
+    :param project_id: 会话所属项目，附件内容地址要用。
+    :param number: 会话编号，附件内容地址要用。
     :return: 按对话顺序排列的历史实体，包含尚无事件的用户消息。
     """
     records: list[ConversationHistoryRecord] = []
@@ -245,15 +257,31 @@ def _merge(
 
     for event in events:
         while next_message < len(messages) and messages[next_message].after_seq < event.seq:
-            records.append(_record_for_user_message(messages[next_message]))
+            records.append(_record_for_user_message(messages[next_message], project_id=project_id, number=number))
             next_message += 1
         records.append(_record_for_ui_event(event))
-    records.extend(_record_for_user_message(message) for message in messages[next_message:])
+    records.extend(
+        _record_for_user_message(message, project_id=project_id, number=number) for message in messages[next_message:]
+    )
     return records
 
 
-def _record_for_user_message(message: ConversationUserMessage) -> ConversationHistoryRecord:
-    return ConversationHistoryRecord(user_message=UserMessageHistoryRecord.model_validate(message))
+def _record_for_user_message(
+    message: ConversationUserMessage, *, project_id: str, number: int
+) -> ConversationHistoryRecord:
+    return ConversationHistoryRecord(
+        user_message=UserMessageHistoryRecord(
+            id=message.id,
+            run_id=message.run_id,
+            after_seq=message.after_seq,
+            created_at=message.created_at,
+            content=message.content,
+            attachments=[
+                build_attachment_response(attachment, project_id=project_id, number=number)
+                for attachment in message.attachments.all()
+            ],
+        )
+    )
 
 
 def _record_for_ui_event(event: ConversationUiEvent) -> ConversationHistoryRecord:

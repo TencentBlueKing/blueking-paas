@@ -193,6 +193,17 @@ class TestStateConvergence:
         assert reconcile.reconcile_all(dry_run=True).converged == 1
         assert E2BSandbox.objects.get(sandbox_id="reclaimed").status == E2BSandboxStatus.RUNNING.value
 
+    def test_disabled_cluster_is_still_reconciled(self, gateway, e2b_config, bk_app):
+        """停用的集群不再接新沙箱，但存量沙箱仍要收敛，否则集群永远下线不了。"""
+        e2b_config.enabled = False
+        e2b_config.save(update_fields=["enabled"])
+        _record(bk_app, "reclaimed")
+
+        result = reconcile.reconcile_all()
+
+        assert result.converged == 1
+        assert E2BSandbox.objects.get(sandbox_id="reclaimed").status == E2BSandboxStatus.TERMINATED.value
+
     def test_bulk_update_refreshes_updated(self, gateway, bk_app):
         """bulk_update 不走 save()，必须显式写 updated，否则归档会按旧时间立刻清掉刚收敛的记录。"""
         record = _record(bk_app, "reclaimed")

@@ -36,6 +36,7 @@ from .components import (
     ClusterComponentUpsertInputSLZ,
 )
 from .default_configs import ClusterDefaultConfigListOutputSLZ
+from .e2b_configs import ClusterE2BConfigRetrieveOutputSLZ, ClusterE2BConfigUpsertInputSLZ
 from .feature_flags import ClusterFeatureFlagListOutputSLZ
 from .policies import (
     ClusterAllocationPolicyCondTypeOutputSLZ,
@@ -63,6 +64,9 @@ __all__ = [
     "ClusterCreateInputSLZ",
     # default_configs
     "ClusterDefaultConfigListOutputSLZ",
+    # e2b_configs
+    "ClusterE2BConfigRetrieveOutputSLZ",
+    "ClusterE2BConfigUpsertInputSLZ",
     # feature_flags
     "ClusterFeatureFlagListOutputSLZ",
     # clusters

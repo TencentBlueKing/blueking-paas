@@ -8,7 +8,7 @@ from typing import Any, Protocol, cast
 import httpx2
 from openai import AsyncOpenAI, DefaultAsyncHttpxClient
 from pydantic_ai import Agent
-from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.capabilities import AbstractCapability, LocalWorkspace
 from pydantic_ai.messages import ModelMessage, ToolCallPart
 from pydantic_ai.models import Model, infer_model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
@@ -251,11 +251,14 @@ def create_agent(
     ]
 
     capabilities: list[AbstractCapability[object]] = [
-        FileSystem(root_dir=workspace_path),
+        # 文件工具、shell、RepoContext 都经 ctx.workspace 访问，工作目录只能设在这里：它们自己的
+        # cwd / workspace_dir 已被 harness 弃用并忽略，留着也不生效。FileSystem 的边界默认就是它。
+        LocalWorkspace(workspace_path),
+        FileSystem(),
         Shell(
-            cwd=workspace_path,
             # 模型可能会触发 uv 相关命令操作依赖源，传入 uv 相关环境变量比如 INDEX_URL 等
-            # 以保持一致性。
+            # 以保持一致性。env 放在 Shell 而不是 LocalWorkspace 上：denied_env_patterns
+            # 只过滤 Shell.env。
             env=uv_environ(os.environ),
             denied_env_patterns=(
                 *LLM_API_KEY_ENV_PATTERNS,
@@ -265,7 +268,6 @@ def create_agent(
         # 只有 workspace 这一个 repo。「怎么写应用」在 settings.INSTRUCTIONS 里无条件生效，
         # 不再拿第二个 RepoContext 指向本包安装目录。
         RepoContext(
-            workspace_dir=workspace_path,
             filenames=("AGENTS.md",),
             nested_traversal=True,
         ),

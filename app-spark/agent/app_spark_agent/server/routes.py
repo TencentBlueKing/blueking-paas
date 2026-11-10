@@ -402,13 +402,12 @@ async def _start_run(
         request_with_body(request, prepared.body),
         agent=runtime.agent,
         # 'server' mode attaches `ReinjectSystemPrompt(replace_existing=True)`, which
-        # strips every `SystemPromptPart` from the history on each request. That is
-        # where `SummarizingCompaction` keeps its summary, so server mode silently
-        # deletes the summary the expensive tier just paid a model call to produce, and
-        # the history re-summarizes on every subsequent request. The protection it
-        # offers is redundant here anyway: `prepare_run` already reduces the request to
-        # a single trusted user turn, so no client-supplied system prompt can reach the
-        # model.
+        # strips every `SystemPromptPart` the history starts the run with. It cannot tell a
+        # client's from one an earlier run of this Runtime left there -- `RepoContext` points
+        # at a nested AGENTS.md with one -- so server mode would silently drop those. The
+        # protection it offers is redundant here anyway: `prepare_run` already reduces the
+        # request to a single trusted user turn, so no client-supplied system prompt can
+        # reach the model.
         manage_system_prompt="client",
     )
     # Recorded here rather than inferred from the run's history: the framework merges

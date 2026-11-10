@@ -3,9 +3,10 @@
 ``tests/api/test_compaction.py`` pins what compaction does, deterministically, against a scripted
 model. What it cannot pin is the round trip: a summary written by DeepSeek has to survive being
 persisted, reloaded, and handed back to the *next* request. That is exactly what
-``manage_system_prompt='server'`` used to break -- it strips every ``SystemPromptPart`` from the
-history, which is where ``SummarizingCompaction`` keeps its summary, so the summary was
-discarded on the request after the one that paid for it and the history re-summarized forever.
+``manage_system_prompt='server'`` once broke, back when ``SummarizingCompaction`` kept its summary
+in a ``SystemPromptPart``: that mode strips them from the history, so the summary was discarded on
+the request after the one that paid for it and the history re-summarized forever. The summary is a
+``CompactionPart`` now, but any history rewrite on the way in can still lose it.
 
 Only a real model can produce a real summary, so this is the only place that regression shows.
 """
@@ -15,12 +16,10 @@ from typing import Any
 import pytest
 
 from tests.support import console
-from tests.support.live import LiveRuntime, model_messages, part_contents
+from tests.support.live import LiveRuntime, model_messages
 from tests.support.live_fixtures import StartRuntime
 
 pytestmark = pytest.mark.live
-
-SUMMARY_PREFIX = "Summary of previous conversation:"
 
 # Far below the fixed overhead of the tool schemas alone, so the escalation is entered on every
 # request and the tiers decide what actually happens -- the production 480,000 would need a
@@ -50,8 +49,13 @@ def compacting_runtime(start_runtime: StartRuntime) -> LiveRuntime:
 
 
 def summaries(messages: list[dict[str, Any]]) -> list[str]:
-    """Return every part that reads like a compaction summary."""
-    return [text for text in part_contents(messages) if text.startswith(SUMMARY_PREFIX)]
+    """Return the text of every compaction summary."""
+    return [
+        part["content"]
+        for message in messages
+        for part in message["parts"]
+        if part["part_kind"] == "compaction" and part.get("content")
+    ]
 
 
 def test_a_real_summary_enters_the_context_and_stays_there(
@@ -79,8 +83,8 @@ def test_a_real_summary_enters_the_context_and_stays_there(
     transcript = runtime.drain("log")
 
     # Re-read after a further run, which is what makes this a regression test rather than a
-    # snapshot: the summary lives in a `SystemPromptPart`, so a system-prompt manager that
-    # rewrites the history would drop it on the way into that last request.
+    # snapshot: anything that rewrites the history on the way into that last request -- a
+    # system-prompt manager, the history cleanup -- could drop the summary there.
     assert summaries(after["messages"]), "the summary was discarded by the next request, so every run re-summarizes"
     assert not summaries(model_messages(transcript)), (
         "a summary is a compaction artifact and must never enter the raw transcript"

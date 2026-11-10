@@ -8,9 +8,9 @@ import pytest
 from pydantic import ValidationError
 from pydantic_ai import ModelMessage
 from pydantic_ai.messages import (
+    CompactionPart,
     ModelRequest,
     ModelResponse,
-    SystemPromptPart,
     TextPart,
     UserPromptPart,
 )
@@ -88,7 +88,7 @@ async def test_restore_refuses_to_overwrite_an_active_context(tmp_path: Path) ->
 def test_a_summary_carrying_no_conversation_id_is_accepted() -> None:
     """Compaction synthesizes its summary outside any run, so it has no conversation id."""
     conversation_id = str(uuid4())
-    summary = ModelRequest(parts=[SystemPromptPart(content="Summary of previous conversation:")])
+    summary = ModelRequest(parts=[CompactionPart(content="the conversation so far")])
 
     context = ConversationContext(
         conversation_id=conversation_id,

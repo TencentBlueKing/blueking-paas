@@ -7,9 +7,9 @@ from typing import Any, cast
 from pydantic_ai import ModelMessage, ModelMessagesTypeAdapter
 from pydantic_ai.capabilities import CapabilityOrdering
 from pydantic_ai.messages import (
+    CompactionPart,
     ModelRequest,
     ModelResponse,
-    SystemPromptPart,
     TextPart,
     UserPromptPart,
 )
@@ -119,7 +119,7 @@ async def test_later_requests_record_the_suffix_and_ignore_a_head_summary(
     user = user_turn("hello")
     first_response = assistant_turn("world")
     tool_return = user_turn("tool result")
-    summary = ModelRequest(parts=[SystemPromptPart(content="Summary of previous conversation:")])
+    summary = ModelRequest(parts=[CompactionPart(content="the conversation so far")])
 
     await recorder.before_model_request(_RUN_CTX, request_context([user]))
     await recorder.after_model_request(
@@ -141,7 +141,7 @@ async def test_compaction_commits_the_settled_history_mid_run(tmp_path: Path) ->
     user = user_turn("hello")
     first_response = assistant_turn("world")
     tool_return = user_turn("tool result")
-    summary = ModelRequest(parts=[SystemPromptPart(content="Summary of previous conversation:")])
+    summary = ModelRequest(parts=[CompactionPart(content="the conversation so far")])
     compacted = [summary, tool_return]
     second_response = assistant_turn("done")
 

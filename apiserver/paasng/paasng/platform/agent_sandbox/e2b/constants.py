@@ -56,12 +56,46 @@ SANDBOX_ID_FIELD = "sandboxID"
 # 创建请求与网关响应中的模板标识字段
 TEMPLATE_ID_FIELD = "templateID"
 
+# 创建请求中模板标识的旧字段名，网关在 templateID 为空时回退到它
+TEMPLATE_NAME_FIELD = "template"
+
 # 网关响应中的运行状态字段，对账时以它为权威值
 SANDBOX_STATE_FIELD = "state"
 
 # 归档时的单批删除条数。终止记录没有关联对象，删除很轻，
 # 分批只是为了不在一条语句里锁住过多行
 ARCHIVE_BATCH_SIZE = 500
+
+# 模板标识（SDK 创建沙箱时传入的 templateID）的格式。首尾必须是字母数字：
+# 它要拼进 k8s 资源名，网关还会把资源名写进标签值，两者都不接受首尾为连接符
+TEMPLATE_ID_PATTERN = r"^[a-z][a-z0-9-]{0,29}[a-z0-9]$"
+
+# 自定义模板在集群内的资源名为 ``{应用}--{模板标识}``。应用 code 与内置模板名都不能含 ``--``，
+# 因此按它切分既能还原出模板标识，也不会与内置模板撞名
+CUSTOM_RESOURCE_NAME_SEPARATOR = "--"
+
+# 网关把资源名写进 SandboxInstance 的标签值，标签值最长 63 个字符
+RESOURCE_NAME_MAX_LENGTH = 63
+
+# 模板规格的默认值与上下限
+DEFAULT_TEMPLATE_CPU_COUNT = 2
+DEFAULT_TEMPLATE_MEMORY_MB = 4096
+MAX_TEMPLATE_CPU_COUNT = 16
+MIN_TEMPLATE_MEMORY_MB = 512
+MAX_TEMPLATE_MEMORY_MB = 32768
+MIN_TEMPLATE_DISK_SIZE_MB = 1024
+MAX_TEMPLATE_DISK_SIZE_MB = 102400
+MAX_TEMPLATE_PREWARM_COUNT = 50
+
+# 系统盘是放在 PVC 里的磁盘镜像文件，PVC 要比盘本身大，取值参照网关示例（20Gi 盘配 30Gi PVC）
+TEMPLATE_PVC_SIZE_RATIO = 1.5
+
+# 平台下发的 CR 都打上这个标签，同步只清理带标签的 CR，不碰集群里手工创建的
+TEMPLATE_MANAGED_BY_LABEL = "paas.bk.tencent.com/managed-by"
+TEMPLATE_MANAGED_BY_VALUE = "bkpaas-e2b-template"
+
+# 网关按这个标签回填沙箱的 templateID，值为资源名
+GATEWAY_TEMPLATE_LABEL = "advanced.bkbcs.tencent.com/e2b-template"
 
 
 class E2BSandboxStatus(StrStructuredEnum):
@@ -76,6 +110,15 @@ class E2BSandboxStatus(StrStructuredEnum):
     def active_values(cls) -> list[str]:
         """仍占用底层资源、需要参与对账的状态。"""
         return [cls.RUNNING.value, cls.PAUSED.value]
+
+
+class E2BTemplateSyncStatus(StrStructuredEnum):
+    """模板下发到单个集群的状态"""
+
+    # 模板已保存、下发任务还没跑完
+    PENDING = EnumField("pending", label="待同步")
+    SUCCEEDED = EnumField("succeeded", label="同步成功")
+    FAILED = EnumField("failed", label="同步失败")
 
 
 class E2BReconcileOutcome(StrStructuredEnum):

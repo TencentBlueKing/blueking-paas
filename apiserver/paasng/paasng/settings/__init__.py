@@ -1814,6 +1814,14 @@ AGENT_SANDBOX_E2B_ORPHAN_SAFETY_WINDOW_MINUTES = settings.get("AGENT_SANDBOX_E2B
 # 已终止记录的保留天数，超过则从主表删除
 AGENT_SANDBOX_E2B_TERMINATED_RETENTION_DAYS = settings.get("AGENT_SANDBOX_E2B_TERMINATED_RETENTION_DAYS", 30)
 
+# ---------------------------------------------
+# e2b 沙箱模板
+# ---------------------------------------------
+# 单个应用可创建的自定义模板数量上限
+AGENT_SANDBOX_E2B_MAX_CUSTOM_TEMPLATES_PER_APP = settings.get("AGENT_SANDBOX_E2B_MAX_CUSTOM_TEMPLATES_PER_APP", 30)
+# 模板系统盘所在 PVC 的存储类，须在所有启用 e2b 的集群中存在
+AGENT_SANDBOX_E2B_TEMPLATE_STORAGE_CLASS = settings.get("AGENT_SANDBOX_E2B_TEMPLATE_STORAGE_CLASS", "cbs")
+
 # 是否展示应用可用性保障
 FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL", False)
 # 是否展示 MCP Server 云 API 权限

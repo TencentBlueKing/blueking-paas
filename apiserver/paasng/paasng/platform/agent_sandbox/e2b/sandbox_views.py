@@ -40,10 +40,10 @@ class E2BSandboxViewSet(E2BProtocolViewSet):
 
     def create(self, request):
         """创建沙箱"""
-        slz = E2BSandboxCreateInputSLZ(data=request.data)
+        slz = E2BSandboxCreateInputSLZ(data=request.data, context={"application": self.application})
         slz.is_valid(raise_exception=True)
 
-        resp = sandboxes.create_sandbox(self.application, dict(request.data))
+        resp = sandboxes.create_sandbox(self.application, slz.validated_data["template"], dict(request.data))
         return Response(resp, status=status.HTTP_201_CREATED)
 
     def list(self, request):

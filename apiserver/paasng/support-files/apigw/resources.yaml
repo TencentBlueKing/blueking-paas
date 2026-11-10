@@ -3959,6 +3959,138 @@ paths:
           resourcePermissionRequired: true
         descriptionEn:
         noneSchema: true
+  /agent_sandbox/applications/{app_code}/e2b/templates/:
+    get:
+      operationId: list_e2b_templates
+      description: 列出应用可见的 e2b 沙箱模板（公开的内置模板与本应用的自定义模板）
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/applications/{app_code}/e2b/templates/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+    post:
+      operationId: create_e2b_template
+      description: 创建 e2b 沙箱自定义模板
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/applications/{app_code}/e2b/templates/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/applications/{app_code}/e2b/templates/{template_id}:
+    get:
+      operationId: get_e2b_template
+      description: 查询 e2b 沙箱模板详情
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/applications/{app_code}/e2b/templates/{template_id}
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+    put:
+      operationId: update_e2b_template
+      description: 修改 e2b 沙箱自定义模板
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: put
+          path: /backend/api/agent_sandbox/applications/{app_code}/e2b/templates/{template_id}
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+    delete:
+      operationId: delete_e2b_template
+      description: 删除 e2b 沙箱自定义模板
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: delete
+          path: /backend/api/agent_sandbox/applications/{app_code}/e2b/templates/{template_id}
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
   /cloudapi-v2/apps/{app_code}/inner/gateways/:
     get:
       operationId: list_gateways

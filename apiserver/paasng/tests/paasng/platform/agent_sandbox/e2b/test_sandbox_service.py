@@ -38,6 +38,7 @@ from paasng.platform.agent_sandbox.models import E2BSandbox
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 from .conftest import DATA_PLANE_ADDRESS, GATEWAY_INTERNAL_DOMAIN
+from .helpers import make_builtin_template, make_custom_template
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -149,8 +150,12 @@ def _record(
 
 
 class TestCreate:
+    @pytest.fixture(autouse=True)
+    def _template(self):
+        self.template = make_builtin_template("e2b-envd")
+
     def test_records_ownership(self, gateway, bk_app):
-        sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd"})
+        sandboxes.create_sandbox(bk_app, self.template, {"templateID": "e2b-envd"})
 
         record = E2BSandbox.objects.get(sandbox_id=SANDBOX_ID)
         assert record.application == bk_app
@@ -159,9 +164,26 @@ class TestCreate:
         assert record.status == E2BSandboxStatus.RUNNING.value
         assert record.expired_at is not None
 
+    def test_custom_template_goes_through_resource_name(self, gateway, bk_app):
+        """网关只认资源名；记录也存资源名，用来判断模板是否还在用；返回给 SDK 的仍是用户传入的标识"""
+        template = make_custom_template(bk_app, "my-tpl")
+        gateway.create_response = _create_response(templateID=template.resource_name)
+
+        resp = sandboxes.create_sandbox(bk_app, template, {"templateID": "my-tpl"})
+
+        assert gateway.created_payloads[0]["templateID"] == f"{bk_app.code}--my-tpl"
+        assert E2BSandbox.objects.get(sandbox_id=SANDBOX_ID).template_id == template.resource_name
+        assert resp["templateID"] == "my-tpl"
+
+    def test_drops_template_name_field(self, gateway, bk_app):
+        """网关在 templateID 为空时会回退到 template 字段，不能留着它绕过资源名转换"""
+        sandboxes.create_sandbox(bk_app, self.template, {"templateID": "e2b-envd", "template": "other--x"})
+
+        assert "template" not in gateway.created_payloads[0]
+
     def test_rewrites_data_plane_address(self, gateway, bk_app):
         """集群内域名换成对外地址，SDK 拿它拼数据面 URL。"""
-        resp = sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd"})
+        resp = sandboxes.create_sandbox(bk_app, self.template, {"templateID": "e2b-envd"})
 
         assert resp["domain"] == DATA_PLANE_ADDRESS
 
@@ -169,7 +191,7 @@ class TestCreate:
         """除地址字段外原样返回，包括访问令牌与我们不认识的新字段。"""
         gateway.create_response = _create_response(someFutureField="kept")
 
-        resp = sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd"})
+        resp = sandboxes.create_sandbox(bk_app, self.template, {"templateID": "e2b-envd"})
 
         assert resp["envdAccessToken"] == ACCESS_TOKEN
         assert resp["someFutureField"] == "kept"
@@ -178,7 +200,7 @@ class TestCreate:
         """请求体整体转发，不因为服务层不认识某个参数就把它吃掉。"""
         payload = {"templateID": "e2b-envd", "timeout": 600, "metadata": {"owner": "a"}}
 
-        sandboxes.create_sandbox(bk_app, payload)
+        sandboxes.create_sandbox(bk_app, self.template, payload)
 
         assert gateway.created_payloads == [payload]
 
@@ -187,19 +209,19 @@ class TestCreate:
         gateway.fail("create_sandbox", E2BGatewayNotFound("gateway returned 404 on POST /sandboxes"))
 
         with pytest.raises(E2BTemplateNotFound):
-            sandboxes.create_sandbox(bk_app, {"templateID": "e2b-ghost"})
+            sandboxes.create_sandbox(bk_app, self.template, {"templateID": "e2b-ghost"})
 
         assert not E2BSandbox.objects.exists()
 
     def test_injects_default_timeout_when_missing(self, gateway, bk_app):
         """不带 timeout 时补平台默认值，网关的缺省语义是永不过期。"""
-        sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd"})
+        sandboxes.create_sandbox(bk_app, self.template, {"templateID": "e2b-envd"})
 
         assert gateway.created_payloads[0]["timeout"] == DEFAULT_SANDBOX_TIMEOUT_SECONDS
 
     def test_keeps_explicit_timeout(self, gateway, bk_app):
         """显式传的存活时长原样转发，不能被默认值覆盖。"""
-        sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd", "timeout": 3600})
+        sandboxes.create_sandbox(bk_app, self.template, {"templateID": "e2b-envd", "timeout": 3600})
 
         assert gateway.created_payloads[0]["timeout"] == 3600
 
@@ -208,7 +230,7 @@ class TestCreate:
         _record(bk_app)
 
         with pytest.raises(IntegrityError):
-            sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd"})
+            sandboxes.create_sandbox(bk_app, self.template, {"templateID": "e2b-envd"})
 
         assert gateway.killed == [SANDBOX_ID]
 
@@ -218,7 +240,7 @@ class TestCreate:
         gateway.fail("kill_sandbox", E2BGatewayUnavailable("gateway down"))
 
         with pytest.raises(IntegrityError):
-            sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd"})
+            sandboxes.create_sandbox(bk_app, self.template, {"templateID": "e2b-envd"})
 
 
 class TestGet:
@@ -231,6 +253,12 @@ class TestGet:
 
         assert resp["domain"] == DATA_PLANE_ADDRESS
         assert resp["envdAccessToken"] == "refreshed-token"
+
+    def test_restores_custom_template_id(self, gateway, bk_app):
+        _record(bk_app)
+        gateway.get_response = _create_response(templateID=f"{bk_app.code}--my-tpl")
+
+        assert sandboxes.get_sandbox(bk_app, SANDBOX_ID)["templateID"] == "my-tpl"
 
     def test_terminated_sandbox_is_invisible(self, gateway, bk_app):
         """销毁之后再查就该是 404，记录留着只是为了让重复销毁保持幂等。"""
@@ -258,6 +286,18 @@ class TestList:
         items = sandboxes.list_sandboxes(bk_app)
 
         assert [item["sandboxID"] for item in items] == ["mine"]
+
+    def test_restores_custom_template_id(self, gateway, bk_app):
+        _record(bk_app, "custom")
+        _record(bk_app, "builtin")
+        gateway.list_response = [
+            _create_response("custom", templateID=f"{bk_app.code}--my-tpl"),
+            _create_response("builtin", templateID="e2b-envd"),
+        ]
+
+        items = sandboxes.list_sandboxes(bk_app)
+
+        assert [item["templateID"] for item in items] == ["my-tpl", "e2b-envd"]
 
     def test_skips_terminated_records(self, gateway, bk_app):
         _record(bk_app, "alive")

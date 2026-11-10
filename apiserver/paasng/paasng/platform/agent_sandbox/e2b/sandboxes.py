@@ -24,7 +24,7 @@ from typing import Any
 from django.utils.dateparse import parse_datetime
 
 from paas_wl.infras.cluster.models import ClusterE2BConfig
-from paasng.platform.agent_sandbox.models import E2BSandbox
+from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate
 from paasng.platform.applications.models import Application
 
 from .clusters import select_e2b_cluster
@@ -33,6 +33,7 @@ from .constants import (
     DEFAULT_SANDBOX_TIMEOUT_SECONDS,
     SANDBOX_ID_FIELD,
     TEMPLATE_ID_FIELD,
+    TEMPLATE_NAME_FIELD,
     E2BSandboxStatus,
 )
 from .exceptions import (
@@ -43,22 +44,27 @@ from .exceptions import (
     E2BTemplateNotFound,
 )
 from .gateway import E2BGatewayClient
+from .templates import to_sdk_template_id
 
 logger = logging.getLogger(__name__)
 
 
-def create_sandbox(application: Application, payload: dict[str, Any]) -> dict[str, Any]:
+def create_sandbox(application: Application, template: E2BSandboxTemplate, payload: dict[str, Any]) -> dict[str, Any]:
     """创建沙箱并登记归属。
 
     :param application: 归属应用，由 API Key 认证后端解析得出
-    :param payload: 透传给网关的创建请求体。未带 ``timeout`` 时补平台默认值，
+    :param template: 本次使用的模板，调用方须已确认它对该应用可用
+    :param payload: 透传给网关的创建请求体。模板标识换成集群内的资源名；未带 ``timeout`` 时补平台默认值，
         如果不加的话底层网关对缺省 timeout 的处理是永不过期
-    :returns: 网关响应，数据面地址字段已改写为该集群的对外地址
+    :returns: 网关响应，数据面地址字段已改写为该集群的对外地址，模板标识已还原成用户传入的
     :raises E2BClusterUnavailable: 没有可用于 e2b 的集群
     :raises E2BGatewayTimeout: 网关未在创建超时窗口内返回
-    :raises E2BTemplateNotFound: 平台已登记的模板在网关侧不存在，两边配置漂移
+    :raises E2BTemplateNotFound: 模板在网关侧不存在，多半是还没有下发到这个集群
     """
     payload = dict(payload)
+    payload[TEMPLATE_ID_FIELD] = template.resource_name
+    # 网关在 templateID 为空时回退到这个字段，不能让用户借它绕过资源名转换
+    payload.pop(TEMPLATE_NAME_FIELD, None)
     if payload.get("timeout") is None:
         payload["timeout"] = DEFAULT_SANDBOX_TIMEOUT_SECONDS
 
@@ -68,21 +74,22 @@ def create_sandbox(application: Application, payload: dict[str, Any]) -> dict[st
         try:
             resp = client.create_sandbox(payload)
         except E2BGatewayNotFound as exc:
-            # 创建时还没有沙箱，网关的 404 只能是模板不存在（平台登记与网关漂移）。
+            # 创建时还没有沙箱，网关的 404 只能是模板不存在（尚未下发到该集群，或下发失败）。
             # 不转译就会被统一映射成 "Sandbox not found"，把用户引向错误方向。
             # 若是网关自身路由缺失这类部署问题，日志里的 method/path 能区分
             raise E2BTemplateNotFound(
-                f"template {payload.get(TEMPLATE_ID_FIELD)} is not available on gateway"
+                f"template {template.resource_name} is not available on cluster {cluster.name}"
             ) from exc
 
         # 从这里开始沙箱已在网关侧存在。后面任何一步失败都必须销毁它，
         # 否则会留下一个本地无记录、用户看不到、也没人回收的孤儿实例
         try:
-            _record_ownership(application, cluster.name, resp)
+            _record_ownership(application, cluster.name, template, resp)
         except Exception:
             _rollback_created_sandbox(client, resp.get(SANDBOX_ID_FIELD))
             raise
 
+        _rewrite_template_id(application, resp)
         return _rewrite_data_plane_address(resp, client.config)
 
 
@@ -93,7 +100,7 @@ def get_sandbox(application: Application, sandbox_id: str) -> dict[str, Any]:
         字段名是 e2b 协议规定的驼峰形式。相对 list，详情多出连数据面所需的两项：
 
         - ``sandboxID``：沙箱标识
-        - ``templateID``：创建时用的模板
+        - ``templateID``：创建时用的模板，已从资源名还原成用户使用的模板标识
         - ``state``：网关侧运行态（``running`` / ``paused`` 等）
         - ``startedAt`` / ``endAt``：实例启动与预计回收时间
         - ``cpuCount`` / ``memoryMB`` / ``diskSizeMB``：规格
@@ -115,6 +122,7 @@ def get_sandbox(application: Application, sandbox_id: str) -> dict[str, Any]:
             # 这里只做转译，本地状态的收敛交给对账任务，避免读路径写库
             raise E2BSandboxNotFound(f"sandbox {sandbox_id} is gone on gateway") from exc
 
+        _rewrite_template_id(application, resp)
         return _rewrite_data_plane_address(resp, client.config)
 
 
@@ -126,7 +134,7 @@ def list_sandboxes(application: Application) -> list[dict[str, Any]]:
 
     某个集群不可达时跳过该集群，不影响其余集群的结果。
 
-    :returns: 求交后的网关列表条目。每条字段原样透传，不做数据面地址改写——
+    :returns: 求交后的网关列表条目。除模板标识还原成用户使用的以外，每条字段原样透传，不做数据面地址改写——
         列表本身不含 ``domain`` / ``envdAccessToken``，SDK 连数据面要再走 get。
         字段名是 e2b 协议规定的驼峰形式，SDK 的 ``ListedSandbox.from_dict``
         缺任一必填项都会整表反序列化失败：
@@ -160,7 +168,7 @@ def list_sandboxes(application: Application) -> list[dict[str, Any]]:
 
         for item in cluster_items:
             if item.get(SANDBOX_ID_FIELD) in owned_ids:
-                items.append(item)
+                items.append(_rewrite_template_id(application, item))
 
     return items
 
@@ -218,6 +226,13 @@ def _rewrite_data_plane_address(resp: dict[str, Any], config: ClusterE2BConfig) 
     return resp
 
 
+def _rewrite_template_id(application: Application, resp: dict[str, Any]) -> dict[str, Any]:
+    """网关返回的是资源名，自定义模板的资源名带应用前缀，要还原成用户使用的模板标识"""
+    if template_id := resp.get(TEMPLATE_ID_FIELD):
+        resp[TEMPLATE_ID_FIELD] = to_sdk_template_id(application, template_id)
+    return resp
+
+
 def _get_live_sandbox(application: Application, sandbox_id: str) -> E2BSandbox:
     """取归属于该应用且未终止的沙箱记录"""
     sandbox = E2BSandbox.objects.get_owned(application, sandbox_id)
@@ -234,12 +249,15 @@ def _live_sandboxes(application: Application) -> list[E2BSandbox]:
     )
 
 
-def _record_ownership(application: Application, cluster_name: str, resp: dict[str, Any]) -> None:
+def _record_ownership(
+    application: Application, cluster_name: str, template: E2BSandboxTemplate, resp: dict[str, Any]
+) -> None:
     E2BSandbox.objects.create(
         sandbox_id=resp[SANDBOX_ID_FIELD],
         application=application,
         cluster_name=cluster_name,
-        template_id=resp.get(TEMPLATE_ID_FIELD, ""),
+        # 记资源名而不是用户传入的标识：判断模板是否还在用时，要据此精确匹配到具体哪个模板
+        template_id=template.resource_name,
         expired_at=parse_datetime(resp["endAt"]) if resp.get("endAt") else None,
         tenant_id=application.tenant_id,
     )

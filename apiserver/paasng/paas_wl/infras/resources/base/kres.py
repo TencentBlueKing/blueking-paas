@@ -736,6 +736,18 @@ class KSandboxInstance(BaseKresource):
         raise ReadTargetStatusTimeout(pod_name=name, max_seconds=timeout, extra_value=instance)
 
 
+class KSandboxTemplate(BaseKresource):
+    """CRD: SandboxTemplate, the instance spec that a SandboxPool creates instances from."""
+
+    kind = "SandboxTemplate"
+
+
+class KSandboxPool(BaseKresource):
+    """CRD: SandboxPool, the e2b gateway uses its name as the e2b template ID."""
+
+    kind = "SandboxPool"
+
+
 class KDeployment(BaseKresource):
     kind = "Deployment"
 

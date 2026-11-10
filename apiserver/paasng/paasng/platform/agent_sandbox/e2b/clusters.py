@@ -18,6 +18,8 @@
 
 import logging
 
+from django.db.models import QuerySet
+
 from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster, ClusterE2BConfig
@@ -39,6 +41,18 @@ def select_e2b_cluster(tenant_id: str, region: str | None = None) -> Cluster:
     :param region: 归属应用的 region，缺省时由分配上下文取平台默认值
     :raises E2BClusterUnavailable: 没有既被策略选中、又启用了 e2b 配置的集群
     """
+    cluster = list_e2b_clusters(tenant_id, region).first()
+    if cluster is None:
+        raise E2BClusterUnavailable(f"none of the allocated clusters has e2b enabled for tenant {tenant_id}")
+
+    return cluster
+
+
+def list_e2b_clusters(tenant_id: str, region: str | None = None) -> QuerySet[Cluster]:
+    """列出可分配给该租户、且启用了 e2b 配置的集群，按分配器的优先级排列。
+
+    :raises E2BClusterUnavailable: 租户没配分配策略，或策略选不出集群
+    """
     # e2b 沙箱跑在 SandboxInstance（cube MicroVM）上，用途固定为隔离型
     ctx = AllocationContext.create_for_agent_sandbox(tenant_id, region, is_isolated=True)
 
@@ -48,11 +62,7 @@ def select_e2b_cluster(tenant_id: str, region: str | None = None) -> Cluster:
         # 分配器在租户没配策略、或策略选不出集群时抛 ValueError
         raise E2BClusterUnavailable(f"no cluster allocated for tenant {tenant_id}: {exc}") from exc
 
-    cluster = candidates.filter(e2b_config__enabled=True).first()
-    if cluster is None:
-        raise E2BClusterUnavailable(f"none of the allocated clusters has e2b enabled for tenant {tenant_id}")
-
-    return cluster
+    return candidates.filter(e2b_config__enabled=True)
 
 
 def get_e2b_cluster_config(cluster_name: str) -> ClusterE2BConfig:

@@ -12,9 +12,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.11
-  title: "Add system APIs for gateways and MCP servers."
-  comment: "Add 7 app-level system APIs under sys/api/cloudapi_v2."
+  version: 1.4.12
+  title: "Add APIs to manage e2b sandbox templates."
+  comment: "Add list_e2b_templates, create_e2b_template, get_e2b_template, update_e2b_template and delete_e2b_template."
 
 stages:
   - name: "prod"

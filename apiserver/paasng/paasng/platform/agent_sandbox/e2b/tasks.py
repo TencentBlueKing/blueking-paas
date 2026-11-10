@@ -32,6 +32,7 @@ from django.conf import settings
 from paasng.utils.lock import redis_lock
 
 from .reconcile import archive_terminated_sandboxes, reconcile_all
+from .template_sync import sync_template
 
 logger = logging.getLogger(__name__)
 
@@ -68,3 +69,9 @@ def reconcile_e2b_sandboxes_task():
         # 归档跟着对账一起跑。它只删本地行、不碰网关，放同一轮省一个调度项，
         # 多跑几次也没有副作用
         archive_terminated_sandboxes()
+
+
+@shared_task
+def sync_e2b_template_task(resource_name: str):
+    """把单个模板的当前状态下发到集群，模板保存或删除后触发"""
+    sync_template(resource_name)

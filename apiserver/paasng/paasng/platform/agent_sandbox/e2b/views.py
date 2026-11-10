@@ -17,7 +17,7 @@
 
 """e2b 的管理接口。
 
-- ``E2BApiKeyViewSet``：给平台调用方用的，走平台既有的 APIGW 认证
+- ``E2BApiKeyViewSet`` / ``E2BTemplateViewSet``：给平台调用方用的，走平台既有的 APIGW 认证
 - ``E2BConsole*ViewSet``：给开发者中心页面用的，走登录态与应用权限
 
 用 key 本身去访问的 e2b 协议端点见 ``base_views.E2BProtocolViewSet``。
@@ -39,8 +39,16 @@ from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 
-from . import sandboxes
-from .exceptions import E2BApiKeyGenerateError, E2BApiKeyQuotaExceeded, E2BError, E2BSandboxNotFound
+from . import sandboxes, templates
+from .exceptions import (
+    E2BApiKeyGenerateError,
+    E2BApiKeyQuotaExceeded,
+    E2BError,
+    E2BSandboxNotFound,
+    E2BTemplateAlreadyExists,
+    E2BTemplateInUse,
+    E2BTemplateQuotaExceeded,
+)
 from .serializers import (
     E2BApiKeyCreateInputSLZ,
     E2BApiKeyCreateOutputSLZ,
@@ -48,8 +56,10 @@ from .serializers import (
     E2BConsoleApiKeyOutputSLZ,
     E2BConsoleSandboxListInputSLZ,
     E2BConsoleSandboxOutputSLZ,
-    E2BConsoleTemplateDetailOutputSLZ,
-    E2BConsoleTemplateOutputSLZ,
+    E2BCustomTemplateCreateInputSLZ,
+    E2BTemplateDetailOutputSLZ,
+    E2BTemplateOutputSLZ,
+    E2BTemplateSpecInputSLZ,
 )
 
 logger = logging.getLogger(__name__)
@@ -163,31 +173,90 @@ class E2BConsoleSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMix
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
-    """开发者中心页面浏览平台已启用且公开的沙箱模板。
+class E2BTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    """应用可用的沙箱模板，以及本应用自定义模板的增删改。
 
-    模板全平台共享、与应用无关，路径带上应用 code 是为了沿用页面的应用权限口径。
+    能看到的是已启用且公开的内置模板，加上本应用的自定义模板。不公开的内置模板不在这里出现，
+    但仍可通过 SDK 按标识使用。内置模板只能由平台管理员维护，这里只读。
     """
 
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
 
     @swagger_auto_schema(
         tags=["agent_sandbox.e2b"],
-        responses={status.HTTP_200_OK: E2BConsoleTemplateOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: E2BTemplateOutputSLZ(many=True)},
     )
     def list(self, request, code):
-        """列出已启用且公开的模板"""
-        # 模板本身不按应用过滤，调用只为触发应用权限校验
-        self.get_application()
-        templates = E2BSandboxTemplate.objects.filter(enabled=True, is_public=True)
-        return Response(E2BConsoleTemplateOutputSLZ(templates, many=True).data)
+        """列出本应用可见的模板"""
+        application = self.get_application()
+        items = E2BSandboxTemplate.objects.listable_by(application)
+        return Response(E2BTemplateOutputSLZ(items, many=True).data)
 
     @swagger_auto_schema(
         tags=["agent_sandbox.e2b"],
-        responses={status.HTTP_200_OK: E2BConsoleTemplateDetailOutputSLZ()},
+        responses={status.HTTP_200_OK: E2BTemplateDetailOutputSLZ()},
     )
     def retrieve(self, request, code, template_id):
-        """查询模板详情，未启用或不公开的模板按不存在处理"""
-        self.get_application()
-        template = get_object_or_404(E2BSandboxTemplate, template_id=template_id, enabled=True, is_public=True)
-        return Response(E2BConsoleTemplateDetailOutputSLZ(template).data)
+        """查询模板详情，不可见的模板按不存在处理"""
+        application = self.get_application()
+        template = self._get_template(E2BSandboxTemplate.objects.listable_by(application), template_id)
+        return Response(E2BTemplateDetailOutputSLZ(template).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox.e2b"],
+        request_body=E2BCustomTemplateCreateInputSLZ(),
+        responses={status.HTTP_201_CREATED: E2BTemplateDetailOutputSLZ()},
+    )
+    def create(self, request, code):
+        """创建自定义模板。创建后异步下发到应用可用的 e2b 集群，下发完成前用它创建沙箱会失败"""
+        application = self.get_application()
+        slz = E2BCustomTemplateCreateInputSLZ(data=request.data, context={"application": application})
+        slz.is_valid(raise_exception=True)
+
+        try:
+            template = templates.create_custom_template(application, **slz.validated_data)
+        except E2BTemplateQuotaExceeded:
+            raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_QUOTA_EXCEEDED
+        except E2BTemplateAlreadyExists:
+            raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_ALREADY_EXISTS
+        return Response(E2BTemplateDetailOutputSLZ(template).data, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox.e2b"],
+        request_body=E2BTemplateSpecInputSLZ(),
+        responses={status.HTTP_200_OK: E2BTemplateDetailOutputSLZ()},
+    )
+    def update(self, request, code, template_id):
+        """修改自定义模板。已创建的沙箱不受影响"""
+        application = self.get_application()
+        template = self._get_template(E2BSandboxTemplate.objects.custom_of(application), template_id)
+        slz = E2BTemplateSpecInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        templates.update_template(template, **slz.validated_data)
+        return Response(E2BTemplateDetailOutputSLZ(template).data)
+
+    @swagger_auto_schema(tags=["agent_sandbox.e2b"], responses={status.HTTP_204_NO_CONTENT: ""})
+    def destroy(self, request, code, template_id):
+        """删除自定义模板。模板下还有未销毁的沙箱时拒绝删除"""
+        application = self.get_application()
+        template = self._get_template(E2BSandboxTemplate.objects.custom_of(application), template_id)
+
+        try:
+            templates.delete_template(template)
+        except E2BTemplateInUse:
+            raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_IN_USE
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @staticmethod
+    def _get_template(queryset, template_id: str) -> E2BSandboxTemplate:
+        template = queryset.filter(template_id=template_id).first()
+        if template is None:
+            raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_NOT_FOUND
+        return template
+
+
+class E2BConsoleTemplateViewSet(E2BTemplateViewSet):
+    """开发者中心页面管理沙箱模板，行为与 APIGW 版本一致。"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]

@@ -287,6 +287,14 @@ class ErrorCodes:
     AGENT_SANDBOX_E2B_NO_AVAILABLE_CLUSTER = ErrorCode(_("暂无可用的 e2b 沙箱集群"), status_code=503)
     AGENT_SANDBOX_E2B_SANDBOX_NOT_FOUND = ErrorCode(_("e2b 沙箱不存在"), status_code=404)
     AGENT_SANDBOX_E2B_SERVICE_UNAVAILABLE = ErrorCode(_("e2b 沙箱服务暂不可用，请稍后重试"), status_code=503)
+    AGENT_SANDBOX_E2B_TEMPLATE_NOT_FOUND = ErrorCode(_("e2b 沙箱模板不存在"), status_code=404)
+    AGENT_SANDBOX_E2B_TEMPLATE_ALREADY_EXISTS = ErrorCode(_("模板标识已被占用，请更换"), status_code=409)
+    AGENT_SANDBOX_E2B_TEMPLATE_QUOTA_EXCEEDED = ErrorCode(
+        _("自定义模板数量已达上限，请先删除不再使用的模板"), status_code=400
+    )
+    AGENT_SANDBOX_E2B_TEMPLATE_IN_USE = ErrorCode(
+        _("模板下还有未销毁的沙箱，删除模板会连带销毁它们，请先销毁沙箱"), status_code=409
+    )
 
     CANNOT_CREATE_RESERVED_PREFIX_AUTH_CODE = ErrorCode(_("生成保留前缀授权码失败"))
     CANNOT_DELETE_USED_RESERVED_PREFIX_AUTH_CODE = ErrorCode(_("已使用的保留前缀授权码不能被删除"))

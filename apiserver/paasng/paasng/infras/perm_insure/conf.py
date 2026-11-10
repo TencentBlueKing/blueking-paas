@@ -34,6 +34,7 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     # skip the insure checking for them.
     "RegionSpecsViewSet",
     "UserInfoViewSet",
+    "UserProfileRegistrationView",
     "AccountFeatureFlagViewSet",
     "ApplicationCreateViewSet",
     "ApplicationListViewSet.list_detailed",

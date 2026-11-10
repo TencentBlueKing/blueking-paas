@@ -462,3 +462,12 @@ class ListAppAlarmRecordsOutputSLZ(serializers.Serializer):
 
     count = serializers.IntegerField(default=0, help_text="总条数")
     results = AppAlarmRecordOutputSLZ(many=True, default=list, help_text="告警记录列表")
+
+
+# ============ 应用态 (系统 API) 相关 ============
+
+
+class SysApplyGatewayResourcePermissionInputSLZ(ApplyGatewayResourcePermissionInputSLZ):
+    """应用态网关资源权限申请参数"""
+
+    operator = serializers.CharField(required=True, help_text="申请人用户名")

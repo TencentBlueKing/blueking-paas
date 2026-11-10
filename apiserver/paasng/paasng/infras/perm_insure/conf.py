@@ -120,7 +120,7 @@ SYS_API_CHECKING_EXCLUDED_VIEWS: Set[str] = {
 # Multi-editions specific start
 
 try:
-    from . import conf_ext
+    from . import conf_ext  # type: ignore
 
     SYS_API_CHECKING_EXCLUDED_VIEWS |= set(conf_ext.SYS_API_CHECKING_EXCLUDED_VIEWS)
 except ImportError:

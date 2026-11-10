@@ -78,16 +78,16 @@ class TestCheckSysApiViewLayout:
         assert "perm_insure.E101" in {err.id for err in errors}
 
     def test_sys_view_serves_user_api(self, patch_entries):
-        """E102 & E104: the view has the `Sys` prefix and the sysapi client permission, but
+        """E101 & E102: the view has the `Sys` prefix and the sysapi client permission, but
         it serves a user-facing url."""
         entries = self._make_entries(SysDemoViewSet, "api/demo/")
         with patch_entries(entries):
             errors = check_sys_api_view_layout(None)
 
-        assert {err.id for err in errors} == {"perm_insure.E102", "perm_insure.E104"}
+        assert {err.id for err in errors} == {"perm_insure.E101", "perm_insure.E102"}
 
     def test_sys_view_without_sysapi_perm(self, patch_entries):
-        """E103: the view serves a system API url but configures no sysapi client permission."""
+        """E102: the view serves a system API url but configures no sysapi client permission."""
 
         class SysNoPermViewSet(viewsets.ViewSet):
             permission_classes = []
@@ -96,18 +96,18 @@ class TestCheckSysApiViewLayout:
         with patch_entries(entries):
             errors = check_sys_api_view_layout(None)
 
-        assert [err.id for err in errors] == ["perm_insure.E103"]
+        assert [err.id for err in errors] == ["perm_insure.E102"]
 
     def test_url_name_without_sys_prefix(self, patch_entries):
-        """E105: the system API url is named without the `sys.` prefix."""
+        """E103: the system API url is named without the `sys.` prefix."""
         entries = self._make_entries(SysDemoViewSet, "sys/api/demo/", name="api.demo")
         with patch_entries(entries):
             errors = check_sys_api_view_layout(None)
 
-        assert [err.id for err in errors] == ["perm_insure.E105"]
+        assert [err.id for err in errors] == ["perm_insure.E103"]
 
     def test_user_url_name_with_sys_prefix(self, patch_entries):
-        """E106: the user-facing url is named with the `sys.` prefix."""
+        """E103: the user-facing url is named with the `sys.` prefix."""
 
         class DemoNoPermViewSet(viewsets.ViewSet):
             permission_classes = []
@@ -116,10 +116,10 @@ class TestCheckSysApiViewLayout:
         with patch_entries(entries):
             errors = check_sys_api_view_layout(None)
 
-        assert [err.id for err in errors] == ["perm_insure.E106"]
+        assert [err.id for err in errors] == ["perm_insure.E103"]
 
     def test_module_defines_both_views(self, patch_entries):
-        """E107: a module defines both the `Sys` and non-`Sys` view classes, the two classes
+        """E104: a module defines both the `Sys` and non-`Sys` view classes, the two classes
         are defined in the same module (this test module)."""
         entries = self._make_entries(SysDemoViewSet, "sys/api/demo/") + self._make_entries(
             DemoViewSet, "sys/api/demo/"
@@ -127,7 +127,7 @@ class TestCheckSysApiViewLayout:
         with patch_entries(entries):
             errors = check_sys_api_view_layout(None)
 
-        assert "perm_insure.E107" in {err.id for err in errors}
+        assert "perm_insure.E104" in {err.id for err in errors}
 
     def test_violation_blocks_startup(self):
         """A violation should be registered to the Django check framework and block the

@@ -21,12 +21,10 @@ The system APIs are the APIs which are called by other systems, they are served 
 them easy to be distinguished from the user-facing APIs, they must follow the conventions
 below:
 
-1. The view class serving `sys/api/` urls must be named with the `Sys` prefix.
-2. The `Sys`-prefixed view class must only serve `sys/api/` urls.
-3. The view class serving `sys/api/` urls must configure a sysapi client permission.
-4. The view class configuring a sysapi client permission must only serve `sys/api/` urls.
-5. The url name of a `sys/api/` url must start with `sys.`, and the other urls must not.
-6. A module must not define both the `Sys` and non-`Sys` view classes.
+1. A view class serves the `sys/api/` urls if and only if its name starts with `Sys`.
+2. A view class serves the `sys/api/` urls if and only if it configures a sysapi client permission.
+3. A url name starts with `sys.` if and only if it serves the `sys/api/` urls.
+4. A module must not define both the `Sys` and non-`Sys` view classes.
 
 Any violation of the conventions above produces an error by the Django system check
 framework. For the views that cannot follow the conventions (e.g. the deprecated views which
@@ -108,7 +106,7 @@ def is_sysapi_permission(perm_cls: type) -> bool:
 
 
 def _check_view_naming(view_cls: type, sys_urls: list[str], other_urls: list[str]) -> list[Error]:
-    """Rule 1 & 2: the `Sys` prefix and the served urls must match each other."""
+    """Rule 1 (E101): the `Sys` prefix and the served urls must match each other."""
     errors = []
     if sys_urls and not is_sys_view_cls(view_cls):
         errors.append(
@@ -136,14 +134,14 @@ def _check_view_naming(view_cls: type, sys_urls: list[str], other_urls: list[str
                     "The `Sys` prefix is reserved for the views which only serve `sys/api/` urls, "
                     "split the mixed view or remove the prefix."
                 ),
-                id="perm_insure.E102",
+                id="perm_insure.E101",
             )
         )
     return errors
 
 
 def _check_view_permissions(view_cls: type, sys_urls: list[str], other_urls: list[str]) -> list[Error]:
-    """Rule 3 & 4: the sysapi permissions and the served urls must match each other."""
+    """Rule 2 (E102): the sysapi permission and the served urls must match each other."""
     permissions = getattr(view_cls, "permission_classes", None) or []
     has_sysapi_perm = any(is_sysapi_permission(perm) for perm in permissions)
 
@@ -159,7 +157,7 @@ def _check_view_permissions(view_cls: type, sys_urls: list[str], other_urls: lis
                     "Use `sysapi_client_perm_class()` or `sysapi_client_view_actions_perm()` to declare "
                     "which client action is required by the system API."
                 ),
-                id="perm_insure.E103",
+                id="perm_insure.E102",
             )
         )
     elif other_urls and has_sysapi_perm:
@@ -173,14 +171,14 @@ def _check_view_permissions(view_cls: type, sys_urls: list[str], other_urls: lis
                     "The sysapi client permission only applies to the `sys/api/` urls, split the mixed "
                     "view into two view classes."
                 ),
-                id="perm_insure.E104",
+                id="perm_insure.E102",
             )
         )
     return errors
 
 
 def _check_url_naming(entries: list[UrlEntry]) -> list[Error]:
-    """Rule 5: the url name of a system API must start with `sys.` and vice versa."""
+    """Rule 3 (E103): the `sys.` url name prefix and the served urls must match each other."""
     errors = []
     for entry in entries:
         if not entry.name:
@@ -194,7 +192,7 @@ def _check_url_naming(entries: list[UrlEntry]) -> list[Error]:
                         "with the `sys.` prefix."
                     ),
                     hint="Rename the url to `sys.api.<name-mirrors-the-path>`.",
-                    id="perm_insure.E105",
+                    id="perm_insure.E103",
                 )
             )
         elif not is_sys_api_url(entry.url) and is_sys_named:
@@ -205,14 +203,14 @@ def _check_url_naming(entries: list[UrlEntry]) -> list[Error]:
                         "the `sys.` prefix."
                     ),
                     hint="The `sys.` prefix is reserved for the system APIs, rename the url.",
-                    id="perm_insure.E106",
+                    id="perm_insure.E103",
                 )
             )
     return errors
 
 
 def _check_module_layout(entries_by_view: dict[type, list[UrlEntry]]) -> list[Error]:
-    """Rule 6: a module must not mix the `Sys` and non-`Sys` view classes."""
+    """Rule 4 (E104): a module must not mix the `Sys` and non-`Sys` view classes."""
     module_views: dict[str, list[type]] = defaultdict(list)
     for view_cls in entries_by_view:
         module_views[view_cls.__module__].append(view_cls)
@@ -233,7 +231,7 @@ def _check_module_layout(entries_by_view: dict[type, list[UrlEntry]]) -> list[Er
                         "Move the system API views into a dedicated `sys_api.py` module (or a module whose "
                         "name ends with `_sys_api`), so that the two kinds of views are separated."
                     ),
-                    id="perm_insure.E107",
+                    id="perm_insure.E104",
                 )
             )
     return errors

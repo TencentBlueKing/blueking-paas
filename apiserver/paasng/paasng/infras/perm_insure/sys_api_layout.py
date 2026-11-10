@@ -27,9 +27,13 @@ below:
 4. A module must not define both the `Sys` and non-`Sys` view classes.
 
 Any violation of the conventions above produces an error by the Django system check
-framework. For the views that cannot follow the conventions (e.g. the deprecated views which
-have already been registered in APIGW), add them to `SYS_API_CHECKING_EXCLUDED_VIEWS` in
-`conf.py` to skip the checking.
+framework. Each rule has exactly one error id `perm_insure.E10N`, the last digit `N` is the
+serial number of the rule above, e.g. `perm_insure.E103` always means the rule 3 is violated.
+The two directions of a rule share the same id, they are told apart by the error message.
+
+For the views that cannot follow the conventions, add them to `SYS_API_CHECKING_EXCLUDED_VIEWS`
+in `conf.py` to skip the checking. The deprecated views which are not checked for historical
+reasons are the typical cases.
 """
 
 from collections import defaultdict

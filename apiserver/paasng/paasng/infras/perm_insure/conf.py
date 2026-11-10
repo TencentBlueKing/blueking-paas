@@ -109,11 +109,9 @@ SYS_API_URL_PREFIX = "sys/api/"
 # apart from the user-facing ones.
 SYSAPI_ROLE_MODULE = "paasng.infras.sysapi_client.roles"
 
-# These views serve the system APIs but don't follow the naming conventions, they are
-# excluded from the checking process of `sys_api_layout`.
+# These views serve the system APIs but are excluded from the checking process of `sys_api_layout`.
 SYS_API_CHECKING_EXCLUDED_VIEWS: Set[str] = {
-    # The deprecated version of the structured log API, it's already registered in APIGW and
-    # must keep the same name for compatibility, so the `Sys` prefix is not applicable.
+    # The deprecated v1 structured log API, it's not checked for historical reasons.
     "V1SysStructuredLogAPIView",
 }
 

@@ -1501,6 +1501,10 @@ PLUGIN_REPO_CONF = settings.get("PLUGIN_REPO_CONF")
 # 插件开发中心在权限中心注册的系统 ID
 IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get("IAM_PLUGINS_CENTER_SYSTEM_ID", default="bk_plugins")
 
+# 是否跳过插件开发中心的权限模型注册（执行 migrate 时推送到权限中心 V3）。
+# 与 BK_IAM_SKIP 不同，只影响插件开发中心，不影响开发者中心自身的权限模型注册
+BK_PLUGINS_IAM_SKIP = settings.get("BK_PLUGINS_IAM_SKIP", False)
+
 # 是否在开发者中心应用列表中展示插件应用
 DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 

@@ -42,7 +42,7 @@ from app_spark_api.core.projects.exceptions import (
     ProjectIdTakenError,
 )
 from app_spark_api.core.projects.models import Project
-from app_spark_api.publication.services import afail_pending_tasks
+from app_spark_api.core.projects.signals import project_deleting
 from app_spark_api.repository.git.services import adelete_project_repository, aprovision_project_repository
 from app_spark_api.repository.git.source_packages import adelete_project_source_packages
 
@@ -183,14 +183,15 @@ async def rename_project(project: Project, *, name: str) -> Project:
 
 async def delete_project(project: Project) -> None:
     """Delete every located Project resource before hiding the Project itself."""
-    current_category = "publication task"
+    current_category = "background task"
 
     try:
         async with asyncio.timeout(constants.DELETE_PROJECT_TIMEOUT_SECONDS):
-            # 先结束发布任务：准备任务只在任务仍在进行中时才发部署，结束之后就不会再把已删项目部署上去。
-            # 已经提交的部署在开发者中心照常进行，要到开发者中心下架。
+            # 先让挂在项目上的后台任务（如发布）收手，否则清理期间它们还会动这个项目。receiver 自己说明失败类别。
             try:
-                await afail_pending_tasks(project, "Project deleted")
+                await project_deleting.asend(sender=Project, project=project)
+            except ProjectDeletionError:
+                raise
             except Exception as exc:
                 raise ProjectDeletionError(current_category) from exc
 

@@ -48,14 +48,15 @@ const { entering } = storeToRefs(projectStore);
 watch(() => route.params.projectId, async (projectId) => {
   const id = String(projectId || '');
   if (!id) return;
+  const initialMessage = projectStore.consumeInitialMessage(id);
   try {
     await Promise.all([
-      projectStore.enterProject(id),
+      projectStore.enterProject(id, initialMessage?.conversationNumber),
       modelCatalogStore.loadCatalog(),
     ]);
     if (String(route.params.projectId || '') !== id) return;
-    const initialMessage = projectStore.consumeInitialMessage(id);
     if (initialMessage) {
+      void projectStore.pollProjectIntRenaming(id);
       await projectStore.sendMessage(
         initialMessage.content,
         [],
@@ -63,7 +64,6 @@ watch(() => route.params.projectId, async (projectId) => {
       );
     }
   } catch (error) {
-    projectStore.consumeInitialMessage(id);
     Message({
       theme: 'error',
       message: error instanceof Error ? error.message : '进入项目失败',

@@ -79,11 +79,11 @@ def _measured_thinking(efforts: frozenset[OpenAIReasoningEffort]) -> Callable[[s
     return lambda _model_id: profile
 
 
-# 混元不回传思考内容，但默认要用掉几十个 completion token；none 能关掉（只剩答案的 2 个 token）。
-# 其它强度都接受，但用量看不出差别。
+# 混元默认要思考，用掉几十个 completion token，多数型号不回传思考内容（hy4 回传）；none 能关掉
+# （只剩答案的 2 个 token）。其它强度都接受，但用量看不出差别。
 _HUNYUAN_THINKING = _measured_thinking(frozenset({"none", "minimal", "low", "medium", "high", "xhigh", "max"}))
 
-# thinking 白名单，人工维护，增改的步骤见 README「为网关模型适配 thinking」。
+# thinking 白名单，人工维护，增改的步骤见 docs/misc.md「为网关模型适配 thinking」。
 #
 # 网关模型 ID（fnmatch，区分大小写，按顺序先匹配先用）→ 它的 thinking 档从哪来：
 # - pydantic-ai 自带的厂商档：只借其中和 thinking 有关的字段，怎么开关、发什么取值由 pydantic-ai 维护；
@@ -91,20 +91,20 @@ _HUNYUAN_THINKING = _measured_thinking(frozenset({"none", "minimal", "low", "med
 # - None：显式排除。
 # 匹配不上或为 None 的模型不发 thinking 参数，请求不会因为取值不被接受而失败。
 #
-# 2026-11-03 对照网关实测选的。没列的模型及原因：
+# 2026-11-03 对照网关实测选的，qwen3 系列与 hy4、hy4-preview 2026-11-05 复测。没列的模型及原因：
 # - GLM：上游的开关做在 ZaiModel 里、用 thinking.type，网关对它返回 400；
 # - kimi、qwen3-8b：网关接受 none 但照样思考，关不掉也不会退到指定强度；
+# - qwen3-235B、qwen3-5-397B：不认 high（只认 low / medium / xhigh），上游会把 high 原样发出去换来 400；
+# - qwen3-nothinking：medium 及以上返回 400；qwen3-5-27B-nothinking：从不思考，发了也没用；
 # - gpt-oss：上游档不声明 thinking，借了也没用；
 # - SRE、aidev-*、dsv32*：没测过。
 # deepseek-v4.1-flash、deepseek-chat、deepseek-v3 虽然匹配 deepseek-*，但上游档不认为它们能设 thinking，
-# 同样不发。
+# 同样不发。qwen3 系列各型号行为不一，只按 ID 逐个收录，不用通配符。
 _GATEWAY_THINKING_PROFILES: dict[str, Callable[[str], ModelProfile | None] | None] = {
     "deepseek-*": DeepSeekProvider.model_profile,
-    # 不认 high（只认 low / medium / xhigh），上游会把 high 原样发出去换来 400。
-    "qwen3-235B": None,
-    "qwen3-5-397B": None,
-    # 网关上的 qwen 是自部署的，按 vLLM 的档走：qwen3 用 reasoning_effort 开关思考。
-    "qwen3*": VLLMProvider.model_profile,
+    # 网关上的 qwen 是自部署的，按 vLLM 的档走：用 reasoning_effort 开关思考，none 能关掉。
+    "qwen3": VLLMProvider.model_profile,
+    "qwen3-5-27B": VLLMProvider.model_profile,
     # 混元的 vision 和 embedding 模型没测，不收录。
     "hy3*": _HUNYUAN_THINKING,
     "hy4*": _HUNYUAN_THINKING,

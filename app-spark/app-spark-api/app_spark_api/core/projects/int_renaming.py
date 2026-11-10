@@ -60,7 +60,7 @@ async def run(project_id: str, *, llm: LLMClient) -> None:
         return
 
     if not project.initial_prompt.strip():
-        # 手动创建的项目没有第一句话，也就没有起名素材。
+        # 建项目的接口已经拒绝了纯空白，这里只是兜底：没有起名素材，按「无需起名」结束。
         await record.complete(None)
         return
 

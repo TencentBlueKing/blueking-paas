@@ -26,6 +26,8 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 指定其他文件后，`settings_files/*.yaml` 与 `settings_local.yaml` 仍然会生效，最终
 配置会是所有内容合并后的结果。
 
+每个配置项的说明、默认值和是否必填以 `conf.yaml.tpl` 为准。在这里增删改配置项时，同步更新它。
+
 除了 YAML 外，每个配置项也可通过环境变量设置。比如，在 YAML 文件里的配置项 `SECRET_KEY: foo`，
 也可使用以下环境变量修改：
 
@@ -216,7 +218,7 @@ CELERY_BROKER_URL = build_rabbitmq_broker_url(settings)
 CELERY_TASK_IGNORE_RESULT = True
 
 # == 缓存相关配置项
-# DEFAULT_CACHE_CONFIG 优先级最高，若无该配置则检查是否配置 Redis，若存在则作为缓存, 否则使用临时文件作为缓存(仅适用于本地开发)
+# 配置了 DEFAULT_CACHE_CONFIG 就用它，否则使用临时文件作为缓存(仅适用于本地开发)
 # WARNING: 生产环境请配置远程服务缓存, 如 RedisCache, DatabaseCache 等, 以保证多副本多 worker 时, 缓存数据一致, 否则可能无法正常工作
 DEFAULT_CACHE_CONFIG = settings.get("DEFAULT_CACHE_CONFIG")
 if DEFAULT_CACHE_CONFIG:
@@ -444,7 +446,7 @@ AGENT_RUNTIME_PROVIDER_CONFIG = settings.get("AGENT_RUNTIME_PROVIDER_CONFIG", {}
 ## access_token 交给它；direct 直连模型厂商，用 AGENT_DIRECT_MODEL_CONFIG 里固定的 key。
 AGENT_MODEL_SOURCE = settings.get("AGENT_MODEL_SOURCE", "bkaidev")
 
-## AGENT_MODEL_SOURCE 为 direct 时必填，字段详见 DirectModelAccess。
+## AGENT_MODEL_SOURCE 为 direct 时必填，字段详见 DirectModelConfig。
 ##
 ## AGENT_DIRECT_MODEL_CONFIG:
 ##   ## 必填。pydantic-ai 的 <provider>:<model>；本地不花钱跑通可用 fake:write-file。
@@ -481,7 +483,7 @@ BKAIDEV_MODEL_CONFIG = settings.get("BKAIDEV_MODEL_CONFIG", {})
 
 ## 走哪条路，可选值见 ext.llm.config.LLMSource。与 Agent Runtime 的 AGENT_MODEL_SOURCE 分开配，这类小活儿
 ## 可以换更便宜、更快的模型：
-## - bkaidev（默认）：走 bkaidev 的 LLM 网关，基址与 Agent Runtime 相同（BK_API_URL_TMPL + APIGW_ENVIRONMENT
+## - bkaidev（默认）：走 bkaidev 的 LLM 网关，基址与 Agent Runtime 相同（BK_API_URL_TMPL + BKAIDEV_APIGW_ENVIRONMENT
 ##   拼出），凭用户态 access_token 调用。token 由有用户态的请求先换好，再交给后台任务；
 ## - direct：直连模型厂商，用 LLM_DIRECT_CONFIG 里固定的 key；
 ## - fake：不发起网络请求的假模型，本地不花钱跑通链路用。
@@ -515,7 +517,7 @@ AGENT_CONTEXT_STORAGE = settings.get(
 ## 小于 1 会被抬回 1：最新那一版是冷启动唯一能依赖的东西，任何配置都不该把它清掉。
 AGENT_CONTEXT_VERSIONS_KEPT = settings.get("AGENT_CONTEXT_VERSIONS_KEPT", 5)
 
-## 一个会话保留多少个最近的检查点。冷启动只用最新的那一个（见 services._restore_files），
+## 一个会话保留多少个最近的检查点。冷启动只用最新的那一个（见 lifecycle.utils._restore_files），
 ## 多留的几行只用于排查；行本身很小，不钉住任何上下文版本。
 AGENT_CHECKPOINTS_KEPT = settings.get("AGENT_CHECKPOINTS_KEPT", 3)
 

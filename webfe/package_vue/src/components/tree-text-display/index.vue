@@ -1,16 +1,23 @@
 <template>
   <div class="tree-text-wrapper">
     <div class="tip">{{ `<${$t('代码仓库根目录')}>` }}</div>
-    <pre
-      class="tree-text-display"
-      ref="dynamicContent"
-    ></pre>
+    <div class="tree-text-display">
+      <div
+        v-for="(line, index) in formattedTree"
+        :key="index"
+        :class="{ mark: line.tag }"
+      >
+        <span>{{ line.text }}</span><i
+          v-if="line.tag"
+          class="paasng-icon paasng-info-line ml10"
+          v-bk-tooltips="tipConfig"
+        ></i>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import Vue from 'vue';
-
 export default {
   name: 'TreeTextDisplay',
   props: {
@@ -76,25 +83,13 @@ export default {
       return this.formatChildren(this.displayTreeData.children);
     },
   },
-  watch: {
-    formattedTree: {
-      handler() {
-        this.$nextTick(() => {
-          this.$refs.dynamicContent.innerHTML = '';
-          this.renderDynamicContent();
-        });
-      },
-      immediate: true,
-    },
-  },
   methods: {
     // 显示根节点时的格式化方法
     formatTree(node, prefix = '', isLast = true) {
-      let result = '';
       const connector = isLast ? '└─ ' : '├─ ';
 
       // 当前节点行（根节点特殊处理）
-      result += node === this.treeData ? `${node.name}\n` : `${prefix}${connector}${node.name}\n`;
+      const result = [{ text: node === this.treeData ? node.name : `${prefix}${connector}${node.name}` }];
 
       // 子节点处理
       if (node.children && node.children.length > 0) {
@@ -102,46 +97,29 @@ export default {
 
         node.children.forEach((child, index) => {
           const isChildLast = index === node.children.length - 1;
-          result += this.formatTree(child, childPrefix, isChildLast);
+          result.push(...this.formatTree(child, childPrefix, isChildLast));
         });
       }
 
       return result;
     },
 
-    renderDynamicContent() {
-      const Component = Vue.extend({
-        data: () => ({
-          config: this.tipConfig,
-        }),
-        template: `<div>${this.formattedTree}</div>`,
-      });
-      const instance = new Component();
-      instance.$mount();
-      this.$refs.dynamicContent.appendChild(instance.$el);
-    },
-
     // 不显示根节点时的格式化方法
-    formatChildren(children, prefix = '', _isParentLast = true) {
-      if (!children || children.length === 0) return '';
+    formatChildren(children, prefix = '') {
+      if (!children || children.length === 0) return [];
 
-      let result = '';
+      const result = [];
 
       children.forEach((child, index) => {
         const isLast = index === children.length - 1;
         const connector = isLast ? '└─ ' : '├─ ';
 
-        if (child.tag) {
-          const icon = '<i class="paasng-icon paasng-info-line ml10" v-bk-tooltips="config" />';
-          result += `<span class="mark">${prefix}${connector}${child.name}${icon}</span>\n`;
-        } else {
-          result += `${prefix}${connector}${child.name}\n`;
-        }
+        result.push({ text: `${prefix}${connector}${child.name}`, tag: child.tag });
 
         // 递归处理子节点
         if (child.children && child.children.length > 0) {
           const childPrefix = prefix + (isLast ? '   ' : '│  ');
-          result += this.formatChildren(child.children, childPrefix, isLast);
+          result.push(...this.formatChildren(child.children, childPrefix));
         }
       });
 

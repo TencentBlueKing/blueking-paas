@@ -317,6 +317,13 @@ class TestStartup:
         moved = _take_remote_offline(bare_remote)
         (workspace_dir / "app.py").write_text("unpushed\n")
         sha = await commit_turn(first, run_id="run-1", conversation_id="conv-1")
+        # aclose() cancels the background task but not the git push already handed to a
+        # worker thread. Wait until that attempt has failed against the missing remote
+        # before putting the directory back, or the abandoned push and the next Runtime
+        # create refs/heads/main at the same time.
+        async with asyncio.timeout(10):
+            while first.status.push_failures == 0:  # noqa: ASYNC110
+                await asyncio.sleep(0.01)
         await first.aclose()
         moved.rename(bare_remote)
 

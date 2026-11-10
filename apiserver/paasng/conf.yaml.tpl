@@ -701,6 +701,9 @@ BK_CI_CLIENT_USERNAME = "blueking"
 ## 插件开发中心在权限中心注册的系统 ID
 # IAM_PLUGINS_CENTER_SYSTEM_ID: bk_plugins
 
+## 是否跳过插件开发中心的权限模型注册，只影响插件开发中心，不影响开发者中心自身（见 BK_IAM_SKIP）
+# BK_PLUGINS_IAM_SKIP: false
+
 ## 是否在开发者中心应用列表中展示插件应用
 # DISPLAY_BK_PLUGIN_APPS: true
 

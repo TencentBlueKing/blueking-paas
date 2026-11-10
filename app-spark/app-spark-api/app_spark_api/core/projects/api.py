@@ -41,9 +41,9 @@ from app_spark_api.core.projects.models import Project, ProjIntRenaming
 from app_spark_api.core.shortcuts import aget_project_or_404
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.entities import ERROR_RESPONSES
-from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
 from app_spark_api.infras.accounts.credentials import get_user_credential
+from app_spark_api.utils.api_errors.error_codes import error_codes
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -114,12 +114,14 @@ async def get_project_int_renaming(request: HttpRequest, project_id: str = PROJE
     """查询一个项目的自动命名任务。
 
     只有用 `POST /projects/-/create-from-prompt/` 创建的项目有这个任务；手动创建的项目没有，
-    返回 404。前端在创建后轮询本接口，直到 `status` 不再是 `pending`。
+    返回 404。前端在创建后轮询本接口，直到 `status` 不再是 `pending`；任务迟迟没有结论时，本接口会把它
+    记为 `failed`，轮询总能结束。
     """
     project = await aget_project_or_404(request, project_id)
     record = await ProjIntRenaming.objects.filter(project_id=project.pk).afirst()
     if record is None:
         raise error_codes.PROJECT_INT_RENAMING_NOT_FOUND
+    await record.fail_if_overdue()
     return record
 
 

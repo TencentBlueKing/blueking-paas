@@ -1,16 +1,16 @@
 <template>
   <header class="app-header">
-    <router-link
+    <component
+      :is="brandTarget"
       class="app-header__brand"
-      :to="{ name: 'home' }"
-      aria-label="返回 App-Spark 首页"
+      v-bind="brandAttrs"
     >
       <span class="brand-mark" aria-hidden="true">
         <i class="brand-mark__spark" />
         <i class="brand-mark__spark is-small" />
       </span>
-      <span class="app-header__name">App-<em>Spark</em></span>
-    </router-link>
+      <span class="app-header__name">App<em>Spark</em></span>
+    </component>
     <div class="app-header__actions">
       <UserInfo />
     </div>
@@ -18,7 +18,19 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { RouterLink, useRoute } from 'vue-router';
 import UserInfo from '@/components/user-info.vue';
+
+const route = useRoute();
+const isHome = computed(() => route.name === 'home');
+const brandTarget = computed(() => isHome.value ? 'div' : RouterLink);
+const brandAttrs = computed(() => isHome.value
+  ? {}
+  : {
+    to: { name: 'home' },
+    'aria-label': '返回 AppSpark 首页',
+  });
 </script>
 
 <style lang="postcss" scoped>
@@ -41,6 +53,10 @@ import UserInfo from '@/components/user-info.vue';
   padding: 0 16px;
   color: #fff;
   text-decoration: none;
+}
+
+.app-header__brand:not(a) {
+  cursor: default;
 }
 
 .brand-mark {
@@ -108,8 +124,11 @@ import UserInfo from '@/components/user-info.vue';
 }
 
 .app-header__name em {
-  color: #9db4ff;
+  color: #8aa8ff;
   font-style: normal;
+  background: linear-gradient(90deg, #8fd0ea 0%, #8aa8ff 100%);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .app-header__actions {

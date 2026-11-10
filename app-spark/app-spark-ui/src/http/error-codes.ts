@@ -12,8 +12,18 @@ export const ApiErrorCode = {
   CONVERSATION_CLOSED: 'CONVERSATION_CLOSED',
   /** 同项目里已有别的会话占着 workspace，新会话拉不起自己的 Agent Runtime。 */
   AGENT_WORKSPACE_BUSY: 'AGENT_WORKSPACE_BUSY',
+  /** 工作区应用的端口被不是 Runtime 拉起的进程占着，预览拉不起来。 */
+  PREVIEW_PORT_TAKEN: 'PREVIEW_PORT_TAKEN',
   /** 用户选择的模型已经不在当前推荐目录中，需要刷新目录并重新选择。 */
   MODEL_NOT_AVAILABLE: 'MODEL_NOT_AVAILABLE',
+  /** 当前项目还没有可发布的代码检查点。 */
+  PUBLICATION_NO_VERSION: 'PUBLICATION_NO_VERSION',
+  /** 首次发布时填写的应用名称过滤后为空。 */
+  PUBLICATION_APP_NAME_INVALID: 'PUBLICATION_APP_NAME_INVALID',
+  /** 开发者中心拒绝创建应用或提交部署。 */
+  PUBLICATION_SUBMIT_FAILED: 'PUBLICATION_SUBMIT_FAILED',
+  /** 当前项目已经有发布任务进行中，需要重新查询任务状态。 */
+  PUBLICATION_TASK_IN_PROGRESS: 'PUBLICATION_TASK_IN_PROGRESS',
 } as const;
 
 /** 判断一个异常是否为指定业务错误码的接口错误。 */

@@ -25,6 +25,7 @@
 </template>
 
 <script>
+import { escape } from 'lodash';
 import TreeTextDisplay from '@/components/tree-text-display';
 
 export default {
@@ -50,15 +51,15 @@ export default {
     dockerfileTips() {
       return !this.rootPath
         ? this.$t('在根目录下执行如下命令构建镜像：')
-        : this.$t('在 <i>{p}</i> 目录下执行如下命令构建镜像：', { p: this.rootPath });
+        : this.$t('在 <i>{p}</i> 目录下执行如下命令构建镜像：', { p: escape(this.rootPath) });
     },
     tipConfig() {
       return {
         theme: 'light',
         extCls: 'dockerfile-tips-cls',
-        html: `<p class="paas-example-tips">${this.dockerfileTips}</p>
+        content: `<p class="paas-example-tips">${this.dockerfileTips}</p>
         <p class="paas-example-tips">docker build . -f ${
-  this.appendPath ? this.appendPath : 'Dockerfile'
+  escape(this.appendPath || 'Dockerfile')
 } imagename</p>`,
       };
     },

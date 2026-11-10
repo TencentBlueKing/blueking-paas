@@ -166,8 +166,11 @@ const openRename = (project: ProjectResponse) => {
   renameVisible.value = true;
 };
 
-const handleRenamed = (name: string) => {
-  if (renamingProject.value) renamingProject.value.name = name;
+const handleRenamed = (renamed: ProjectResponse) => {
+  projects.value = projects.value.map(project => (
+    project.id === renamed.id ? renamed : project
+  ));
+  renamingProject.value = renamed;
 };
 
 const handleDeleted = async () => {

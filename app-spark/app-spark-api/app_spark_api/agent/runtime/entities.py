@@ -223,7 +223,7 @@ class BkAidevModelConfig:
     """Defaults for a Runtime that calls bkaidev.
 
     The LLM base URL and the access_token exchange endpoint are not configured here: the former
-    is built from BK_API_URL_TMPL and APIGW_ENVIRONMENT, the latter is TOKEN_AUTH_ENDPOINT. The
+    is built from BK_API_URL_TMPL and BKAIDEV_APIGW_ENVIRONMENT, the latter is TOKEN_AUTH_ENDPOINT. The
     app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
 
     :param default_model_id: The preferred default model, injected as the Runtime's MODEL_ID
@@ -380,6 +380,8 @@ class RuntimeHealth:
         application -- ``not_started``, ``starting``, ``ready``, or ``stopped``, or ``None`` when
         it reported no status. Forwarded rather than interpreted: this service has no opinion on
         the names.
+    :param model_ready: Whether the model variables the Runtime was started with add up to a
+        model it can call. A Runtime that says no answers every turn with ``503``.
     """
 
     model: str
@@ -391,6 +393,7 @@ class RuntimeHealth:
     replication_pending: bool = False
     dev_server_status: str | None = None
     run_id: str | None = None
+    model_ready: bool = True
 
     @classmethod
     def from_payload(cls, payload: Any) -> RuntimeHealth:
@@ -416,6 +419,7 @@ class RuntimeHealth:
                     None if payload["dev_server_status"] is None else str(payload["dev_server_status"])
                 ),
                 run_id=None if payload["run_id"] is None else str(payload["run_id"]),
+                model_ready=bool(payload["model_ready"]),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise AgentUnavailableError(f"Unreadable /health response: {exc}") from exc

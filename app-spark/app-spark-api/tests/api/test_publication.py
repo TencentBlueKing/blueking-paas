@@ -18,13 +18,16 @@
 
 from http import HTTPStatus
 
+import httpx2
 import pytest
+from django.db import IntegrityError
 from django.utils import timezone
 
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.infras.bk_paas import BkPaaSApiError, BkPaaSClient
-from app_spark_api.publication.models import DevCenterAppBinding, PublicationTask
+from app_spark_api.publication import steps
+from app_spark_api.publication.models import BkPaaSAppBinding, PublicationTask
 from app_spark_api.publication.packaging import PackagedSource
 from tests.helpers import create_user
 from tests.publication.fake import FakeBkPaaSClient
@@ -55,7 +58,7 @@ def packager(monkeypatch, settings) -> None:
 
 
 @pytest.fixture(autouse=True)
-def dev_center(monkeypatch) -> FakeBkPaaSClient:
+def bkpaas(monkeypatch) -> FakeBkPaaSClient:
     """Answer the developer center calls made within the request, and keep polls off RabbitMQ."""
     fake = FakeBkPaaSClient()
     monkeypatch.setattr(BkPaaSClient, "from_settings", lambda: fake)
@@ -89,7 +92,7 @@ async def test_an_unpublished_project_has_nothing_to_show(aapi_client, owned_pro
         "app_code": None,
         # 预填项目名称，按开发者中心的规则去掉空格。
         "default_app_name": "SparkDemo",
-        "dev_center_links": None,
+        "bkpaas_links": None,
         "latest_version_id": "v2",
     }
 
@@ -116,18 +119,18 @@ async def test_a_project_without_versions_cannot_be_published(aapi_client, owned
     assert not await PublicationTask.objects.filter(project=owned_project).aexists()
 
 
-async def test_deploying_creates_the_app_and_leaves_packing_to_celery(aapi_client, owned_project, bk_user, dev_center):
+async def test_deploying_creates_the_app_and_leaves_packing_to_celery(aapi_client, owned_project, bk_user, bkpaas):
     response = await post_deployment(aapi_client)
 
     # 返回时只建好了应用，打包、部署交给 Celery。没指定时应用 ID、名称取项目的。
     assert response.status_code == HTTPStatus.ACCEPTED
     assert response.json()["task"]["stage"] == "packaging"
-    (create,) = dev_center.called("create_app")
+    (create,) = bkpaas.called("create_app")
     assert (create["code"], create["name"], create["operator"]) == ("spark-demo", "SparkDemo", bk_user.username)
 
 
 async def test_a_bound_project_ignores_the_app_code_and_name(aapi_client, owned_project):
-    await DevCenterAppBinding.objects.acreate(project=owned_project, app_code="sparkdemo-a1b2", module_name="default")
+    await BkPaaSAppBinding.objects.acreate(project=owned_project, app_code="sparkdemo-a1b2", module_name="default")
 
     response = await post_deployment(aapi_client, app_name="!!!")
 
@@ -153,14 +156,52 @@ async def test_a_deployment_that_cannot_start_leaves_the_first_task_alone(
     assert [t.version_id async for t in PublicationTask.objects.filter(project=owned_project)] == ["v2"]
 
 
-async def test_a_failed_submission_answers_with_the_reason(aapi_client, owned_project, dev_center):
-    dev_center.queue("create_app", BkPaaSApiError(400, "应用 ID 已存在", fields_detail={"code": ["已存在"]}))
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        # 开发者中心按业务规则拒绝：用户看了原因自己能处理。
+        (
+            BkPaaSApiError(400, "应用 ID 已存在", fields_detail={"code": ["已存在"]}),
+            (HTTPStatus.BAD_REQUEST, {"code": "PUBLICATION_SUBMIT_FAILED", "detail": "应用 ID 已存在"}),
+        ),
+        # 开发者中心不可用：不是用户的错，稍后重试。
+        (
+            httpx2.ConnectError("refused"),
+            (
+                HTTPStatus.BAD_GATEWAY,
+                {"code": "PUBLICATION_BKPAAS_UNAVAILABLE", "detail": steps.MSG_BKPAAS_UNAVAILABLE},
+            ),
+        ),
+        # 没获得开发者中心授权：要管理员处理。
+        (
+            BkPaaSApiError(403, "x", code="SYSAPI_CLIENT_PERM_DENIED"),
+            (
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                {"code": "PUBLICATION_BKPAAS_MISCONFIGURED", "detail": steps.MSG_NOT_AUTHORIZED},
+            ),
+        ),
+    ],
+)
+async def test_a_failed_submission_answers_with_the_reason(aapi_client, owned_project, bkpaas, error, expected):
+    """expected is the status code and body of the answer."""
+    bkpaas.queue("create_app", error)
 
     response = await post_deployment(aapi_client)
 
-    assert response.status_code == HTTPStatus.BAD_REQUEST
-    assert response.json() == {"code": "PUBLICATION_SUBMIT_FAILED", "detail": "应用 ID 已存在"}
+    assert (response.status_code, response.json()) == expected
     assert (await aapi_client.get(URL)).json()["task"] is None
+
+
+async def test_an_internal_failure_while_submitting_answers_500(aapi_client, owned_project, monkeypatch):
+    def fail_to_record(project, app):
+        raise IntegrityError("Duplicate entry for key project_id")
+
+    monkeypatch.setattr("app_spark_api.publication.steps.binding._record_app", fail_to_record)
+
+    response = await post_deployment(aapi_client)
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert response.json()["code"] == "PUBLICATION_INTERNAL_ERROR"
 
 
 async def make_finished_task(project, status: str, **fields) -> PublicationTask:
@@ -184,8 +225,8 @@ async def test_deleting_the_unseen_result_clears_it(aapi_client, owned_project):
     assert (await aapi_client.get(URL)).json()["unseen_result"] is None
 
 
-async def test_a_published_project_shows_its_url_failure_and_dev_center_links(aapi_client, owned_project):
-    await DevCenterAppBinding.objects.acreate(project=owned_project, app_code="sparkdemo-a1b2", module_name="default")
+async def test_a_published_project_shows_its_url_failure_and_bkpaas_links(aapi_client, owned_project):
+    await BkPaaSAppBinding.objects.acreate(project=owned_project, app_code="sparkdemo-a1b2", module_name="default")
     await make_finished_task(
         owned_project, "successful", version_id="v2", access_url="https://apps.example.com/sparkdemo-a1b2/"
     )
@@ -195,7 +236,7 @@ async def test_a_published_project_shows_its_url_failure_and_dev_center_links(aa
 
     assert (body["online"]["version_id"], body["online"]["url"]) == ("v2", "https://apps.example.com/sparkdemo-a1b2/")
     assert body["last_failure"]["error"] == "Procfile error"
-    assert body["dev_center_links"]["deployments"] == (
+    assert body["bkpaas_links"]["deployments"] == (
         "https://bkpaas.example.com/developer-center/apps/sparkdemo-a1b2/deployments/prod"
     )
 

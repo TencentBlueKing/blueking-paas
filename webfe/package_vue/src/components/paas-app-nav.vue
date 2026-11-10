@@ -98,6 +98,7 @@ export default {
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
           'appCloudAPI', // 云 API 权限管理
+          'agentSandbox', // Agent 沙箱
           'operationRecord', // 操作记录
         ],
 
@@ -111,6 +112,7 @@ export default {
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
           'appCloudAPI', // 云 API 权限管理
+          'agentSandbox', // Agent 沙箱
           'operationRecord', // 操作记录
         ],
 
@@ -197,7 +199,8 @@ export default {
             if (nav.name === 'appMarketing') {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
             }
-            return ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI', 'operationRecord'].includes(nav.name);
+            return ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI', 'agentSandbox', 'operationRecord']
+              .includes(nav.name);
           });
         }
 
@@ -337,6 +340,9 @@ export default {
           }
         }
       });
+      if (allowRouters.includes('agentSandbox')) {
+        this.allowedRouterName.push('agentSandboxTemplateDetail');
+      }
     },
 
     /**

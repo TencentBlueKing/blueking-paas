@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 
 import pytest
@@ -33,6 +33,7 @@ from app_spark_api.core.projects import constants, services, tasks
 from app_spark_api.core.projects.models import Project, ProjIntRenaming
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.publication.models import PublicationTask
+from app_spark_api.publication.steps import MSG_PROJECT_DELETED
 from app_spark_api.repository.git.models import ProjectSourcePackage
 from tests.helpers import create_user
 from tests.repository.storage.fake_bkrepo import SOURCE_PACKAGES_BUCKET
@@ -287,13 +288,47 @@ async def test_creating_from_a_prompt_retries_with_another_id_when_the_generated
     assert response.json()["project"]["id"] == "p-free"
 
 
-@pytest.mark.parametrize("content", ["", "x" * (MAX_RUN_CONTENT_LENGTH + 1)])
-async def test_a_prompt_the_runs_endpoint_would_refuse_creates_nothing(aapi_client, content):
+@pytest.mark.parametrize("content", ["", " \n\t ", "x" * (MAX_RUN_CONTENT_LENGTH + 1)])
+async def test_an_unusable_prompt_creates_nothing(aapi_client, content):
     response = await create_from_prompt_via_api(aapi_client, content)
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     assert response.json()["code"] == "VALIDATION_ERROR"
     assert not await Project.default_objects.aexists()
+
+
+async def test_a_refused_prompt_says_which_field_failed_and_why(aapi_client):
+    response = await aapi_client.post(FROM_PROMPT_URL, data={}, content_type="application/json")
+
+    body = response.json()
+    assert body["detail"] == "Request validation failed: body.content: Field required"
+    # `content` sits at the top of the body; the view's parameter name is not part of the location.
+    assert body["data"] == [{"loc": ["body", "content"], "msg": "Field required", "type": "missing"}]
+
+
+async def test_every_refused_field_is_reported(aapi_client):
+    response = await aapi_client.post(PROJECTS_URL, data={"id": "Bad Id"}, content_type="application/json")
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert [error["loc"] for error in response.json()["data"]] == [["body", "id"], ["body", "name"]]
+    assert "body.id: String should match pattern" in response.json()["detail"]
+    assert response.json()["detail"].endswith("; body.name: Field required")
+
+
+async def test_a_refused_pagination_parameter_is_located_in_the_query(aapi_client):
+    """Pagination arrives as one flattened Schema; the location is the query key the caller sent."""
+    response = await aapi_client.get(PROJECTS_URL, {"page": "first"})
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert [error["loc"] for error in response.json()["data"]] == [["query", "page"]]
+    assert response.json()["detail"].startswith("Request validation failed: query.page: ")
+
+
+async def test_a_refused_path_parameter_is_located_in_the_path(aapi_client):
+    response = await aapi_client.get(f"{PROJECTS_URL}Bad-Id/int-renaming/")
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert [error["loc"] for error in response.json()["data"]] == [["path", "project_id"]]
 
 
 def test_generated_ids_and_the_collection_actions_segment_respect_the_id_pattern():
@@ -359,6 +394,21 @@ async def test_polling_reports_a_pending_renaming(aapi_client, bk_user):
         "error_at": None,
         "error_msg": "",
     }
+
+
+async def test_polling_fails_a_renaming_that_is_overdue(aapi_client, bk_user):
+    """A task lost by its worker never finishes by itself; polling must still come to an end."""
+    project = await make_project(
+        project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id
+    )
+    await ProjIntRenaming.objects.acreate(project=project)
+    overdue = timezone.now() - constants.INT_RENAMING_TIMEOUT - timedelta(seconds=1)
+    await ProjIntRenaming.objects.filter(project=project).aupdate(created_at=overdue)
+
+    body = (await aapi_client.get(int_renaming_url("spark-demo"))).json()
+
+    assert (body["status"], body["error_msg"]) == ("failed", ProjIntRenaming.TIMED_OUT_MESSAGE)
+    assert body["error_at"] is not None
 
 
 async def test_polling_reports_the_generated_name(aapi_client, bk_user):
@@ -609,7 +659,7 @@ async def test_deleting_a_project_ends_its_running_publication(aapi_client, bk_u
     # 任务结束后，准备任务不会再把已删除的项目部署上去。
     assert response.status_code == HTTPStatus.NO_CONTENT
     await task.arefresh_from_db()
-    assert (task.status, task.error) == ("failed", "Project deleted")
+    assert (task.status, task.error) == ("failed", MSG_PROJECT_DELETED)
 
 
 async def test_deleting_a_project_deletes_its_source_packages(aapi_client, bk_user, deletion_provider, fake_bkrepo):
@@ -769,12 +819,14 @@ async def test_a_timed_out_repository_cleanup_is_retryable(aapi_client, bk_user,
         await asyncio.sleep(60)
 
     monkeypatch.setattr(services, "adelete_project_repository", wait_for_repository)
-    monkeypatch.setattr(constants, "DELETE_PROJECT_TIMEOUT_SECONDS", 0.01)
+    # 超时罩住整个删除流程。仓库之前还有通知后台任务、关会话、清会话数据这几步，要给它们留够时间，
+    # 否则超时落在前面那几步上，测的就不是仓库了。
+    monkeypatch.setattr(constants, "DELETE_PROJECT_TIMEOUT_SECONDS", 1)
     started_at = asyncio.get_running_loop().time()
 
     response = await delete_via_api(aapi_client, "spark-demo")
 
-    assert asyncio.get_running_loop().time() - started_at < 1
+    assert asyncio.get_running_loop().time() - started_at < 5
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
     assert "repository" in response.json()["detail"]
     project = await Project.objects.aget(pk="spark-demo")

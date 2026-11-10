@@ -14,7 +14,13 @@ import type {
   PagedProjectResponse,
   PageQuery,
   PreviewResponse,
-  ProjectCreateRequest,
+  PreviewStartResponse,
+  PublicationDeploymentRequest,
+  PublicationResponse,
+  ProjectFromPromptRequest,
+  ProjectFromPromptResponse,
+  ProjectIntRenamingResponse,
+  ProjectRenameRequest,
   ProjectResponse,
   RuntimeStateResponse,
   StartRunRequest,
@@ -44,7 +50,19 @@ export type {
   PagedResponse,
   PageQuery,
   PreviewResponse,
-  ProjectCreateRequest,
+  PreviewStartResponse,
+  PublicationDeploymentRequest,
+  PublicationDevCenterLinks,
+  PublicationFailure,
+  PublicationOnlineVersion,
+  PublicationResponse,
+  PublicationTask,
+  PublicationTaskStage,
+  PublicationUnseenResult,
+  ProjectFromPromptRequest,
+  ProjectFromPromptResponse,
+  ProjectIntRenamingResponse,
+  ProjectRenameRequest,
   ProjectResponse,
   RuntimeStateResponse,
   StartRunRequest,
@@ -69,13 +87,61 @@ export const listProjects = (query: PageQuery = {}): Promise<PagedProjectRespons
   http.get(`${apiPrefix}/projects/`, query)
 );
 
-export const createProject = (payload: ProjectCreateRequest): Promise<ProjectResponse> => (
-  http.post(`${apiPrefix}/projects/`, payload)
+/** 用用户的第一句话创建项目及承接首轮消息的会话。 */
+export const createProjectFromPrompt = (
+  payload: ProjectFromPromptRequest,
+): Promise<ProjectFromPromptResponse> => (
+  http.post(`${apiPrefix}/projects/-/create-from-prompt/`, payload, { globalError: false })
+);
+
+/** 查询从第一句话创建项目后触发的后台智能命名任务。 */
+export const getProjectIntRenaming = (
+  projectId: string,
+): Promise<ProjectIntRenamingResponse> => (
+  http.get(
+    `${apiPrefix}/projects/${projectId}/int-renaming/`,
+    {},
+    { globalError: false },
+  )
+);
+
+/** 修改当前用户自己的项目名称；名称不要求唯一。 */
+export const renameProject = (
+  projectId: string,
+  payload: ProjectRenameRequest,
+): Promise<ProjectResponse> => (
+  http.post(`${apiPrefix}/projects/${projectId}/rename/`, payload, { globalError: false })
 );
 
 /** 删除项目。无请求体；成功后列表不再返回该项目。失败文案由确认框展示。 */
 export const deleteProject = (projectId: string): Promise<void> => (
   http.delete(`${apiPrefix}/projects/${projectId}/`, {}, { globalError: false })
+);
+
+/** 项目在开发者中心的发布状态；发布进行中时由调用方每 3 秒轮询。 */
+export const getPublication = (projectId: string): Promise<PublicationResponse> => (
+  http.get(`${apiPrefix}/projects/${projectId}/publication/`, {}, { globalError: false })
+);
+
+/** 发布当前工作区最新版本。已发布项目调用同一接口即为更新版本。 */
+export const createPublicationDeployment = (
+  projectId: string,
+  payload: PublicationDeploymentRequest = {},
+): Promise<PublicationResponse> => (
+  http.post(
+    `${apiPrefix}/projects/${projectId}/publication/deployments/`,
+    payload,
+    { globalError: false },
+  )
+);
+
+/** 结果页展示并关闭后确认已读，之后不会再次展示一次性结果。 */
+export const clearPublicationUnseenResult = (projectId: string): Promise<void> => (
+  http.delete(
+    `${apiPrefix}/projects/${projectId}/publication/unseen-result/`,
+    {},
+    { globalError: false },
+  )
 );
 
 /**
@@ -118,6 +184,24 @@ export const getConversationPreview = (
 ): Promise<PreviewResponse> => (
   http.get(
     `${apiPrefix}/projects/${projectId}/conversations/${number}/preview/`,
+    {},
+    { globalError: false },
+  )
+);
+
+/**
+ * 把会话的工作区应用拉起来，不等就绪就返回。
+ *
+ * 进入已有代码的项目时用：没有一轮对话，模型不会去拉起应用，预览会一直空着。会按需拉起 Agent
+ * Runtime 并恢复工作区，可能要几秒到几十秒。应用已在跑就不动它，重复调用安全。是否起来了照常看
+ * `getConversationPreview` 的 `dev_server_status`。失败不影响对话，所以关掉全局报错。
+ */
+export const startConversationPreview = (
+  projectId: string,
+  number: number,
+): Promise<PreviewStartResponse> => (
+  http.post(
+    `${apiPrefix}/projects/${projectId}/conversations/${number}/preview/start/`,
     {},
     { globalError: false },
   )

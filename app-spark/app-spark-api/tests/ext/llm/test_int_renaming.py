@@ -56,7 +56,7 @@ class TestGeneratedProjectName:
     def test_strips_decoration(self, name, expected):
         assert GeneratedProjectName(name=name).name == expected
 
-    @pytest.mark.parametrize("name", [None, "", "   \n  ", "「」。"])
+    @pytest.mark.parametrize("name", [None, "", "   \n  ", "「」。", "留空", "「无」", "null", "None"])
     def test_nothing_usable_is_no_name(self, name):
         assert GeneratedProjectName(name=name).name is None
 

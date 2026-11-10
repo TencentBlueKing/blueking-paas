@@ -1,0 +1,47 @@
+# This workflow will build sandbox daemon binaries and upload them to the release
+name: release-sandbox-daemon
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  release-sandbox-daemon:
+    runs-on: ubuntu-latest
+    # tag_name 需要以 sandbox-daemon- 为前缀，如 sandbox-daemon-v0.2.2，去掉前缀后的版本号需与 daemon 镜像 tag 一致
+    if: github.event.release && startsWith(github.event.release.tag_name, 'sandbox-daemon-')
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+    defaults:
+      run:
+        working-directory: sandbox/daemon
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: sandbox/daemon/go.mod
+          cache-dependency-path: sandbox/daemon/go.sum
+
+      - name: build daemon
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.goarch }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          make build VERSION="${TAG_NAME#sandbox-daemon-}"
+          asset="${TAG_NAME}-linux-${GOARCH}"
+          mv build/daemon "build/${asset}"
+          (cd build && sha256sum "${asset}" > "${asset}.sha256")
+
+      - name: upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.REPO_RELEASE_ACCESS_TOKEN }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          asset="${TAG_NAME}-linux-${{ matrix.goarch }}"
+          gh release upload "${TAG_NAME}" "build/${asset}" "build/${asset}.sha256" --clobber

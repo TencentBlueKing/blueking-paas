@@ -511,6 +511,13 @@ AGENT_CONTEXT_STORAGE = settings.get(
     {"backend": "host_tmp_path", "root": "/tmp/app-spark/agent-contexts"},
 )
 
+## 会话里用户上传的图片附件存哪儿，字段与 AGENT_CONTEXT_STORAGE 相同。附件的元数据在数据库里，
+## 字节在这里；前端预览和 Agent 取图都经本服务读出，不对外签发存储地址。
+AGENT_ATTACHMENT_STORAGE = settings.get(
+    "AGENT_ATTACHMENT_STORAGE",
+    {"backend": "host_tmp_path", "root": "/tmp/app-spark/agent-attachments"},
+)
+
 ## 一个会话保留多少个最近的上下文版本。每一版单独存一份 blob（写入因此不用加锁、也不用维护
 ## 「最新」指针），代价是版本会累积，所以要有保留上限。冷启动只读最新一版，多留的几版是排障和
 ## 人工恢复的余量。

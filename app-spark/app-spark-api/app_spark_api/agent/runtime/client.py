@@ -49,9 +49,9 @@ PREVIEW_NO_PROJECT_CODE = "no_project"
 PREVIEW_PORT_TAKEN_CODE = "port_taken"
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Sequence
 
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle
+    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, ImageInput
 
 # What the AG-UI protocol asks for when it wants the event stream rather than a buffered body.
 SSE_HEADERS = {"Accept": "text/event-stream", "Content-Type": "application/json"}
@@ -286,19 +286,21 @@ class AgentRuntimeClient:
         context_version: int,
         run_id: str | None = None,
         model_id: str | None = None,
+        images: Sequence[ImageInput] = (),
     ) -> AgentRun:
         """Submit one conversation turn and return its still-open event stream.
 
         Only the new user message is sent. The Runtime owns the history and rejects anything a
         client tries to resend, so there is nothing here to keep in step with it.
 
-        :param content: The user's message for this turn.
+        :param content: The user's message for this turn; may be empty when images are sent.
         :param context_version: Version read from ``/health`` immediately beforehand. Compaction
             can move it in the middle of a run, so a value carried over from an earlier turn is
             not good enough.
         :param run_id: Identifier for this turn; a fresh UUID when omitted. The Runtime refuses
             a replayed one.
         :param model_id: Model to run this turn on; None leaves the Runtime on its default.
+        :param images: Images sent with this turn, as references the Runtime resolves itself.
         :return: The accepted run.
         :raises AgentBusyError: If a run is already occupying the Runtime.
         :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the turn.
@@ -315,7 +317,7 @@ class AgentRuntimeClient:
             "threadId": self.handle.conversation_id,
             "runId": run_id,
             "state": {},
-            "messages": [{"id": str(uuid4()), "role": "user", "content": content}],
+            "messages": [{"id": str(uuid4()), "role": "user", "content": _build_user_content(content, images)}],
             "tools": [],
             "context": [],
             "forwardedProps": forwarded_props,
@@ -443,6 +445,24 @@ class AgentRuntimeClient:
                 return str(detail["message"])
             return str(detail)
         return response.text[:200]
+
+
+def _build_user_content(content: str, images: Sequence[ImageInput]) -> str | list[dict[str, Any]]:
+    """Return the AG-UI user message content for a turn's text and images.
+
+    A turn without images keeps sending a plain string, so a text-only conversation produces
+    exactly the request body it always did.
+    """
+    if not images:
+        return content
+
+    # content 为空时不带 text 段，否则模型的用户内容里会多一个空字符串。
+    parts: list[dict[str, Any]] = [{"type": "text", "text": content}] if content.strip() else []
+    parts.extend(
+        {"type": "image", "source": {"type": "url", "value": image.url, "mimeType": image.mime_type}}
+        for image in images
+    )
+    return parts
 
 
 def _refusal_code(response: httpx2.Response) -> str:

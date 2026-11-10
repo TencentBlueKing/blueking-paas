@@ -5,14 +5,23 @@ to act on: a single new user turn. The trusted history comes from the Runtime's 
 no display history, tool list, or system prompt submitted by the caller ever reaches the model.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
 from uuid import UUID
 
-from ag_ui.core import RunAgentInput, UserMessage
+from ag_ui.core import (
+    ImageInputContent,
+    InputContent,
+    InputContentUrlSource,
+    RunAgentInput,
+    TextInputContent,
+    UserMessage,
+)
 from fastapi import HTTPException, Request, status
 from starlette.types import Message
 
+from app_spark_agent.attachments import IMAGE_MEDIA_TYPES, parse_attachment_id
 from app_spark_agent.state import AppendLog, ConversationContext
 
 
@@ -96,10 +105,10 @@ def prepare_run(
         (message for message in reversed(run_input.messages) if isinstance(message, UserMessage)),
         None,
     )
-    if user_message is None or not isinstance(user_message.content, str):
-        raise HTTPException(status_code=422, detail="A text user message is required.")
-    if not user_message.content.strip():
-        raise HTTPException(status_code=422, detail="The user message cannot be empty.")
+    if user_message is None:
+        raise HTTPException(status_code=422, detail="A user message is required.")
+
+    _check_user_content(user_message.content)
 
     filtered_input = run_input.model_copy(
         update={
@@ -120,6 +129,40 @@ def prepare_run(
         body=filtered_input.model_dump_json(by_alias=True).encode(),
         model_id=model_id,
     )
+
+
+def _check_user_content(content: str | Sequence[InputContent]) -> None:
+    """Refuse user content other than text and images referenced as app-spark-attachment://."""
+    if isinstance(content, str):
+        if not content.strip():
+            raise HTTPException(status_code=422, detail="The user message cannot be empty.")
+
+        return
+
+    has_input = False
+    for part in content:
+        if isinstance(part, TextInputContent):
+            has_input = has_input or bool(part.text.strip())
+            continue
+
+        # 图片只认控制面签发的附件引用。外部 URL 会让 Agent 替调用方去拉任意地址，内联 data
+        # 会把字节带进上下文，两者都不放行。
+        if (
+            isinstance(part, ImageInputContent)
+            and isinstance(part.source, InputContentUrlSource)
+            and parse_attachment_id(part.source.value) is not None
+            and part.source.mime_type in IMAGE_MEDIA_TYPES
+        ):
+            has_input = True
+            continue
+
+        raise HTTPException(
+            status_code=422,
+            detail="Only text and app-spark-attachment image references are accepted.",
+        )
+
+    if not has_input:
+        raise HTTPException(status_code=422, detail="The user message cannot be empty.")
 
 
 def _read_model_id(forwarded_props: dict[str, object]) -> str | None:

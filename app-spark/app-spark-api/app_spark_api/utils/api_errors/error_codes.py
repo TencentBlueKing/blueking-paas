@@ -69,6 +69,29 @@ class ErrorCodes:
     RUN_NOT_FOUND = ErrorCode(_("This conversation has no such run."), status_code=HTTPStatus.NOT_FOUND)
     RUN_NOT_RUNNING = ErrorCode(_("This run is not in progress."), status_code=HTTPStatus.CONFLICT)
 
+    # --- Conversation attachments -----------------------------------------------------------------
+    ATTACHMENT_NOT_FOUND = ErrorCode(_("No such attachment in this conversation."), status_code=HTTPStatus.NOT_FOUND)
+    # An attachment rides with exactly one turn; sending it again would put the same image into
+    # the context twice under two different user messages.
+    ATTACHMENT_ALREADY_USED = ErrorCode(
+        _("This attachment has already been sent with another message."), status_code=HTTPStatus.CONFLICT
+    )
+    ATTACHMENT_TOO_LARGE = ErrorCode(
+        _("The image is too large. Please upload one under 5 MB."), status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE
+    )
+    ATTACHMENT_TYPE_UNSUPPORTED = ErrorCode(
+        _("Only PNG, JPEG, GIF and WebP images are supported."), status_code=HTTPStatus.UNPROCESSABLE_ENTITY
+    )
+    ATTACHMENT_STORAGE_UNAVAILABLE = ErrorCode(
+        _("Attachment storage is unavailable. Please retry later."), status_code=HTTPStatus.SERVICE_UNAVAILABLE
+    )
+    # Refused rather than sent without the images: the user would get an answer that ignores what
+    # they showed it, with nothing saying why.
+    MODEL_IMAGE_INPUT_UNSUPPORTED = ErrorCode(
+        _("The selected model cannot read images. Please choose a multimodal model."),
+        status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
     # --- Conversation state write-back ------------------------------------------------------------
     # The Agent Runtime's replication path. The split that matters: `INVALID_` is the Runtime
     # pushing something this service refuses to store, which it can fix by re-sending; the other

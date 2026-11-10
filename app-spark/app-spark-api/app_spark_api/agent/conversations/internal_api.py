@@ -32,9 +32,10 @@ from typing import TYPE_CHECKING, Any
 # a type used in a path parameter cannot live in the TYPE_CHECKING block below.
 from uuid import UUID  # noqa: TC003
 
+from django.http import HttpResponse
 from ninja import Field, Path, Router, Schema
 
-from app_spark_api.agent.conversations import checkpoints, state
+from app_spark_api.agent.conversations import attachments, checkpoints, state
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.conversations.tokens import (
     InvalidStateToken,
@@ -62,6 +63,7 @@ MESSAGES_SEGMENT = "messages"
 UI_EVENTS_SEGMENT = "ui-events"
 CONTEXT_SEGMENT = "context"
 CHECKPOINT_SEGMENT = "checkpoint"
+ATTACHMENTS_SEGMENT = "attachments"
 
 APPEND_MESSAGES_URL_NAME = "internal-append-messages"
 
@@ -252,6 +254,26 @@ async def put_checkpoint(
         state_epoch=conversation.state_epoch,
     )
     return CheckpointResponse()
+
+
+@router.get(
+    f"{{conversation_id}}/state/{ATTACHMENTS_SEGMENT}/{{attachment_id}}/content",
+    response={**ERROR_RESPONSES, HTTPStatus.OK: None},
+    url_name="internal-get-attachment-content",
+    summary="读取会话图片附件的内容",
+)
+async def get_attachment_content(
+    request: HttpRequest,
+    attachment_id: UUID,
+    conversation_id: UUID = CONVERSATION_ID,
+):
+    """把一张附件的字节交给 Runtime，供它在调模型前替换上下文里的附件引用。
+
+    挂在 state 根下面：Runtime 手里只有这一个会话级根地址和 token，token 的校验这里本来就有。
+    """
+    conversation = await _authorized_conversation(request, conversation_id)
+    attachment = await attachments.aget_attachment(conversation, attachment_id)
+    return HttpResponse(await attachments.aread_content(attachment), content_type=attachment.mime_type)
 
 
 async def _append(

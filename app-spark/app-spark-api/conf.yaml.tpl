@@ -157,7 +157,7 @@
 #   commit_author_name: App-Spark
 #   commit_author_email: app-spark@localhost.invalid
 
-## 按条件必填：发布到开发者中心、或 AGENT_CONTEXT_STORAGE.backend 为 bk_repo 时必填。
+## 按条件必填：发布到开发者中心、或 AGENT_CONTEXT_STORAGE / AGENT_ATTACHMENT_STORAGE 的 backend 为 bk_repo 时必填。
 ## 发布用的源码包要签预签名下载地址，只能存在制品库。四个字段都必填。
 # BLOBSTORE_BKREPO_CONFIG:
 #   PROJECT: ''
@@ -276,12 +276,27 @@
 
 ## ---------------------------------- 会话状态 ----------------------------------
 
-## 可选，默认如下。会话上下文存在哪，一份上下文可能有好几 MB，所以存 blob 而不是数据库行。backend 可选：
-## - host_tmp_path：root 为本机父目录，只适合单副本；
-## - bk_repo：root 为制品库通用仓库名，多副本 e2b 必须用它，需要 BLOBSTORE_BKREPO_CONFIG。
+## 可选，默认如下。会话上下文存在哪，一份上下文可能有好几 MB，所以存 blob 而不是数据库行。
+## root 在 host_tmp_path 下是本机父目录，只适合单副本；在 bk_repo 下是通用仓库名，须事先在
+## BLOBSTORE_BKREPO_CONFIG.PROJECT 下建好。对象 key 为
+## conversations/<会话 ID>/v<版本>/context.json。多副本 e2b 必须用 bk_repo，两段示例只启用一段。
 # AGENT_CONTEXT_STORAGE:
 #   backend: host_tmp_path
 #   root: /tmp/app-spark/agent-contexts
+# AGENT_CONTEXT_STORAGE:
+#   backend: bk_repo
+#   root: app-spark-contexts
+
+## 可选，默认如下。会话里用户上传的图片附件存在哪，backend 取值与 AGENT_CONTEXT_STORAGE 相同。
+## root 在 host_tmp_path 下是本机父目录；在 bk_repo 下是通用仓库名，须事先在
+## BLOBSTORE_BKREPO_CONFIG.PROJECT 下建好。对象 key 为 attachments/<会话 ID>/<附件 ID>。
+## 多副本 e2b 必须用 bk_repo，两段示例只启用一段。
+# AGENT_ATTACHMENT_STORAGE:
+#   backend: host_tmp_path
+#   root: /tmp/app-spark/agent-attachments
+# AGENT_ATTACHMENT_STORAGE:
+#   backend: bk_repo
+#   root: app-spark-attachments
 
 ## 可选，默认 5。一个会话保留的最近上下文版本数。小于 1 按 1 算，冷启动只读最新一版。
 # AGENT_CONTEXT_VERSIONS_KEPT: 5

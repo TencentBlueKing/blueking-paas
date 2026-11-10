@@ -295,6 +295,11 @@ COMPACTION_KEEP_MESSAGES = env.int("COMPACTION_KEEP_MESSAGES", 20, validate=Rang
 # 下一步要用的，清掉它们省下的 token 换不回这个代价。
 COMPACTION_KEEP_TOOL_RESULT_PAIRS = env.int("COMPACTION_KEEP_TOOL_RESULT_PAIRS", 3, validate=Range(min=0))
 
+# 最近多少轮用户消息里的图片会以字节发给模型。更早的图片只留一行文字占位：一张图要占上千
+# token，整段历史的图片每次请求都重发一遍，花销随对话长度线性增长，而模型通常只需要看最近的图。
+# 设为 0 则一张都不发。
+ATTACHMENT_IMAGE_TURNS = env.int("ATTACHMENT_IMAGE_TURNS", 2, validate=Range(min=0))
+
 # -----------------------------------------------------------------------
 # 状态回写（复制到控制面）
 # -----------------------------------------------------------------------

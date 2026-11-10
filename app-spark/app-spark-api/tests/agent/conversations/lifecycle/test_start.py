@@ -71,6 +71,7 @@ async def test_a_turn_can_be_stopped_as_soon_as_its_runtime_has_it(provider, con
             context_version: int,
             run_id: str,
             model_id: str | None = None,
+            images: Any = (),
         ) -> FakeRun:
             owned = ConversationUserMessage.objects.filter(conversation=conversation, run_id=run_id)
             owned_when_started.append(await owned.aexists())
@@ -113,6 +114,7 @@ async def test_a_turn_that_names_a_model_reaches_the_runtime(provider, conversat
             context_version: int,
             run_id: str,
             model_id: str | None = None,
+            images: Any = (),
         ) -> FakeRun:
             seen.append(model_id)
             run = FakeRun([])

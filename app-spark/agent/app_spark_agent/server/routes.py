@@ -16,6 +16,7 @@ from starlette.responses import JSONResponse, Response
 from app_spark_agent import VERSION, settings
 from app_spark_agent.agent import build_run_model
 from app_spark_agent.app_supervisor import AppLaunchConflict, AppLaunchFailed
+from app_spark_agent.attachments import ATTACHMENT_URI_SCHEME
 from app_spark_agent.git import GitError
 
 # Imported under a different name: `log` already means "append-only channel" in this module.
@@ -410,6 +411,10 @@ async def _start_run(
         # a single trusted user turn, so no client-supplied system prompt can reach the
         # model.
         manage_system_prompt="client",
+        # The adapter drops client file URLs outside this set, and its default (http, https) would
+        # drop every attachment reference. Only ours is listed: prepare_run has already refused
+        # any other URL, so nothing else should reach the context even if that check regressed.
+        allowed_file_url_schemes=frozenset({ATTACHMENT_URI_SCHEME}),
     )
     # Recorded here rather than inferred from the run's history: the framework merges
     # this turn into a restored trailing request before any capability sees it, and the
@@ -477,7 +482,7 @@ async def _start_run(
         run_id=prepared.run_id,
         # None 时 pydantic-ai 用 agent 构造时的默认模型。
         model=run_model,
-        capabilities=[recorder, stopper],
+        capabilities=[recorder, stopper, runtime.attachment_images],
         on_complete=commit_context,
         on_cancel=commit_stopped_context,
     )

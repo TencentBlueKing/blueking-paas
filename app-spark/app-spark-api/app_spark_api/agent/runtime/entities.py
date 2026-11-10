@@ -194,6 +194,20 @@ class StateCallback:
 
 
 @attrs.frozen
+class ImageInput:
+    """One image sent with a turn, as a reference the Runtime resolves rather than its bytes.
+
+    :param url: A stable reference such as app-spark-attachment://<id>. Never a downloadable
+        address: it is kept in the conversation context and must still mean something long
+        after any signed link would have expired.
+    :param mime_type: The image's MIME type.
+    """
+
+    url: str
+    mime_type: str
+
+
+@attrs.frozen
 class GitRemote:
     """How a Runtime is told to persist its workspace into the Project's repository.
 

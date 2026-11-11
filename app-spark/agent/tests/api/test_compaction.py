@@ -19,7 +19,6 @@ from tests.support.fake_models import probe, summarizing_model, tool_calling_mod
 TINY_TARGET_TOKENS = 40
 
 CLEARED = "[tool result cleared]"
-SUMMARY_PREFIX = "Summary of previous conversation:"
 
 
 def clearing_client(tmp_path: Path, *, rounds: int) -> TestClient:
@@ -103,11 +102,8 @@ def test_summary_enters_the_context_but_never_the_transcript(tmp_path: Path) -> 
         context_messages = get_context(client)["messages"]
         transcript_messages = get_transcript_messages(client)
 
-    context_text = _all_part_content(context_messages)
-    transcript_text = _all_part_content(transcript_messages)
-
-    assert any(text.startswith(SUMMARY_PREFIX) for text in context_text)
-    assert not any(text.startswith(SUMMARY_PREFIX) for text in transcript_text)
+    assert "the agent probed three times" in _compaction_contents(context_messages)
+    assert not _compaction_contents(transcript_messages)
     # The summary replaced the prefix it covers, so the context is now strictly smaller than
     # the conversation the transcript recorded.
     assert len(context_messages) < len(transcript_messages)
@@ -157,12 +153,13 @@ def test_replay_detection_survives_compaction_dropping_the_run(tmp_path: Path) -
     assert "already been committed" in replay.json()["detail"]
 
 
-def _all_part_content(messages: list[dict[str, Any]]) -> list[str]:
+def _compaction_contents(messages: list[dict[str, Any]]) -> list[str]:
+    """Return the summary text of every compaction part in a serialized message list."""
     return [
         part["content"]
         for message in messages
         for part in message.get("parts", [])
-        if isinstance(part.get("content"), str)
+        if part.get("part_kind") == "compaction"
     ]
 
 

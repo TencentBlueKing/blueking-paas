@@ -109,7 +109,7 @@ uv run pytest tests/api/test_health.py
 ### 纯单元
 
 不起 Runtime，也不依赖外部程序：状态原语（`tests/state/`）、模型工具（`tests/tools/`）、应用架构（`tests/app_arch/`）、
-bkaidev 客户端（`tests/bkaidev/`），以及 `tests/` 根目录下的模块级测试。
+bkaidev 鉴权（`tests/bkaidev/`），以及 `tests/` 根目录下的模块级测试。
 
 - `tests/replication/` 用 `httpx2.MockTransport` 在进程内伪造控制面，但状态文件、游标、字节偏移全是真的：
   整套复制的设计就架在「本地文件即 outbox」上。

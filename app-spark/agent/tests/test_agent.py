@@ -8,7 +8,7 @@ from typing import Any, cast
 import httpx2
 import pytest
 from pydantic_ai import Agent
-from pydantic_ai.exceptions import ModelRetry
+from pydantic_ai.capabilities import LocalWorkspace
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.openai import OpenAIChatModel
@@ -36,6 +36,7 @@ from app_spark_agent.agent import (
 )
 from app_spark_agent.bkaidev.auth import BKAPI_AUTHORIZATION_HEADER, OPENAI_API_KEY_PLACEHOLDER
 from tests.support.fake_models import text_model
+from tests.support.file_tools import read_file_result
 
 
 def test_create_agent_scopes_tools_to_workspace(
@@ -45,6 +46,7 @@ def test_create_agent_scopes_tools_to_workspace(
     monkeypatch.setattr(settings, "MODEL_API_KEY", "not-used-by-this-test")
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
+    monkeypatch.setattr(settings, "MODEL_ID", "")
 
     agent = create_agent(tmp_path)
 
@@ -59,8 +61,9 @@ def test_create_agent_scopes_tools_to_workspace(
     shell = next(item for item in capabilities if isinstance(item, Shell))
     repo_contexts = [item for item in capabilities if isinstance(item, RepoContext)]
 
-    assert Path(filesystem.root_dir) == tmp_path
-    assert Path(shell.cwd) == tmp_path
+    workspace = next(item for item in capabilities if isinstance(item, LocalWorkspace))
+    assert Path(workspace.working_dir) == tmp_path
+    assert filesystem.root_dir is None
     # The harness's own key patterns are extended, not replaced. Which vendors that list names
     # is the harness's business and it does change, so the assertion is that this runtime adds
     # its prefix to the list rather than passing a list of its own -- doing the latter would
@@ -71,7 +74,6 @@ def test_create_agent_scopes_tools_to_workspace(
     # text, not a second RepoContext pointed at this package's install directory.
     assert len(repo_contexts) == 1
     assert tuple(repo_contexts[0].filenames) == ("AGENTS.md",)
-    assert repo_contexts[0].workspace_dir == tmp_path
     assert repo_contexts[0].nested_traversal is True
     assert any(isinstance(item, TieredCompaction) for item in capabilities)
     log_tool = function_tools(agent)["read_app_log"]
@@ -190,6 +192,7 @@ def test_the_injected_contract_key_reaches_the_provider(monkeypatch: MonkeyPatch
     monkeypatch.setattr(settings, "MODEL_API_KEY", "injected-contract-key")
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
+    monkeypatch.setattr(settings, "MODEL_ID", "")
 
     assert provider_key_of(build_model()) == "injected-contract-key"
 
@@ -205,6 +208,7 @@ def test_the_settings_key_reaches_the_provider_when_it_is_not_in_the_environment
     monkeypatch.setattr(settings, "MODEL_API_KEY", "key-only-in-settings")
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
+    monkeypatch.setattr(settings, "MODEL_ID", "")
 
     assert provider_key_of(build_model()) == "key-only-in-settings"
 
@@ -361,7 +365,7 @@ def set_gateway_settings(monkeypatch: MonkeyPatch) -> None:
 def test_file_read_key_matches_the_harness_read_tool() -> None:
     """A wrong tool name silently disables deduplication; a wrong path blanks live data."""
     # `get_toolset` is typed as the filtered wrapper, so reach the registry through `Any`.
-    toolset = cast(Any, FileSystem(root_dir=Path.cwd()).get_toolset())
+    toolset = cast(Any, FileSystem().get_toolset())
     assert "read_file" in toolset.tools
 
     assert file_read_key(ToolCallPart(tool_name="read_file", args={"path": "a.py"})) == "a.py"
@@ -383,20 +387,13 @@ def test_file_tools_cannot_see_sibling_state_dir(
 
     monkeypatch.setattr(settings, "MODEL_API_KEY", "not-used-by-this-test")
     agent = create_agent(workspace)
-    filesystem = next(item for item in agent.root_capability.capabilities if isinstance(item, FileSystem))
-    assert Path(filesystem.root_dir) == workspace.resolve()
-    toolset = cast(Any, filesystem.get_toolset())
-    inner = getattr(toolset, "wrapped", toolset)
-    while hasattr(inner, "wrapped"):
-        inner = inner.wrapped
 
     workspace_names = {path.name for path in workspace.iterdir()}
     assert "context.json" not in workspace_names
     assert "state" not in workspace_names
 
     for outside in (f"../{state_dir.name}/context.json", str(state_dir / "context.json")):
-        with pytest.raises((PermissionError, ModelRetry), match="outside"):
-            inner._resolve_path(outside)
+        assert "outside" in read_file_result(agent, outside)
 
 
 def test_create_agent_rejects_file_workspace(tmp_path: Path) -> None:

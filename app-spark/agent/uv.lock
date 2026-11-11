@@ -77,8 +77,8 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.116.0" },
     { name = "httpx2", specifier = ">=2.10.0,<3.0.0" },
     { name = "marshmallow", specifier = ">=4.0.0,<5.0.0" },
-    { name = "pydantic-ai-harness", specifier = ">=0.24.0,<1.0.0" },
-    { name = "pydantic-ai-slim", extras = ["ag-ui", "openai"], specifier = ">=2.32.1,<3.0.0" },
+    { name = "pydantic-ai-harness", specifier = ">=0.66.0,<0.67.0" },
+    { name = "pydantic-ai-slim", extras = ["ag-ui", "openai"], specifier = ">=2.66.0,<2.67.0" },
     { name = "uvicorn", specifier = ">=0.52.1,<0.53.0" },
 ]
 
@@ -310,15 +310,15 @@ wheels = [
 
 [[package]]
 name = "genai-prices"
-version = "0.1.4"
+version = "0.1.13"
 source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
 dependencies = [
     { name = "httpx2" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/1e/e3/23f4be7d5626878a6297c728f5f8db83bd9b135da481935d4c1bb82efc21/genai_prices-0.1.4.tar.gz", hash = "sha256:f3b8a0bf0c21b01f5af3ca42babcab2f17728bf3c602f87f42b72d1d2bf61d98" }
+sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/ad/de/119c7ba00b9ddbf629de34cf390ab472da6d7bc5df0c51cdbec900280a74/genai_prices-0.1.13.tar.gz", hash = "sha256:76c9e2dd3917fdacdf3bc562297c4591384142ea2283c477e1512fafa4e3a384" }
 wheels = [
-    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/e6/54/911961e926a4c4ea30bf1fa0bf9d8ffc5c9ac5ed6a3f77b3d9e0ab5bb9a5/genai_prices-0.1.4-py3-none-any.whl", hash = "sha256:1d1b01cc7ab1adfa17c3a1121f4c13990bd0a4377640ecd37ebfde5836768240" },
+    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/41/5a/b6b7d55148d367d07bcd3efdf24e3086ad199ea5109d0c335a872dfaac95/genai_prices-0.1.13-py3-none-any.whl", hash = "sha256:6d2b40760a2f7f5e207bac9b98de0af80e60c58ead497872a5331a7cee610477" },
 ]
 
 [[package]]
@@ -609,7 +609,7 @@ wheels = [
 
 [[package]]
 name = "openai"
-version = "3.3.1"
+version = "3.48.0"
 source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
 dependencies = [
     { name = "anyio" },
@@ -619,9 +619,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/7d/9c/ba0c292b4032ede74c249ca314ad64eb1bb5a03a843f6e01facb02f80cd8/openai-3.3.1.tar.gz", hash = "sha256:6f22807de1a976c932cecda620e8172a8c3fdbaeed29c7f21564e0c2410edf56" }
+sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/d5/d4/03b70b8bb3784efab3b67e04622daf574711d20a0843bacfe78728966df8/openai-3.48.0.tar.gz", hash = "sha256:8786c46c2496baef3ca840ff6abff59882a7735b08f610bfe96fcf407338527d" }
 wheels = [
-    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/6a/db/2b7a1b3de659bb82aef979116c74e809982b13e42c057759767552b5155f/openai-3.3.1-py3-none-any.whl", hash = "sha256:9652df7fdf8ee6f5bd58e0a12f2b1d414a18e0f06bb7a9a57c8643a5f5469bd3" },
+    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/18/d4/edb09ba3524f1289b49b37408700c0ba24dd4fd35789c58b68a94fc060ea/openai-3.48.0-py3-none-any.whl", hash = "sha256:1a798238712133c237712907cc68a059c10b264ca284b9d7f1c253212db67802" },
 ]
 
 [[package]]
@@ -680,21 +680,21 @@ wheels = [
 
 [[package]]
 name = "pydantic-ai-harness"
-version = "0.24.0"
+version = "0.66.0"
 source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
 dependencies = [
     { name = "genai-prices" },
     { name = "httpx" },
     { name = "pydantic-ai-slim" },
 ]
-sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/df/bc/6bb9736a8baf129cd5b0f825d7bd66b615407ab8d493222cb5d4f6bb7cea/pydantic_ai_harness-0.24.0.tar.gz", hash = "sha256:6caa05a553b0cef6acc8a63fd1440ce80aaba2709ef02987daaf8ef415c85234" }
+sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/c8/28/96e1ac69852614c1c993ca352000f0f8e381bbc9656802a16864a5c2d897/pydantic_ai_harness-0.66.0.tar.gz", hash = "sha256:d646caf7cf0f83ced707d88dbc387bd73f3ff78cd6e34722665cf527dcfe6674" }
 wheels = [
-    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/ba/42/d08d467b6b0cce694eaa71b631dadb524a3a10de51139356afd9e6811338/pydantic_ai_harness-0.24.0-py3-none-any.whl", hash = "sha256:f1b738b788b48a30570d47ea094b0e6cbcb4ff1b3ec5a889d0d37691733178a1" },
+    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/50/1b/d3a4e0941226a88f54e17fbb80b7190b752154329d6681a465ae101b4706/pydantic_ai_harness-0.66.0-py3-none-any.whl", hash = "sha256:d98e2e8c57dd34560ad0a83c5611d9b57c30c7572f2bde276d3b99c4d99ab025" },
 ]
 
 [[package]]
 name = "pydantic-ai-slim"
-version = "2.32.1"
+version = "2.66.0"
 source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
 dependencies = [
     { name = "anyio" },
@@ -706,9 +706,9 @@ dependencies = [
     { name = "pydantic-graph" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/85/c0/2d3ff5fc83c3a2cfb6817f575992b69bd30df8939d2ca51bc74c4ca6f1f6/pydantic_ai_slim-2.32.1.tar.gz", hash = "sha256:1bf26deaa6ac0ca038b9e23d76cd9683a47b5cd3bc56b666f5900fdc5547cf53" }
+sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/cf/35/f8330c6797a3a3646e90c5a05354441a159f7451ff077182a2ea001f61df/pydantic_ai_slim-2.66.0.tar.gz", hash = "sha256:78968fa75086ddae9039bdaa3939e9510f15a40d5f1f58fb3ded04386f9292f2" }
 wheels = [
-    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/68/5b/745497e48b0c34d35550c55d1fa9c18946db3145203463074fdf9563ac65/pydantic_ai_slim-2.32.1-py3-none-any.whl", hash = "sha256:0a2565e2dab5f3dab7c6627b749016c4af52a8c7ba4eccaba4a43d8f91bf5e6b" },
+    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/8b/13/deacff97ec5836e0ef2e2a55731a1d32ba325d6dead37f6839b11a03d463/pydantic_ai_slim-2.66.0-py3-none-any.whl", hash = "sha256:c47bbd0abe6f51e5400308a53b4f7e3409a582b1459140c381e3d4701a205608" },
 ]
 
 [package.optional-dependencies]
@@ -764,7 +764,7 @@ wheels = [
 
 [[package]]
 name = "pydantic-graph"
-version = "2.32.1"
+version = "2.66.0"
 source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
 dependencies = [
     { name = "anyio" },
@@ -772,9 +772,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/0f/75/9c0d96a0d99a5e71a1ef1f93d974efcc0e34d0c806f4788adc0abb19e213/pydantic_graph-2.32.1.tar.gz", hash = "sha256:881ef6e5115cceedfbc03befa9ec127c32c5d41d6b8b8aa4a950459fb913d848" }
+sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/9f/60/e098cf08a7cad7dce38f2dbb7b977e93ea6204e99f61c33bcc76df71a7bf/pydantic_graph-2.66.0.tar.gz", hash = "sha256:af31fd3ad5f3446556a270b14e1a43b12996f4bb52a0511f58f739dbacadb3f9" }
 wheels = [
-    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/48/ef/d5ebf857fab20746462976a646a866dae25a05fee46ea1f98283487a339d/pydantic_graph-2.32.1-py3-none-any.whl", hash = "sha256:29a0cd70914db95b7b1f8a2ab19888f17757784e8b41ac100b894de2eed27993" },
+    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/7d/0c/2c2ff8a1ede97bb734a56e5b4991a9a98dd05b9ba9f5d8683e4acfdc9d34/pydantic_graph-2.66.0-py3-none-any.whl", hash = "sha256:5b2a0aafc569c00fdb36879b1e80bed06ed5926979e2c1d44533222f208fd2ec" },
 ]
 
 [[package]]

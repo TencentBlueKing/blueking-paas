@@ -26,6 +26,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import attrs
+import httpx2
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db import transaction
@@ -33,8 +34,10 @@ from django.utils import timezone
 
 from app_spark_api.core.projects.models import Project
 from app_spark_api.infras.bk_paas import (
+    AppFieldProblem,
     BkPaaSClient,
     BkPaaSConfigurationError,
+    BkPaaSError,
     ConsoleLinks,
     build_console_links,
     build_deployment_detail_url,
@@ -50,6 +53,7 @@ from app_spark_api.publication.constants import (
     PublicationTaskStatus,
 )
 from app_spark_api.publication.exceptions import (
+    PublicationAppNameConflictError,
     PublicationAppNameInvalidError,
     PublicationNoVersionError,
     PublicationProjectGoneError,
@@ -67,6 +71,7 @@ logger = logging.getLogger(__name__)
 
 # 开发者中心的应用名称（NickNameField）去掉首尾空白后只保留这些字符，其余静默丢掉。
 _APP_NAME_CHAR = re.compile(r"[\u4e00-\u9fa5\w\-_]")
+MSG_APP_NAME_UNUSABLE = "应用名称只能包含中文、英文字母、数字、连接符和下划线"
 
 
 @attrs.frozen
@@ -99,6 +104,25 @@ class UnseenResult:
 
     kind: str
     status: str
+
+
+@attrs.frozen
+class AppNameValidation:
+    """Whether the first deployment could create the application under a name.
+
+    :param name: 按开发者中心的规则过滤、截断后实际会用的名称，什么也不剩时为空字符串。
+    :param problem: 不能用的原因，能用时为 None。
+    :param message: 给用户看的说明，能用时为 None。
+    """
+
+    name: str
+    problem: AppFieldProblem | None
+    message: str | None
+
+    @property
+    def is_available(self) -> bool:
+        """Whether the name can be used."""
+        return self.problem is None
 
 
 @attrs.frozen
@@ -142,9 +166,10 @@ async def start_deployment(
     :raises PublicationNoVersionError: 没指定版本，项目也还没有任何版本。
     :raises PublicationVersionNotFoundError: 版本不属于该项目。
     :raises PublicationAppNameInvalidError: 首次发布时应用名称按开发者中心的规则过滤后为空。
+    :raises PublicationAppNameConflictError: 首次发布时应用名称已被开发者中心的其他应用使用。
     :raises PublicationTaskInProgressError: 项目已有发布任务在进行。
     :raises PublicationProjectGoneError: 项目刚被删除。
-    :raises PublicationSubmitError: 创建应用失败，任务已记为失败。
+    :raises PublicationSubmitError: 开发者中心提前拒绝了应用 ID 或名称（不建任务），或创建应用失败（任务已记为失败）。
     """
     # 发布暂不支持选版本，前端不传版本时发最新的；任务里记下实际发的版本，线上版本和失败记录据此展示。
     if version_id is None:
@@ -155,21 +180,76 @@ async def start_deployment(
     elif not await packaging.aversion_exists(project, version_id):
         raise PublicationVersionNotFoundError(f"Project {project.pk} has no publishable version {version_id!r}")
 
-    # 已绑定的项目复用原应用，不需要名称。名称只在开发者中心里要求租户内唯一，本地不存也不查重，
-    # 重名由创建应用的报错说明。
+    factory = client_factory or BkPaaSClient.from_settings
+
+    # 已绑定的项目复用原应用，不需要名称。名称只在开发者中心里要求租户内唯一，本地不存，
+    # 建任务前先问开发者中心，重名时让用户改名，不留下一次失败的发布。
     name = ""
     if not await BkPaaSAppBinding.objects.filter(project=project).aexists():
         name = normalize_app_name(app_name) if app_name is not None else resolve_default_app_name(project)
         if not name:
             raise PublicationAppNameInvalidError(app_name or "")
 
+        await _ensure_app_creatable(project, factory, name)
+
     task = await sync_to_async(_create_deployment_task)(project, version_id, operator)
 
     # 浏览器断开时 Django 会取消正在处理的请求。创建应用一旦开始就要做完，否则开发者中心里建好了应用，
     # 这边却没记下绑定。应用 ID 就是项目 ID，规则由开发者中心校验。
-    factory = client_factory or BkPaaSClient.from_settings
     await _complete_even_if_cancelled(_bind_and_queue(task, project, factory, project.id, name))
     return task
+
+
+async def validate_app_name(project: Project, name: str) -> AppNameValidation:
+    """Tell whether the first deployment could create the Project's application under this name.
+
+    已绑定应用的项目发布时不再用到名称，前端不必为它调用。
+
+    :raises PublicationStepError: 开发者中心没能给出结论，message 是给用户看的原因。
+    """
+    normalized = normalize_app_name(name)
+
+    # 过滤后什么也不剩，开发者中心会当成空名称，不必去问。
+    if not normalized:
+        return AppNameValidation(name="", problem=AppFieldProblem.INVALID, message=MSG_APP_NAME_UNUSABLE)
+
+    try:
+        async with BkPaaSClient.from_settings() as client:
+            result = await client.validate_app_basic_info(normalized, **steps.build_app_tenant_kwargs(project))
+    except (BkPaaSError, httpx2.HTTPError) as exc:
+        raise steps.to_step_error(exc) from exc
+
+    error = result.name_error
+    if error is None:
+        return AppNameValidation(name=normalized, problem=None, message=None)
+
+    return AppNameValidation(name=normalized, problem=error.problem, message=error.message)
+
+
+async def _ensure_app_creatable(project: Project, client_factory: Callable[[], BkPaaSClient], name: str) -> None:
+    """Refuse up front a first deployment whose application the developer center would not create."""
+    try:
+        async with client_factory() as client:
+            result = await client.validate_app_basic_info(
+                name, code=project.id, **steps.build_app_tenant_kwargs(project)
+            )
+    except BkPaaSError, httpx2.HTTPError:
+        # 提前校验只为把话说清楚。问不到时照常发起，创建应用时开发者中心会再校验一次，失败原因照样告诉用户。
+        logger.warning(
+            "Validating the app of project %s failed, leaving it to app creation", project.pk, exc_info=True
+        )
+        return
+
+    # 应用 ID 就是项目 ID，用户改不了，先说它：否则用户改完名再发，还是被 ID 挡住。
+    if result.code_error is not None:
+        raise PublicationSubmitError(result.code_error.message, steps.FailureCause.REJECTED)
+
+    if result.name_error is not None and result.name_error.problem == AppFieldProblem.TAKEN:
+        raise PublicationAppNameConflictError(name)
+
+    # 名称已按开发者中心的规则过滤、截断过，格式问题基本不会出现，照开发者中心的说法拒绝。
+    if result.name_error is not None:
+        raise PublicationSubmitError(result.name_error.message, steps.FailureCause.REJECTED)
 
 
 def resolve_default_app_name(project: Project) -> str:
@@ -218,6 +298,10 @@ async def _bind_and_queue(
     try:
         async with client_factory() as client:
             await steps.bind_app(task, project, client, app_code=app_code, app_name=app_name)
+    except steps.AppNameTakenError as exc:
+        # 发起前校验时名称还空着，创建时被别人抢先用了：任务照样当场结束，但按重名回答，让用户改名。
+        await _fail_submission(task, exc)
+        raise PublicationAppNameConflictError(app_name) from exc
     except steps.PublicationStepError as exc:
         raise await _fail_submission(task, exc) from exc
     except BkPaaSConfigurationError as exc:

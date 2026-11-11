@@ -23,7 +23,7 @@ import attrs
 from ninja import Field, Schema
 
 if TYPE_CHECKING:
-    from app_spark_api.publication.services import PublicationState
+    from app_spark_api.publication.services import AppNameValidation, PublicationState
 
 
 class DeploymentCreateRequest(Schema):
@@ -149,4 +149,25 @@ class PublicationResponse(Schema):
             default_app_name=state.default_app_name,
             bkpaas_links=bkpaas_links,
             latest_version_id=state.latest_version_id,
+        )
+
+
+class AppNameValidateResponse(Schema):
+    """首次发布时某个应用名称能否用来创建开发者中心应用。"""
+
+    name: str = Field(description="按开发者中心的规则过滤、截断后实际会用的名称；什么也不剩时为空字符串")
+    is_available: bool = Field(description="能否用这个名称创建应用")
+    problem: str | None = Field(
+        description="不能用的原因：taken 表示已被其他应用使用，invalid 表示格式不合法；能用时为空"
+    )
+    message: str | None = Field(description="给用户看的说明，能用时为空")
+
+    @classmethod
+    def from_validation(cls, validation: AppNameValidation) -> AppNameValidateResponse:
+        """Build the response from a name validation."""
+        return cls(
+            name=validation.name,
+            is_available=validation.is_available,
+            problem=validation.problem,
+            message=validation.message,
         )

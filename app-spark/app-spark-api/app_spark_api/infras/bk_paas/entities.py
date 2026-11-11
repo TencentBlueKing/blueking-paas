@@ -69,6 +69,70 @@ class CreatedApp:
             raise BkPaaSUnavailableError(f"Unreadable create-app response: {exc!r}") from exc
 
 
+class AppFieldProblem(StrEnum):
+    """Why the developer center would refuse an application ID or name."""
+
+    # 已被其他应用占用，换一个即可。
+    TAKEN = "taken"
+    # 格式不合法，如超长、含保留字。
+    INVALID = "invalid"
+
+
+# 开发者中心表示「已被占用」的字段错误码，其余错误码都算格式不合法。
+_UNIQUE_ERROR_CODE = "unique"
+
+
+@attrs.frozen
+class AppFieldError:
+    """One field the developer center would refuse.
+
+    :param message: 开发者中心给出的说明，可以直接展示给用户。
+    """
+
+    problem: AppFieldProblem
+    message: str
+
+
+@attrs.frozen
+class AppBasicInfoValidation:
+    """Whether the developer center would accept an application ID and name, as sys_validate_app_basic_info says.
+
+    :param code_error: 应用 ID 不能用的原因，能用或没校验时为 None。
+    :param name_error: 应用名称不能用的原因，能用时为 None。
+    """
+
+    code_error: AppFieldError | None
+    name_error: AppFieldError | None
+
+    @property
+    def is_valid(self) -> bool:
+        """Whether both the ID and the name can be used."""
+        return self.code_error is None and self.name_error is None
+
+    @classmethod
+    def from_payload(cls, payload: Any) -> AppBasicInfoValidation:
+        """Read the result out of a sys_validate_app_basic_info response."""
+        try:
+            fields_detail = payload["fields_detail"]
+            return cls(
+                code_error=_read_field_error(fields_detail.get("code")),
+                name_error=_read_field_error(fields_detail.get("name")),
+            )
+        except (KeyError, TypeError, AttributeError) as exc:
+            raise BkPaaSUnavailableError(f"Unreadable app validation response: {exc!r}") from exc
+
+
+def _read_field_error(errors: Any) -> AppFieldError | None:
+    if not errors:
+        return None
+
+    # 同一字段可能同时有多条错误；只要有一条是占用，就让用户换名字，格式问题换名字时一并解决。
+    taken = any(error.get("code") == _UNIQUE_ERROR_CODE for error in errors)
+    return AppFieldError(
+        problem=AppFieldProblem.TAKEN if taken else AppFieldProblem.INVALID, message=str(errors[0]["message"])
+    )
+
+
 @attrs.frozen
 class Deployment:
     """A deployment the developer center has accepted."""

@@ -34,9 +34,10 @@
 
 ## ---------------------------------- 应用身份与用户 ----------------------------------
 
-## 必填。本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、调开发者中心）都用这一对。
-## APP_SECRET 只留在本服务里，不会交给 Agent Runtime。
-# APP_CODE: ''
+## 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、调开发者中心）都用这一对。
+## APP_CODE 可选，默认 bk-app-spark：开发者中心网关按它预授权了发布要用的资源，改成别的要自己去网关申请。
+## APP_SECRET 必填，只留在本服务里，不会交给 Agent Runtime。
+# APP_CODE: 'bk-app-spark'
 # APP_SECRET: ''
 
 ## 按条件必填：AGENT_MODEL_SOURCE 为 bkaidev 时必填。签发 Agent 用户态 access_token 的专用应用（如 app-spark-pub），

@@ -114,6 +114,18 @@ export interface PublicationDeploymentRequest {
   app_name?: string;
 }
 
+/** `taken`：已被开发者中心的其他应用使用；`invalid`：格式不合法。 */
+export type PublicationAppNameProblem = 'taken' | 'invalid';
+
+/** 首次发布时某个蓝鲸应用名能否使用。 */
+export interface PublicationAppNameValidateResponse {
+  /** 按开发者中心规则过滤、截断后实际会用的名称；什么也不剩时为空字符串。 */
+  name: string;
+  is_available: boolean;
+  problem: PublicationAppNameProblem | null;
+  message: string | null;
+}
+
 /** Agent 提交代码时用的机器身份，不是终端用户。 */
 export interface GitCommitIdentity {
   author_name: string;

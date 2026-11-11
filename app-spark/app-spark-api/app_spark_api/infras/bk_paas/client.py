@@ -27,7 +27,13 @@ from typing import Any, Self
 import httpx2
 from django.conf import settings
 
-from app_spark_api.infras.bk_paas.entities import CreatedApp, Deployment, DeploymentResult, structure_payload
+from app_spark_api.infras.bk_paas.entities import (
+    AppBasicInfoValidation,
+    CreatedApp,
+    Deployment,
+    DeploymentResult,
+    structure_payload,
+)
 from app_spark_api.infras.bk_paas.exceptions import (
     BkPaaSApiError,
     BkPaaSConfigurationError,
@@ -115,6 +121,32 @@ class BkPaaSClient:
 
         response = await self._client.post("/system/bkapps/app_spark/", json=payload)
         return CreatedApp.from_payload(read_gateway_json(response))
+
+    async def validate_app_basic_info(
+        self,
+        name: str,
+        code: str | None = None,
+        app_tenant_mode: str | None = None,
+        app_tenant_id: str | None = None,
+    ) -> AppBasicInfoValidation:
+        """Ask whether an application could be created with this name and, if given, this ID.
+
+        规则与 create_app 一致。ID、名称不能用时不抛异常，从返回值里读原因。
+
+        :param code: 应用 ID，None 表示只校验名称。
+        :param app_tenant_mode: 多租户模式下的应用租户模式，与 create_app 传的一致。
+        :param app_tenant_id: 多租户模式下的租户 ID。
+        """
+        payload: dict[str, Any] = {"name": name}
+        if code is not None:
+            payload["code"] = code
+
+        if app_tenant_mode is not None:
+            payload["app_tenant_mode"] = app_tenant_mode
+            payload["app_tenant_id"] = app_tenant_id or ""
+
+        response = await self._client.post("/system/bkapps/applications/validations/", json=payload)
+        return AppBasicInfoValidation.from_payload(self._read_json(response))
 
     async def upload_package_via_link(  # noqa: PLR0917
         self,

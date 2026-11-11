@@ -25,7 +25,13 @@ from django.utils import timezone
 
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
-from app_spark_api.infras.bk_paas import BkPaaSApiError, BkPaaSClient
+from app_spark_api.infras.bk_paas import (
+    AppBasicInfoValidation,
+    AppFieldError,
+    AppFieldProblem,
+    BkPaaSApiError,
+    BkPaaSClient,
+)
 from app_spark_api.publication import steps
 from app_spark_api.publication.models import BkPaaSAppBinding, PublicationTask
 from app_spark_api.publication.packaging import PackagedSource
@@ -190,6 +196,78 @@ async def test_a_failed_submission_answers_with_the_reason(aapi_client, owned_pr
 
     assert (response.status_code, response.json()) == expected
     assert (await aapi_client.get(URL)).json()["task"] is None
+
+
+async def test_a_taken_app_name_answers_409_without_a_task(aapi_client, owned_project, bkpaas):
+    bkpaas.queue(
+        "validate_app_basic_info",
+        AppBasicInfoValidation(None, AppFieldError(AppFieldProblem.TAKEN, "名称已存在")),
+    )
+
+    response = await post_deployment(aapi_client, app_name="Spark")
+
+    assert (response.status_code, response.json()["code"]) == (HTTPStatus.CONFLICT, "PUBLICATION_APP_NAME_CONFLICT")
+    assert (await aapi_client.get(URL)).json()["last_failure"] is None
+
+
+@pytest.mark.parametrize(
+    ("name", "answer", "expected"),
+    [
+        (
+            "Spa rk",
+            AppBasicInfoValidation(None, None),
+            {"name": "Spark", "is_available": True, "problem": None, "message": None},
+        ),
+        (
+            "Spark",
+            AppBasicInfoValidation(None, AppFieldError(AppFieldProblem.TAKEN, "名称已存在")),
+            {"name": "Spark", "is_available": False, "problem": "taken", "message": "名称已存在"},
+        ),
+    ],
+)
+@pytest.mark.usefixtures("owned_project")
+async def test_validating_an_app_name(aapi_client, bkpaas, name, answer, expected):
+    bkpaas.queue("validate_app_basic_info", answer)
+
+    response = await aapi_client.get(f"{URL}app-name-validate/", {"name": name})
+
+    assert (response.status_code, response.json()) == (HTTPStatus.OK, expected)
+
+
+async def test_validating_a_name_with_nothing_usable_is_answered_without_asking(aapi_client, owned_project, bkpaas):
+    response = await aapi_client.get(f"{URL}app-name-validate/", {"name": "!!!"})
+
+    body = response.json()
+    assert (response.status_code, body["name"], body["is_available"], body["problem"]) == (
+        HTTPStatus.OK,
+        "",
+        False,
+        "invalid",
+    )
+    assert bkpaas.calls == []
+
+
+async def test_validating_a_name_of_someone_elses_project_is_not_found(aapi_client, bkpaas):
+    stranger = create_user()
+    await Project.objects.acreate(
+        id=PROJECT_ID, name="Spark Demo", creator=stranger, owner=stranger, tenant_id=get_tenant(stranger).id
+    )
+
+    response = await aapi_client.get(f"{URL}app-name-validate/", {"name": "Spark"})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert bkpaas.calls == []
+
+
+async def test_validating_a_name_while_the_developer_center_is_down_answers_502(aapi_client, owned_project, bkpaas):
+    bkpaas.queue("validate_app_basic_info", httpx2.ConnectError("refused"))
+
+    response = await aapi_client.get(f"{URL}app-name-validate/", {"name": "Spark"})
+
+    assert (response.status_code, response.json()["code"]) == (
+        HTTPStatus.BAD_GATEWAY,
+        "PUBLICATION_BKPAAS_UNAVAILABLE",
+    )
 
 
 async def test_an_internal_failure_while_submitting_answers_500(aapi_client, owned_project, monkeypatch):

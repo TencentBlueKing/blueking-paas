@@ -26,7 +26,7 @@ None.
 
 ### Request Example
 ```
-curl -X POST -H 'content-type: application/json' -H 'x-bkapi-authorization: {"bk_app_code": "app-spark", "bk_app_secret": "***"}' -d '{"code": "demo-app", "name": "demo-app", "operator": "admin"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bkapps/app_spark/
+curl -X POST -H 'content-type: application/json' -H 'x-bkapi-authorization: {"bk_app_code": "bk-app-spark", "bk_app_secret": "***"}' -d '{"code": "demo-app", "name": "demo-app", "operator": "admin"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bkapps/app_spark/
 ```
 
 ### Response Example

@@ -66,3 +66,6 @@ class ClientAction(StrStructuredEnum):
 
     # 云 API 管理: 查询网关 / MCP Server 与其接口, 以应用身份申请权限并查询申请状态
     MANAGE_CLOUD_API = EnumField("sysapi:manage:cloud-api", label=_("云 API 管理"))
+
+    # 给会创建应用的系统在创建前检查应用 ID 和名称能否使用
+    VALIDATE_APP_BASIC_INFO = EnumField("sysapi:validate:app-basic-info", label=_("校验应用 ID 和名称"))

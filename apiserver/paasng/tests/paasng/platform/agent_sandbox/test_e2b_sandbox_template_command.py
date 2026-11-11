@@ -169,6 +169,27 @@ class TestApply:
 
         assert not E2BSandboxTemplate.objects.builtins().exists()
 
+    def test_failure_rolls_back_whole_file(
+        self, write_file, template, bk_app, django_capture_on_commit_callbacks, sync_task
+    ):
+        """入库时才发现的冲突也要整份回滚，已处理的项不能留下，也不能投递下发任务"""
+        make_custom_template(bk_app, "e2b-browser")
+        path = write_file(
+            f"- {{template_id: e2b-envd, name: Renamed, image: {IMAGE}, cpu_count: 4}}\n"
+            f"- {{template_id: e2b-new, name: New, image: {IMAGE}}}\n"
+            f"- {{template_id: e2b-browser, name: Browser, image: {IMAGE}}}"
+        )
+        out = StringIO()
+
+        with django_capture_on_commit_callbacks(execute=True), pytest.raises(CommandError, match="e2b-browser"):
+            call_command("e2b_sandbox_template", "apply", "-f", path, stdout=out)
+
+        template.refresh_from_db()
+        assert (template.name, template.cpu_count) == ("Base", 2)
+        assert not E2BSandboxTemplate.objects.filter(template_id="e2b-new").exists()
+        sync_task.delay.assert_not_called()
+        assert out.getvalue() == ""
+
     @pytest.mark.parametrize(
         ("content", "message"),
         [

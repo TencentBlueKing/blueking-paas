@@ -75,6 +75,8 @@ SYNC_LOCK_KEY = "lock:sync_e2b_templates"
 
 # 决定沙箱规格的字段，即 SandboxTemplate 里来自模板的部分
 SPEC_DIGEST_FIELDS = ("image", "cpu_count", "memory_mb", "disk_size_mb", "env_vars", "workdir")
+# 会写进 CR 的全部模板字段，其余字段（名称、描述、启用、公开）只在平台内使用，改了不必重新下发
+MANIFEST_FIELDS = (*SPEC_DIGEST_FIELDS, "prewarm_count")
 
 
 @dataclass

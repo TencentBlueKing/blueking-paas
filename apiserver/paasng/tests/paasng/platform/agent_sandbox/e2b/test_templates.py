@@ -18,10 +18,11 @@
 from unittest import mock
 
 import pytest
+from django_dynamic_fixture import G
 
 from paasng.platform.agent_sandbox.e2b import templates
-from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateSyncStatus
-from paasng.platform.agent_sandbox.e2b.exceptions import E2BTemplateAlreadyExists
+from paasng.platform.agent_sandbox.e2b.constants import RESOURCE_NAME_MAX_LENGTH, E2BTemplateSyncStatus
+from paasng.platform.agent_sandbox.e2b.exceptions import E2BTemplateAlreadyExists, E2BTemplateIDTooLong
 from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate, E2BSandboxTemplateSyncRecord
 from paasng.platform.applications.models import Application
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
@@ -61,6 +62,16 @@ class TestCreate:
 
         with pytest.raises(E2BTemplateAlreadyExists):
             templates.create_builtin_template("e2b-envd", **SPEC)
+
+    def test_custom_rejects_overlong_resource_name(self, sync_task):
+        """应用前缀转义后会变长，标识本身合法也可能超出资源名上限"""
+        app = G(Application, code="ab_cd_ef_gh_ij_kl_mn")
+
+        with pytest.raises(E2BTemplateIDTooLong, match="at most 23 characters"):
+            templates.create_custom_template(app, "a" * 24, **SPEC)
+
+        template = templates.create_custom_template(app, "a" * 23, **SPEC)
+        assert len(template.resource_name) == RESOURCE_NAME_MAX_LENGTH
 
     def test_custom_ignores_prewarm_count(self, bk_app):
         template = templates.create_custom_template(bk_app, "mine", prewarm_count=3, **SPEC)
@@ -124,6 +135,32 @@ class TestUpdate:
             templates.update_template(template, name=template.name)
 
         sync_task.delay.assert_not_called()
+
+    @pytest.mark.usefixtures("e2b_config")
+    def test_fields_outside_manifest_no_sync(self, sync_task, django_capture_on_commit_callbacks):
+        """名称、描述、启用、公开都不进 CR，改了不必下发，也不能把下发记录打回待同步"""
+        template = make_builtin_template("e2b-envd")
+        E2BSandboxTemplateSyncRecord.objects.create(
+            template=template, cluster_name=CLUSTER_NAME_FOR_TESTING, status=E2BTemplateSyncStatus.SUCCEEDED.value
+        )
+
+        with django_capture_on_commit_callbacks(execute=True):
+            changed = templates.update_template(
+                template, name="renamed", description="new", enabled=False, is_public=True
+            )
+
+        assert sorted(changed) == ["description", "enabled", "is_public", "name"]
+        sync_task.delay.assert_not_called()
+        assert template.sync_records.get().status == E2BTemplateSyncStatus.SUCCEEDED.value
+
+    @pytest.mark.parametrize("changes", [{"image": "mirrors.example.com/e2b/envd:v2"}, {"prewarm_count": 3}])
+    def test_manifest_field_change_syncs(self, sync_task, django_capture_on_commit_callbacks, changes):
+        template = make_builtin_template("e2b-envd")
+
+        with django_capture_on_commit_callbacks(execute=True):
+            templates.update_template(template, name="renamed", **changes)
+
+        sync_task.delay.assert_called_once_with("e2b-envd")
 
 
 class TestDeleteCustomTemplatesOf:

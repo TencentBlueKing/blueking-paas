@@ -21,6 +21,7 @@ from pathlib import Path
 
 import yaml
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 from rest_framework import serializers
 
 from paasng.platform.agent_sandbox.e2b import templates
@@ -54,9 +55,9 @@ def _format_errors(errors: dict | list) -> str:
 class Command(BaseCommand):
     """Apply, enable, disable, delete, list or sync the e2b builtin sandbox templates.
 
-    Builtin templates are usable by every application. Saving a template pushes it, as a
-    SandboxTemplate and a SandboxPool of the same name, to every cluster with e2b enabled,
-    asynchronously. Same-named CRs already in the cluster are overwritten. Only the public
+    Builtin templates are usable by every application. Creating a template, or changing its spec,
+    pushes it, as a SandboxTemplate and a SandboxPool of the same name, to every cluster with e2b
+    enabled, asynchronously. Same-named CRs already in the cluster are overwritten. Only the public
     templates are shown on the developer center, a non-public one is still usable by whoever
     knows its ID.
 
@@ -124,30 +125,36 @@ class Command(BaseCommand):
 
     def _apply(self, file: str, prune: bool):
         specs = self._load_specs(file)
-        existing = {t.template_id: t for t in E2BSandboxTemplate.objects.builtins()}
+        # 整份文件一起生效：任一项失败全部回滚，下发任务在提交后才投递，结果也等提交后再输出
+        messages: list[str] = []
+        with transaction.atomic():
+            existing = {t.template_id: t for t in E2BSandboxTemplate.objects.builtins()}
 
-        for template_id, spec in specs.items():
-            template = existing.get(template_id)
-            if template is None:
-                try:
-                    templates.create_builtin_template(template_id, **spec)
-                except E2BTemplateAlreadyExists:
-                    raise CommandError(f"template_id '{template_id}' is already used by a custom template")
-                self.stdout.write(self.style.SUCCESS(f"Created template '{template_id}'"))
-                continue
-
-            changed = templates.update_template(template, **spec)
-            if not changed:
-                self.stdout.write(f"Template '{template_id}' unchanged")
-                continue
-            self.stdout.write(self.style.SUCCESS(f"Updated template '{template_id}': {', '.join(changed)}"))
-
-        if prune:
-            for template_id, template in existing.items():
-                if template_id in specs or not template.enabled:
+            for template_id, spec in specs.items():
+                template = existing.get(template_id)
+                if template is None:
+                    try:
+                        templates.create_builtin_template(template_id, **spec)
+                    except E2BTemplateAlreadyExists:
+                        raise CommandError(f"template_id '{template_id}' is already used by a custom template")
+                    messages.append(self.style.SUCCESS(f"Created template '{template_id}'"))
                     continue
-                templates.update_template(template, enabled=False)
-                self.stdout.write(self.style.WARNING(f"Disabled template '{template_id}' (not in file)"))
+
+                changed = templates.update_template(template, **spec)
+                if not changed:
+                    messages.append(f"Template '{template_id}' unchanged")
+                    continue
+                messages.append(self.style.SUCCESS(f"Updated template '{template_id}': {', '.join(changed)}"))
+
+            if prune:
+                for template_id, template in existing.items():
+                    if template_id in specs or not template.enabled:
+                        continue
+                    templates.update_template(template, enabled=False)
+                    messages.append(self.style.WARNING(f"Disabled template '{template_id}' (not in file)"))
+
+        for message in messages:
+            self.stdout.write(message)
 
     @staticmethod
     def _load_specs(file: str) -> dict[str, dict]:

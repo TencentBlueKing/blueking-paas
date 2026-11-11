@@ -48,6 +48,10 @@ class E2BTemplateQuotaExceeded(E2BError):
     """应用的自定义模板数量已达上限"""
 
 
+class E2BTemplateIDTooLong(E2BError):
+    """模板标识加上应用前缀后，资源名超出长度上限"""
+
+
 class E2BTemplateInUse(E2BError):
     """模板下还有未终止的沙箱
 

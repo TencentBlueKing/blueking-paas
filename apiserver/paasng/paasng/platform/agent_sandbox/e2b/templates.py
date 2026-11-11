@@ -30,10 +30,15 @@ from django.db import IntegrityError, transaction
 from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate
 from paasng.platform.applications.models import Application
 
-from .constants import CUSTOM_RESOURCE_NAME_SEPARATOR, E2BSandboxStatus
-from .exceptions import E2BTemplateAlreadyExists, E2BTemplateInUse, E2BTemplateQuotaExceeded
+from .constants import CUSTOM_RESOURCE_NAME_SEPARATOR, RESOURCE_NAME_MAX_LENGTH, E2BSandboxStatus
+from .exceptions import (
+    E2BTemplateAlreadyExists,
+    E2BTemplateIDTooLong,
+    E2BTemplateInUse,
+    E2BTemplateQuotaExceeded,
+)
 from .tasks import sync_e2b_template_task
-from .template_sync import mark_pending
+from .template_sync import MANIFEST_FIELDS, mark_pending
 
 # 创建后可修改的字段，模板标识决定了资源名，不能改
 COMMON_MUTABLE_FIELDS = (
@@ -84,9 +89,15 @@ def create_builtin_template(template_id: str, **spec: Any) -> E2BSandboxTemplate
 def create_custom_template(application: Application, template_id: str, **spec: Any) -> E2BSandboxTemplate:
     """为应用创建自定义模板，固定启用、不预热。
 
+    :raises E2BTemplateIDTooLong: 加上应用前缀后资源名超长，应用 code 较长时可用的模板标识会更短
     :raises E2BTemplateQuotaExceeded: 应用的自定义模板数量已达上限
     :raises E2BTemplateAlreadyExists: 应用下已有同名模板，或与内置模板重名
     """
+    resource_name = make_custom_resource_name(application, template_id)
+    if len(resource_name) > RESOURCE_NAME_MAX_LENGTH:
+        max_length = RESOURCE_NAME_MAX_LENGTH - len(custom_resource_prefix(application))
+        raise E2BTemplateIDTooLong(f"template id of app {application.code} must be at most {max_length} characters")
+
     custom = E2BSandboxTemplate.objects.custom_of(application)
     if custom.count() >= settings.AGENT_SANDBOX_E2B_MAX_CUSTOM_TEMPLATES_PER_APP:
         raise E2BTemplateQuotaExceeded(f"app {application.code} has too many custom templates")
@@ -101,14 +112,14 @@ def create_custom_template(application: Application, template_id: str, **spec: A
     return _create(
         application=application,
         template_id=template_id,
-        resource_name=make_custom_resource_name(application, template_id),
+        resource_name=resource_name,
         tenant_id=application.tenant_id,
         **spec,
     )
 
 
 def update_template(template: E2BSandboxTemplate, **changes: Any) -> list[str]:
-    """修改模板并重新下发。网关的池子不跟随模板变化，已预热的实例保持旧配置，直到被消耗完。
+    """修改模板，改到 CR 里的字段时重新下发。网关的池子不跟随模板变化，已预热的实例保持旧配置，直到被消耗完。
 
     :returns: 实际发生变化的字段
     """
@@ -121,7 +132,8 @@ def update_template(template: E2BSandboxTemplate, **changes: Any) -> list[str]:
         setattr(template, f, changes[f])
     with transaction.atomic():
         template.save(update_fields=[*changed, "updated"])
-        _schedule_sync(template)
+        if set(changed) & set(MANIFEST_FIELDS):
+            _schedule_sync(template)
     return changed
 
 

@@ -150,11 +150,12 @@ export const useProjectStore = defineStore('project', () => {
     applyCtx.messages = messages.value;
   };
 
-  /** 换了一段要渲染的消息，事件里那些认 id 的索引（消息、工具调用）得跟着清掉。 */
+  /** 换了一段要渲染的消息，事件里那些认 id 的索引（消息、工具调用、思考）得跟着清掉。 */
   const resetApplyCtx = () => {
     applyCtx.messages = messages.value;
     applyCtx.byId = new Map();
     applyCtx.toolCalls = new Map();
+    applyCtx.reasonings = new Map();
   };
 
   const queueInitialMessage = (

@@ -314,6 +314,8 @@ class AgentRuntimeClient:
             # is the protocol's name for what everything else here calls a conversation.
             "threadId": self.handle.conversation_id,
             "runId": run_id,
+            # The Runtime speaks AG-UI 1.0 only and refuses a request that does not say so.
+            "protocolVersion": "1.0",
             "state": {},
             "messages": [{"id": str(uuid4()), "role": "user", "content": content}],
             "tools": [],

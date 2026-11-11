@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import cast
 from uuid import UUID
 
-from ag_ui.core import RunAgentInput, UserMessage
+from ag_ui.core import PROTOCOL_VERSION, RunAgentInput, UserMessage
 from fastapi import HTTPException, Request, status
 from starlette.types import Message
 
@@ -45,6 +45,12 @@ def prepare_run(
         run_input = RunAgentInput.model_validate_json(body)
     except Exception as exc:
         raise HTTPException(status_code=422, detail="Invalid AG-UI request.") from exc
+
+    # Only AG-UI 1.0 is spoken here. The adapter keys 1.0-only output (the cancelled outcome of a
+    # stopped run) off this declaration, so a client that leaves it out would quietly get a
+    # different event stream than the one the stored log and the UI expect.
+    if run_input.protocol_version != PROTOCOL_VERSION:
+        raise HTTPException(status_code=422, detail=f"protocolVersion must be {PROTOCOL_VERSION!r}.")
 
     # AG-UI calls a conversation a thread, so `threadId` is the wire name for what this Runtime
     # calls the conversation id everywhere else. The protocol field cannot be renamed, so the

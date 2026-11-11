@@ -32,6 +32,11 @@
           :tool="block.tool"
           :live="status !== 'idle'"
         />
+        <ReasoningBlock
+          v-else-if="block.type === 'reasoning' && block.reasoning"
+          :reasoning="block.reasoning"
+          :live="status !== 'idle'"
+        />
         <img
           v-else-if="block.type === 'image' && block.src"
           class="chat-message__thumb"
@@ -46,10 +51,11 @@
         </ul>
       </template>
       <p
-        v-if="pendingText(message)"
-        class="chat-message__thinking"
+        v-if="isPending(message)"
+        class="chat-message__pending"
       >
-        {{ pendingText(message) }}
+        <LiveDot live />
+        <span v-if="message.progress">{{ message.progress }}</span>
       </p>
     </article>
   </div>
@@ -59,6 +65,8 @@
 import { computed } from 'vue';
 import { Done } from 'bkui-vue/lib/icon';
 import type { ProjectStatus } from '@/store/project';
+import LiveDot from './LiveDot.vue';
+import ReasoningBlock from './ReasoningBlock.vue';
 import ToolCallBlock from './ToolCallBlock.vue';
 import { renderMarkdown } from './render-markdown';
 import type { ChatBlock, ChatMessage } from './types';
@@ -68,8 +76,9 @@ const props = defineProps<{
   status?: ProjectStatus;
 }>();
 
+// 思考块一建出来就算内容：它自己挂着那颗蓝点，下面不必再挂一颗。
 const hasContent = (block: ChatBlock) => Boolean(
-  block.text || block.src || block.items?.length || block.tool,
+  block.text || block.src || block.items?.length || block.tool || block.reasoning,
 );
 
 const visibleMessages = computed(() => (
@@ -83,15 +92,14 @@ const isFresh = computed(() => (
 ));
 
 /**
- * 助手消息末尾那行灰字，没有就返回空串。
+ * 助手消息末尾要不要挂那颗表示「还在进行」的蓝点（有进度时后面跟着进度文字）。
  *
- * 一条空的助手消息是「已经发出去、还没等到第一个字」的样子，这时候必须说点什么，否则界面看着
- * 像没反应；已经有内容之后就只报 STEP_STARTED 之类带来的进度，没有进度就什么都不加。
+ * 一条空的助手消息是「已经发出去、还没等到第一个字」的样子，这时候必须有点动静，否则界面看着
+ * 像没反应；已经有内容之后就只在有 STEP_STARTED 之类带来的进度时才挂。
  */
-const pendingText = (message: ChatMessage) => {
-  if (message.role !== 'assistant' || props.status === 'idle') return '';
-  if (message.progress) return message.progress;
-  return message.blocks.some(hasContent) ? '' : '正在生成…';
+const isPending = (message: ChatMessage) => {
+  if (message.role !== 'assistant' || props.status === 'idle') return false;
+  return Boolean(message.progress) || !message.blocks.some(hasContent);
 };
 </script>
 
@@ -233,10 +241,19 @@ const pendingText = (message: ChatMessage) => {
   border-left: 3px solid #e4e8ef;
 }
 
-.chat-message__thinking {
-  margin: 8px 0 0;
+.chat-message__pending {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 1.6em;
+  margin: 0;
   color: #7a8494;
   font-size: 13px;
+  line-height: 1.6;
+}
+
+.chat-message__pending:not(:first-child) {
+  margin-top: 8px;
 }
 
 .chat-message__thumb {

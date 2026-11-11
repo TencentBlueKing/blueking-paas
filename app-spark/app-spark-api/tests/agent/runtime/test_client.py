@@ -109,6 +109,7 @@ async def test_a_turn_is_submitted_as_one_new_agui_message():
     body = json.loads(sent[0].content)
     assert body["threadId"] == CONVERSATION_ID
     assert body["runId"] == run.run_id
+    assert body["protocolVersion"] == "1.0"
     assert body["forwardedProps"]["contextVersion"] == 7
     assert [(m["role"], m["content"]) for m in body["messages"]] == [("user", "write my first note")]
     assert sent[0].headers["accept"] == "text/event-stream"

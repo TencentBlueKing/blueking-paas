@@ -8,14 +8,14 @@ resolution-markers = [
 
 [[package]]
 name = "ag-ui-protocol"
-version = "0.1.20"
+version = "1.0.0"
 source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
 dependencies = [
     { name = "pydantic" },
 ]
-sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/e4/7a/0db4c6233ccf39654e45af0e532efa87abc0eb7828b16f9e63014881e75f/ag_ui_protocol-0.1.20.tar.gz", hash = "sha256:fadc9600f492a9dde8b2b027171bb471a899430e53291a0b882a09d3f5416145" }
+sdist = { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/57/92/d88fdc7f4648dc38d3d54c595066bb3e63a4c091884ffb2f98272c33eef8/ag_ui_protocol-1.0.0.tar.gz", hash = "sha256:cfebecef2e7bc942cc8a52d908a4ea86a98f631d2ffdc6ec5812bb843eac74fb" }
 wheels = [
-    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/06/57/55a4a74a5580ef74d2e326f455be45256d4f11260b493174ae0a81626be4/ag_ui_protocol-0.1.20-py3-none-any.whl", hash = "sha256:a15cced52603327b0ba32e95a8aca87e9067f3e69281addfc3fecdaa16a1d485" },
+    { url = "https://mirrors.cloud.tencent.com/yun/pypi/packages/82/b0/850be4576e6443dc575daa54188d8136ae2b2eca3f19e098e7a088fc9ebc/ag_ui_protocol-1.0.0-py3-none-any.whl", hash = "sha256:0058eaf0522201089d444e430fc35180bc8ad0222cae39e8568b313e8105d9e6" },
 ]
 
 [[package]]
@@ -53,6 +53,7 @@ name = "app-spark-agent"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "ag-ui-protocol" },
     { name = "environs" },
     { name = "fastapi" },
     { name = "httpx2" },
@@ -73,6 +74,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ag-ui-protocol", specifier = ">=1.0.0,<1.1.0" },
     { name = "environs", specifier = ">=15.1.0,<16.0.0" },
     { name = "fastapi", specifier = ">=0.116.0" },
     { name = "httpx2", specifier = ">=2.10.0,<3.0.0" },

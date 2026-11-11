@@ -1,4 +1,9 @@
-import type { ChatBlock, ChatMessage, ChatToolCall } from '@/components/project/interaction/types';
+import type {
+  ChatBlock,
+  ChatMessage,
+  ChatReasoning,
+  ChatToolCall,
+} from '@/components/project/interaction/types';
 import type { AgUiEvent, UserMessageRecord } from '@/http/types';
 import { describeToolCall } from '@/services/agent/tool-call';
 
@@ -19,6 +24,8 @@ export interface AgUiApplyContext {
   byId: Map<string, ChatMessage>;
   /** toolCallId -> 那次调用，后续的参数与结果事件靠它找回自己那一行 */
   toolCalls: Map<string, PendingToolCall>;
+  /** 思考事件的 messageId -> 还没说完的那段思考 */
+  reasonings: Map<string, ChatReasoning>;
 }
 
 export interface AgUiApplyResult {
@@ -32,16 +39,10 @@ export const createApplyContext = (messages: ChatMessage[]): AgUiApplyContext =>
   messages,
   byId: new Map(),
   toolCalls: new Map(),
+  reasonings: new Map(),
 });
 
 const createLocalId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
-export const normalizeAgUiType = (type: unknown) => (
-  String(type || '')
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .replace(/-/g, '_')
-    .toUpperCase()
-);
 
 export const unwrapUiRecord = (record: AgUiEvent): AgUiEvent => {
   if (typeof record.type === 'string') return record;
@@ -132,11 +133,11 @@ const refreshToolCall = (pending: PendingToolCall) => {
   pending.tool.detail = display.detail;
 };
 
-const getToolCallId = (event: AgUiEvent) => String(event.toolCallId ?? event.tool_call_id ?? '');
+const getToolCallId = (event: AgUiEvent) => String(event.toolCallId ?? '');
 
 const startToolCall = (ctx: AgUiApplyContext, event: AgUiEvent) => {
   const toolCallId = getToolCallId(event);
-  const name = String(event.toolCallName ?? event.tool_call_name ?? event.name ?? '');
+  const name = String(event.toolCallName ?? '');
   const block = appendBlock(currentAssistant(ctx), {
     type: 'tool',
     tool: { id: toolCallId, name, label: '', detail: '', state: 'running' },
@@ -162,19 +163,57 @@ const growToolCallArgs = (ctx: AgUiApplyContext, event: AgUiEvent, delta: string
   if (!pending.tool.detail) refreshToolCall(pending);
 };
 
+/**
+ * 取这段思考在界面上的那一块，还没有就在末尾那条助手消息上接一块。
+ *
+ * 和工具调用一样挂在末尾那条助手消息上：思考事件的 messageId 是 Agent 单独给这段思考起的，
+ * 不是正文那条消息的 id，按它 upsert 会把每段思考都拆成一条独立的消息。块等到真有思考文字
+ * 要来（MESSAGE_START / CONTENT）才建：只带加密内容、没有正文的思考，界面上什么都不该多。
+ */
+const ensureReasoning = (
+  ctx: AgUiApplyContext,
+  key: string,
+  startedAt?: number,
+): ChatReasoning | undefined => {
+  const existing = ctx.reasonings.get(key);
+  if (existing) return existing;
+  const block = appendBlock(currentAssistant(ctx), {
+    type: 'reasoning',
+    reasoning: { text: '', state: 'running', startedAt },
+  });
+  // 同 `startToolCall`：靠 narrow 拿响应式代理里的那一份。
+  if (block.type !== 'reasoning' || !block.reasoning) return undefined;
+  ctx.reasonings.set(key, block.reasoning);
+  return block.reasoning;
+};
+
+/**
+ * 这段思考说完了。
+ *
+ * MESSAGE_END 和外层的 END 都认：Agent 正常结束时两个都会发，而一轮在思考途中被打断时，落库
+ * 的那份只补得上 MESSAGE_END。认过一次就从索引里拿掉，后到的那个就什么都不用做。
+ */
+const endReasoning = (ctx: AgUiApplyContext, key: string, endedAt?: number) => {
+  const reasoning = ctx.reasonings.get(key);
+  if (!reasoning) return;
+  reasoning.state = 'done';
+  reasoning.endedAt = endedAt;
+  ctx.reasonings.delete(key);
+};
+
 export const applyAgUiEvent = (
   ctx: AgUiApplyContext,
   rawEvent: AgUiEvent,
   options: { ignoreUser?: boolean } = {},
 ): AgUiApplyResult => {
   const event = unwrapUiRecord(rawEvent);
-  const type = normalizeAgUiType(event.type);
-  const messageId = String(event.messageId ?? event.message_id ?? '');
-  const role = String(event.role || '').toLowerCase();
-  const delta = String(event.delta ?? event.content ?? '');
-  const chatRole: ChatMessage['role'] = role === 'user' ? 'user' : 'assistant';
+  const type = String(event.type ?? '');
+  const messageId = String(event.messageId ?? '');
+  const delta = String(event.delta ?? '');
+  const timestamp = typeof event.timestamp === 'number' ? event.timestamp : undefined;
+  const chatRole: ChatMessage['role'] = event.role === 'user' ? 'user' : 'assistant';
 
-  if (options.ignoreUser && (chatRole === 'user' || type.includes('USER_MESSAGE'))) {
+  if (options.ignoreUser && chatRole === 'user') {
     return {};
   }
 
@@ -203,12 +242,12 @@ export const applyAgUiEvent = (
       return {
         status: 'idle',
         done: true,
-        errorText: String(event.message || event.error || event.detail || '对话失败'),
+        errorText: String(event.message || '对话失败'),
       };
     case 'STEP_STARTED':
       return {
         status: 'thinking',
-        progress: String(event.stepName || event.step || event.name || '正在处理…'),
+        progress: String(event.stepName || '正在处理…'),
       };
     // 一次工具调用摊成四个事件：START 报名字，ARGS 一片片送参数，END 表示参数说完了，
     // RESULT 才是工具真的返回。界面上它们合成一行，状态跟着这条线走。
@@ -231,6 +270,23 @@ export const applyAgUiEvent = (
       if (pending) pending.tool.state = 'done';
       return {};
     }
+    // 思考：REASONING_START → MESSAGE_START → CONTENT… → MESSAGE_END → REASONING_END。落库回放
+    // 的那份把 CONTENT 合成了一条，走的是同一条路。
+    case 'REASONING_MESSAGE_START':
+      ensureReasoning(ctx, messageId, timestamp);
+      // 思考那一块已经在说「思考中」，进度条再说一遍就是噪音。
+      return { status: 'thinking', progress: '' };
+    case 'REASONING_MESSAGE_CONTENT':
+    case 'REASONING_MESSAGE_CHUNK': {
+      if (!delta) return {};
+      const reasoning = ensureReasoning(ctx, messageId, timestamp);
+      if (reasoning) reasoning.text += delta;
+      return {};
+    }
+    case 'REASONING_MESSAGE_END':
+    case 'REASONING_END':
+      endReasoning(ctx, messageId, timestamp);
+      return {};
     default:
       return {};
   }
@@ -275,6 +331,7 @@ export const hasConversationContent = (messages: ChatMessage[]) => (
       (block.type === 'text' && Boolean(block.text))
       || (block.type === 'image' && Boolean(block.src))
       || block.type === 'tool'
+      || (block.type === 'reasoning' && Boolean(block.reasoning?.text))
     ))
   ))
 );
@@ -294,7 +351,7 @@ export async function* readSseEvents(response: Response): AsyncGenerator<AgUiEve
         .filter(line => line.startsWith('data:'))
         .map(line => line.slice(5).trimStart())
         .join('\n');
-      if (!raw || raw === '[DONE]') continue;
+      if (!raw) continue;
       try {
         events.push(JSON.parse(raw));
       } catch {

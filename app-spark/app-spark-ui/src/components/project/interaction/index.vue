@@ -32,7 +32,7 @@
       :enable-upload="false"
       :hint="composerHint"
       placeholder="描述你想做的改动"
-      @send="sendMessage"
+      @send="handleSend"
     />
     <div v-else class="interaction-panel__archived" role="status">
       <AppIcon name="archive" />
@@ -75,7 +75,6 @@ const {
   viewingArchive,
   canReturnToLive,
 } = storeToRefs(projectStore);
-const { sendMessage } = projectStore;
 const scrollerRef = ref<HTMLElement>();
 const pinnedToBottom = ref(true);
 
@@ -94,6 +93,12 @@ const handleScroll = () => {
   const el = scrollerRef.value;
   if (!el) return;
   pinnedToBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+};
+
+// 自己刚发的消息总要看得到：哪怕之前翻到了上面，发送也把视口拉回底部，之后照常跟着新内容走。
+const handleSend: typeof projectStore.sendMessage = (...args) => {
+  pinnedToBottom.value = true;
+  return projectStore.sendMessage(...args);
 };
 
 watch(messages, async () => {

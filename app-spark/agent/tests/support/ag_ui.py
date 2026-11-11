@@ -32,6 +32,7 @@ def run_body(
     return {
         "threadId": conversation_id,
         "runId": run_id,
+        "protocolVersion": "1.0",
         "state": {},
         "messages": [{"id": str(uuid4()), "role": "user", "content": prompt}],
         "tools": [],

@@ -31,7 +31,7 @@ stages:
     # 社区版初始化时由 sync_apigw_stage_mcp_servers 注册，须在资源版本发布之后执行
     mcp_servers:
       - name: "perm-management"
-        title: "PaaS 平台权限管理"
+        title: "开发者中心-权限管理"
         description: "为当前应用查询网关及资源，申请、续期网关资源权限，并查询申请记录与审批结果。"
         resource_names:
           - "list_gateways"
@@ -48,7 +48,7 @@ stages:
         category_names:
           - "Official"
       - name: "deploy-with-module"
-        title: "开发者中心(PaaS 平台)模块部署"
+        title: "开发者中心-模块部署"
         description: "创建应用与模块，配置环境变量和增强服务，部署指定模块，并查询部署结果、日志与进程状态。"
         resource_names:
           - "get_minimal_app_list"

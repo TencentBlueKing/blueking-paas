@@ -52,6 +52,8 @@ class FrontendFeatureViewSet(ViewSet):
             "APP_ACCESS_TOKEN": settings.FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN,
             # 是否显示沙箱开发
             "DEV_SANDBOX": settings.FE_FEATURE_SETTINGS_DEV_SANDBOX,
+            # 应用左侧导航的 Agent 沙箱。与 DEV_SANDBOX（沙箱开发）不是同一个开关。
+            "AGENT_SANDBOX": settings.FE_FEATURE_SETTINGS_AGENT_SANDBOX,
             # 是否展示应用可用性保障
             "APP_AVAILABILITY_LEVEL": settings.FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL,
             # 是否展示 MCP Server 云 API 权限

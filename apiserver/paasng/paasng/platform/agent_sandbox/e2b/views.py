@@ -179,7 +179,7 @@ class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMi
         """列出已启用且公开的模板"""
         # 模板本身不按应用过滤，调用只为触发应用权限校验
         self.get_application()
-        templates = E2BSandboxTemplate.objects.filter(enabled=True, is_public=True)
+        templates = E2BSandboxTemplate.objects.builtins().filter(enabled=True, is_public=True)
         return Response(E2BConsoleTemplateOutputSLZ(templates, many=True).data)
 
     @swagger_auto_schema(
@@ -189,5 +189,7 @@ class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMi
     def retrieve(self, request, code, template_id):
         """查询模板详情，未启用或不公开的模板按不存在处理"""
         self.get_application()
-        template = get_object_or_404(E2BSandboxTemplate, template_id=template_id, enabled=True, is_public=True)
+        template = get_object_or_404(
+            E2BSandboxTemplate.objects.builtins(), template_id=template_id, enabled=True, is_public=True
+        )
         return Response(E2BConsoleTemplateDetailOutputSLZ(template).data)

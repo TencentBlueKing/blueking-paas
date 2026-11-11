@@ -1,8 +1,4 @@
-ifdef VERSION
-    VERSION=${VERSION}
-else
-    VERSION=$(shell git describe --always)
-endif
+VERSION ?= $(shell git describe --always)
 
 WORKSPACE=$(shell pwd)
 BUILD_TIME=$(shell date +%Y-%m-%dT%I:%M:%S)

@@ -37,7 +37,7 @@ Runtime 调模型走哪条路由 `AGENT_MODEL_SOURCE` 决定，不配时是 `bka
 
 ### 配置
 
-- 必填：`BK_API_URL_TMPL`、`TOKEN_AUTH_ENDPOINT`、`SANDBOX_APP_CODE` / `SANDBOX_APP_SECRET`（见下面「换票应用」）
+- 必填：`BK_API_URL_TMPL`、`TOKEN_AUTH_ENDPOINT`、`USER_ACCESS_TOKEN_APP_CODE` / `USER_ACCESS_TOKEN_APP_SECRET`（见下面「换票应用」）
 - 可选：`AGENT_MODEL_SOURCE`（默认就是 `bkaidev`）、`BKAIDEV_APIGW_ENVIRONMENT`、`AUTH_ENV_NAME`、`BKAUTH_BACKEND_TYPE`
   （见下面「换取 access_token」）、`BKAIDEV_MODEL_CONFIG`（见下面「模型列表」）
 
@@ -49,7 +49,7 @@ LLM 基址是 `{BK_API_URL_TMPL:bkaidev}/{BKAIDEV_APIGW_ENVIRONMENT}/openapi/aid
 ### 换取 access_token
 
 provider 在确定要新起 Runtime 的那一刻（持锁、确认没有活着的 Runtime 之后），用当前用户的登录态加上
-换票应用的 `SANDBOX_APP_CODE` / `SANDBOX_APP_SECRET` 向 `TOKEN_AUTH_ENDPOINT` 换一张用户态 access_token。
+换票应用的 `USER_ACCESS_TOKEN_APP_CODE` / `USER_ACCESS_TOKEN_APP_SECRET` 向 `TOKEN_AUTH_ENDPOINT` 换一张用户态 access_token。
 已在跑的 Runtime 继续对话时不会再换票。
 
 只有这个 Runtime 拿到下面三项，拿不到 `app_secret`，也拿不到直连用的固定 key：

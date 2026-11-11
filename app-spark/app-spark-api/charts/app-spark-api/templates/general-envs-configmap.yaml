@@ -46,8 +46,8 @@ Only omit nil: false, 0, empty strings and empty collections are explicit overri
   "LOGIN_FULL" .Values.loginFull
   "APP_CODE" .Values.appCode
   "APP_SECRET" .Values.appSecret
-  "SANDBOX_APP_CODE" .Values.sandboxAppCode
-  "SANDBOX_APP_SECRET" .Values.sandboxAppSecret
+  "USER_ACCESS_TOKEN_APP_CODE" .Values.userAccessTokenAppCode
+  "USER_ACCESS_TOKEN_APP_SECRET" .Values.userAccessTokenAppSecret
   "BK_API_URL_TMPL" .Values.bkApiUrlTmpl
   "APIGW_ENVIRONMENT" .Values.apigwEnvironment
   "BKAIDEV_APIGW_ENVIRONMENT" .Values.bkaidevApigwEnvironment

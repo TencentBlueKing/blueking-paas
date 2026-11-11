@@ -48,8 +48,8 @@ def bkaidev_settings(settings):
     settings.AUTH_ENV_NAME = "test"
     settings.APP_CODE = "bk-app-spark"
     settings.APP_SECRET = APP_SECRET
-    settings.SANDBOX_APP_CODE = "bk-app-spark-pub"
-    settings.SANDBOX_APP_SECRET = TOKEN_APP_SECRET
+    settings.USER_ACCESS_TOKEN_APP_CODE = "bk-app-spark-pub"
+    settings.USER_ACCESS_TOKEN_APP_SECRET = TOKEN_APP_SECRET
     return settings
 
 
@@ -156,7 +156,7 @@ async def test_the_platform_app_identity_never_reaches_the_token_service(
     assert APP_SECRET not in request.headers.values()
 
 
-@pytest.mark.parametrize("name", ["SANDBOX_APP_CODE", "SANDBOX_APP_SECRET"])
+@pytest.mark.parametrize("name", ["USER_ACCESS_TOKEN_APP_CODE", "USER_ACCESS_TOKEN_APP_SECRET"])
 async def test_a_missing_token_app_is_a_configuration_error(bkaidev_settings, token_transport, token_requests, name):
     # APP_CODE / APP_SECRET 仍配着，也不能拿来顶替：那样换出来的票带着本服务的全部授权进 Runtime。
     setattr(bkaidev_settings, name, "")

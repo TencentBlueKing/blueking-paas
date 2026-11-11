@@ -97,8 +97,8 @@ def build_access_token_backend_config() -> AccessTokenBackendConfig:
     # 换票应用没配时不回落到 APP_CODE：那样换出来的 token 带着本服务的全部授权进 Runtime。
     return AccessTokenBackendConfig(
         token_url=_require_setting("TOKEN_AUTH_ENDPOINT", settings.TOKEN_AUTH_ENDPOINT),
-        app_code=_require_setting("SANDBOX_APP_CODE", settings.SANDBOX_APP_CODE),
-        app_secret=_require_setting("SANDBOX_APP_SECRET", settings.SANDBOX_APP_SECRET),
+        app_code=_require_setting("USER_ACCESS_TOKEN_APP_CODE", settings.USER_ACCESS_TOKEN_APP_CODE),
+        app_secret=_require_setting("USER_ACCESS_TOKEN_APP_SECRET", settings.USER_ACCESS_TOKEN_APP_SECRET),
         env_name=str(settings.AUTH_ENV_NAME or "").strip() or "prod",
     )
 

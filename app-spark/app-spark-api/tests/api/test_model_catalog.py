@@ -118,8 +118,8 @@ def bkaidev_settings(settings):
     settings.TOKEN_AUTH_ENDPOINT = SSM_URL
     settings.APP_CODE = "bk-app-spark"
     settings.APP_SECRET = "app-secret-value"
-    settings.SANDBOX_APP_CODE = "bk-app-spark-pub"
-    settings.SANDBOX_APP_SECRET = "token-app-secret-value"
+    settings.USER_ACCESS_TOKEN_APP_CODE = "bk-app-spark-pub"
+    settings.USER_ACCESS_TOKEN_APP_SECRET = "token-app-secret-value"
     return settings
 
 
@@ -314,7 +314,7 @@ async def test_the_cache_is_kept_per_token_app(bkaidev_settings, upstream, logge
     upstream.cards = [make_card("hy3")]
     await logged_in_client.get(MODELS_URL)
 
-    bkaidev_settings.SANDBOX_APP_CODE = "another-token-app"
+    bkaidev_settings.USER_ACCESS_TOKEN_APP_CODE = "another-token-app"
     upstream.cards = [make_card("hy4-preview")]
     response = await logged_in_client.get(MODELS_URL)
 
@@ -323,7 +323,7 @@ async def test_the_cache_is_kept_per_token_app(bkaidev_settings, upstream, logge
 
 
 async def test_a_missing_token_app_is_an_operators_problem(bkaidev_settings, upstream, logged_in_client):
-    bkaidev_settings.SANDBOX_APP_CODE = ""
+    bkaidev_settings.USER_ACCESS_TOKEN_APP_CODE = ""
 
     response = await logged_in_client.get(MODELS_URL)
 

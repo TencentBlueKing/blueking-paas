@@ -86,8 +86,8 @@ def bkaidev_settings(settings):
     settings.TOKEN_AUTH_ENDPOINT = SSM_URL
     settings.APP_CODE = "bk-app-spark"
     settings.APP_SECRET = "app-secret-value"
-    settings.SANDBOX_APP_CODE = "bk-app-spark-pub"
-    settings.SANDBOX_APP_SECRET = "pub-secret-value"
+    settings.USER_ACCESS_TOKEN_APP_CODE = "bk-app-spark-pub"
+    settings.USER_ACCESS_TOKEN_APP_SECRET = "pub-secret-value"
     return settings
 
 

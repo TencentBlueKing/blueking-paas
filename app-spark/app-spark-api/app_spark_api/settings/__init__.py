@@ -132,8 +132,8 @@ APP_SECRET = settings.get("APP_SECRET", "")
 
 # 用于签发用户态 AccessToken。注意 AccessToken 会进入用户沙箱，因此需要确保该应用权限可控。
 # 目前该应用只应包含 AIDEV 相关的大模型调用权限，AGENT_MODEL_SOURCE 为 bkaidev 时必填。
-SANDBOX_APP_CODE = settings.get("SANDBOX_APP_CODE", "")
-SANDBOX_APP_SECRET = settings.get("SANDBOX_APP_SECRET", "")
+USER_ACCESS_TOKEN_APP_CODE = settings.get("USER_ACCESS_TOKEN_APP_CODE", "")
+USER_ACCESS_TOKEN_APP_SECRET = settings.get("USER_ACCESS_TOKEN_APP_SECRET", "")
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -466,9 +466,9 @@ AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
 
 ## AGENT_MODEL_SOURCE 为 bkaidev 时可选，字段详见 BkAidevModelConfig。
 ##
-## access_token 由本服务按「SANDBOX_APP_CODE + 当前用户」向 TOKEN_AUTH_ENDPOINT 申请，不落库、
+## access_token 由本服务按「USER_ACCESS_TOKEN_APP_CODE + 当前用户」向 TOKEN_AUTH_ENDPOINT 申请，不落库、
 ## 不缓存：签发服务在现有 token 仍有效时原样返回，不会因为新开会话而把用户已有的 token 废掉。
-## APP_SECRET 和 SANDBOX_APP_SECRET 都不会交给 Agent Runtime。
+## APP_SECRET 和 USER_ACCESS_TOKEN_APP_SECRET 都不会交给 Agent Runtime。
 ##
 ## LLM 基址不在这里配，由 {BK_API_URL_TMPL:bkaidev}/{BKAIDEV_APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1 拼出。
 ##

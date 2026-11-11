@@ -85,8 +85,8 @@ def test_null_groups_and_values_are_omitted():
         ("bkAuth.authEnvName", "test", "AUTH_ENV_NAME"),
         ("bkpaasApigwName", "paasv3", "BKPAAS_APIGW_NAME"),
         ("bkpaasUrl", "https://bkpaas.example.com", "BKPAAS_URL"),
-        ("sandboxAppCode", "bk-app-spark-pub", "SANDBOX_APP_CODE"),
-        ("sandboxAppSecret", "00123", "SANDBOX_APP_SECRET"),
+        ("userAccessTokenAppCode", "bk-app-spark-pub", "USER_ACCESS_TOKEN_APP_CODE"),
+        ("userAccessTokenAppSecret", "00123", "USER_ACCESS_TOKEN_APP_SECRET"),
     ],
 )
 def test_explicit_values_survive_dynaconf(monkeypatch, key, value, setting):

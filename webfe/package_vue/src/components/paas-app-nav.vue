@@ -139,6 +139,9 @@ export default {
     curAppModule() {
       return this.$store.state.curAppModule;
     },
+    platformFeature() {
+      return this.$store.state.platformFeature;
+    },
   },
   watch: {
     'curAppInfo.feature': {
@@ -234,6 +237,11 @@ export default {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appPackages')];
             }
           });
+        }
+
+        // feature flag 未启用时不展示 Agent 沙箱。
+        if (!this.platformFeature.AGENT_SANDBOX) {
+          navTree = navTree.filter(nav => nav.name !== 'agentSandbox');
         }
 
         // 初始化属性
@@ -340,7 +348,8 @@ export default {
           }
         }
       });
-      if (allowRouters.includes('agentSandbox')) {
+      // feature flag 未启用时，模板详情也不从侧栏权限放行。
+      if (allowRouters.includes('agentSandbox') && this.platformFeature.AGENT_SANDBOX) {
         this.allowedRouterName.push('agentSandboxTemplateDetail');
       }
     },

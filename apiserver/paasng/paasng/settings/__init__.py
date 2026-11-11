@@ -1723,6 +1723,9 @@ FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_CNATIV
 FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN = settings.get("FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN", False)
 # 是否显示沙箱
 FE_FEATURE_SETTINGS_DEV_SANDBOX = settings.get("FE_FEATURE_SETTINGS_DEV_SANDBOX", False)
+# 是否在应用左侧导航展示 Agent 沙箱。feature flag 未启用时不展示。
+# 与上面的 DEV_SANDBOX（沙箱开发）不是同一个开关。
+FE_FEATURE_SETTINGS_AGENT_SANDBOX = settings.get("FE_FEATURE_SETTINGS_AGENT_SANDBOX", False)
 
 # ---------------------------------------------
 # Agent Sandbox 网关权限授权配置

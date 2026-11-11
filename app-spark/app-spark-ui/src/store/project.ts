@@ -312,9 +312,49 @@ export const useProjectStore = defineStore('project', () => {
     resetApplyCtx();
   };
 
-  const latestAssistant = (ctx: AgUiApplyContext) => (
-    [...ctx.messages].reverse().find(item => item.role === 'assistant')
-  );
+  /**
+   * 这一轮的助手消息：最后一条用户消息之后的那条，没有就是 undefined。
+   *
+   * 不能越过用户消息往前找：一轮在模型开口之前就失败了，历史里只有 RUN_STARTED / RUN_ERROR，
+   * 没有任何助手文本事件，回放时这一轮根本没有自己的助手消息。往前找会找到上一轮的回复，把这一
+   * 轮的报错接到它末尾。
+   */
+  const currentTurnAssistant = (ctx: AgUiApplyContext) => {
+    for (let index = ctx.messages.length - 1; index >= 0; index--) {
+      const item = ctx.messages[index];
+      if (item.role === 'user') return undefined;
+      if (item.role === 'assistant') return item;
+    }
+    return undefined;
+  };
+
+  const isEmptyMessage = (message: ChatMessage) => !message.blocks.some(block => (
+    (block.type === 'text' && Boolean(block.text))
+    || block.type === 'tool'
+    || (block.type === 'reasoning' && Boolean(block.reasoning?.text))
+  ));
+
+  /**
+   * 把一轮的报错接到这一轮的助手消息上，没有就新起一条。
+   *
+   * 只有这条消息里除了报错什么都没有时才整条标红：模型已经说过的话、调过的工具都是真实发生过
+   * 的，标红会让它们看起来也出了错。
+   */
+  const appendRunError = (ctx: AgUiApplyContext, errorText: string) => {
+    let assistant = currentTurnAssistant(ctx);
+    if (!assistant) {
+      ctx.messages.push({ id: createId(), role: 'assistant', blocks: [] });
+      // 改接进列表之后的那一份，见 ag-ui.ts 的 appendBlock。
+      assistant = ctx.messages[ctx.messages.length - 1];
+    }
+    if (isEmptyMessage(assistant)) {
+      assistant.tone = 'error';
+      assistant.blocks = [{ type: 'text', text: errorText }];
+    } else if (!assistant.blocks.some(block => block.type === 'text' && block.text === errorText)) {
+      assistant.blocks.push({ type: 'text', text: errorText });
+    }
+    assistant.progress = '';
+  };
 
   /**
    * 把一条事件的作用落到界面上。
@@ -326,7 +366,7 @@ export const useProjectStore = defineStore('project', () => {
    * 由会话状态里的 `running` 说，见 :func:`bindConversation`。
    *
    * `ctx` 必须显式传：回放更早的一页历史用的是一个独立的 ctx（见 `replayHistoryPage`），而
-   * `progress` / `errorText` 都是接在「这一段的最后一条助手消息」上的，认错 ctx 就会把更早那一页
+   * `progress` / `errorText` 都是接在「这一段最后一轮的助手消息」上的，认错 ctx 就会把更早那一页
    * 的进度文字写到当前这一轮的气泡里。
    */
   const applyResult = (
@@ -335,19 +375,11 @@ export const useProjectStore = defineStore('project', () => {
     { trackStatus = true }: { trackStatus?: boolean } = {},
   ) => {
     if (trackStatus && result.status) status.value = result.status;
-    const assistant = latestAssistant(ctx);
+    const assistant = currentTurnAssistant(ctx);
     if (assistant && result.progress !== undefined) {
       assistant.progress = result.progress;
     }
-    if (result.errorText && assistant) {
-      const textBlock = assistant.blocks.find(block => block.type === 'text');
-      if (textBlock && !textBlock.text) {
-        textBlock.text = result.errorText;
-      } else if (!assistant.blocks.some(block => block.type === 'text' && block.text === result.errorText)) {
-        assistant.blocks.push({ type: 'text', text: result.errorText });
-      }
-      assistant.progress = '';
-    }
+    if (result.errorText) appendRunError(ctx, result.errorText);
   };
 
   const advanceUiEventSeq = (seq: number | null | undefined) => {

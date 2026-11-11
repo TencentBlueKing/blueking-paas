@@ -66,3 +66,10 @@ class E2BSandboxViewSet(E2BProtocolViewSet):
 
         sandboxes.set_sandbox_timeout(self.application, sandbox_id, slz.validated_data["timeout"])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def connect(self, request, sandbox_id):
+        """连接沙箱，续期并返回数据面连接字段"""
+        slz = E2BSandboxTimeoutInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        return Response(sandboxes.connect_sandbox(self.application, sandbox_id, slz.validated_data["timeout"]))

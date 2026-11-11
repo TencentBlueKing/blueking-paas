@@ -3879,6 +3879,33 @@ paths:
           resourcePermissionRequired: false
         descriptionEn:
         noneSchema: true
+  /agent_sandbox/e2b/sandboxes/{sandbox_id}/connect:
+    post:
+      operationId: connect_e2b_sandbox
+      description: 连接 e2b 沙箱
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/e2b/sandboxes/{sandbox_id}/connect
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: false
+          resourcePermissionRequired: false
+        descriptionEn:
+        noneSchema: true
   /agent_sandbox/applications/{app_code}/e2b/api_keys/:
     post:
       operationId: create_e2b_api_key

@@ -65,6 +65,14 @@ def test_create_posts_payload_verbatim(client, gateway_http):
     assert json.loads(gateway_http.last_request.body) == {"templateID": "e2b-envd"}
 
 
+def test_connect_posts_timeout_and_returns_detail(client, gateway_http):
+    """网关要求 connect 必须带 timeout，缺了会直接 400。"""
+    gateway_http.post(f"{GATEWAY_URL}/sandboxes/sbx-1/connect", json={"sandboxID": "sbx-1"})
+
+    assert client.connect_sandbox("sbx-1", 600) == {"sandboxID": "sbx-1"}
+    assert json.loads(gateway_http.last_request.body) == {"timeout": 600}
+
+
 def test_escapes_sandbox_id_in_path(client, gateway_http):
     """沙箱 ID 来自网关，不对格式做假设，因此按 URL 组件转义后再拼。"""
     gateway_http.register_uri(requests_mock.ANY, requests_mock.ANY, json={})

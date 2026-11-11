@@ -205,6 +205,28 @@ def set_sandbox_timeout(application: Application, sandbox_id: str, timeout: int)
             raise E2BSandboxNotFound(f"sandbox {sandbox_id} is gone on gateway") from exc
 
 
+def connect_sandbox(application: Application, sandbox_id: str, timeout: int) -> dict[str, Any]:
+    """连接沙箱：延长存活期并返回连数据面所需的字段。
+
+    SDK 在另一个进程里接手已有沙箱时只走这一条路径。它与 get 的区别在于会续期，
+    且网关会把暂停态的沙箱恢复过来。
+
+    :param timeout: 从此刻起的存活秒数。网关只延长不缩短，已经更晚的到期时间保持不变
+    :returns: 与 :func:`get_sandbox` 同形的网关响应，``domain`` 已改写为该集群的对外地址，
+        ``envdAccessToken`` 为本次新签发的值
+    :raises E2BSandboxNotFound: 沙箱不存在、不属于该应用，或本地已标记为终止
+    """
+    sandbox = _get_live_sandbox(application, sandbox_id)
+
+    with E2BGatewayClient.for_cluster(sandbox.cluster_name) as client:
+        try:
+            resp = client.connect_sandbox(sandbox_id, timeout)
+        except E2BGatewayNotFound as exc:
+            raise E2BSandboxNotFound(f"sandbox {sandbox_id} is gone on gateway") from exc
+
+        return _rewrite_data_plane_address(resp, client.config)
+
+
 def _rewrite_data_plane_address(resp: dict[str, Any], config: ClusterE2BConfig) -> dict[str, Any]:
     """把网关响应里的数据面地址换成该集群的对外入口。
 

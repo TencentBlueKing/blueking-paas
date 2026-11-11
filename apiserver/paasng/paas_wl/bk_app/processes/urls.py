@@ -87,8 +87,9 @@ urlpatterns = [
     ),
 ]
 
-# 应用态进程操作，仅供 AIDEV 操作 AI Agent 应用
+# System APIs: 给固定的系统调用
 urlpatterns += [
+    # 应用态进程操作，仅供 AIDEV 操作 AI Agent 应用
     re_path(
         make_app_pattern(r"/processes/list/$", prefix="sys/api/bkapps/applications/"),
         views.SysListAndWatchProcsViewSet.as_view({"get": "list"}),

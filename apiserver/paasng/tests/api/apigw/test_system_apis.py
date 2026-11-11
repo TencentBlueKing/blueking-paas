@@ -272,7 +272,7 @@ class TestGetContactInfo:
         assert {str_username(u) for u in contact_info.recent_deployment_operators} == set(recent_deployment_operators)
 
 
-class TestLessCodeSystemAPIViewSet:
+class TestSysLessCodeViewSet:
     @pytest.fixture()
     def mixed_service_mgr(self):
         with mock.patch("paasng.plat_admin.system.views.mixed_service_mgr") as mgr:

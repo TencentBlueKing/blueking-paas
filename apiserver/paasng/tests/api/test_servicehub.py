@@ -62,8 +62,8 @@ class TestServiceEngineAppAttachmentViewSet:
         rel.db_obj.credentials_enabled = credentials_enabled
         return rel
 
-    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
-    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_attachment_by_engine_app")
+    @mock.patch("paasng.accessories.servicehub.views.api.mixed_service_mgr.get_or_404")
+    @mock.patch("paasng.accessories.servicehub.views.api.mixed_service_mgr.get_attachment_by_engine_app")
     def test_list(self, get_attachment_by_engine_app, get_or_404, api_client, bk_app, bk_module):
         service = G(Service)
         get_attachment_by_engine_app.side_effect = self.mock_get_attachment_by_engine_app(service.uuid)
@@ -74,8 +74,8 @@ class TestServiceEngineAppAttachmentViewSet:
         assert response.status_code == 200
         assert response.data[0]["credentials_enabled"] is True
 
-    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
-    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_attachment_by_engine_app")
+    @mock.patch("paasng.accessories.servicehub.views.api.mixed_service_mgr.get_or_404")
+    @mock.patch("paasng.accessories.servicehub.views.api.mixed_service_mgr.get_attachment_by_engine_app")
     def test_update(self, get_attachment_by_engine_app, get_or_404, api_client, bk_app, bk_module):
         service = G(Service)
         get_attachment_by_engine_app.side_effect = self.mock_get_attachment_by_engine_app(service.uuid)
@@ -109,8 +109,8 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
         rel.db_obj.service_instance_id = instance.uuid
         return rel
 
-    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.list_unbound_instance_rels")
-    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
+    @mock.patch("paasng.accessories.servicehub.views.api.mixed_service_mgr.list_unbound_instance_rels")
+    @mock.patch("paasng.accessories.servicehub.views.api.mixed_service_mgr.get_or_404")
     def test_list_by_module(self, mock_get_or_404, mock_list_unbound_instance_rels, api_client, bk_app, bk_module):
         service1 = G(
             Service, uuid=uuid.uuid4(), logo_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAAC"
@@ -165,8 +165,8 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
             "environment_name": "预发布环境",
         }
 
-    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_unbound_instance_rel_by_instance_id")
-    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
+    @mock.patch("paasng.accessories.servicehub.views.api.mixed_service_mgr.get_unbound_instance_rel_by_instance_id")
+    @mock.patch("paasng.accessories.servicehub.views.api.mixed_service_mgr.get_or_404")
     def test_retrieve_sensitive_field(self, mock_get_or_404, mock_get_rel, api_client, bk_app, bk_module):
         service = G(
             Service, uuid=uuid.uuid4(), logo_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAAC"

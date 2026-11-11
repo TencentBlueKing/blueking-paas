@@ -64,7 +64,11 @@ def _build_rel(service_instance: ServiceInstanceObj) -> mock.MagicMock:
 
 @pytest.fixture()
 def stubbed_service_mgr(service_instance: ServiceInstanceObj):
-    with mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr") as mgr:
+    with (
+        # 应用态视图在 sys_api, 共享的实例信息组装逻辑在 api, 两者需指向同一个 mock
+        mock.patch("paasng.accessories.servicehub.views.sys_api.mixed_service_mgr") as mgr,
+        mock.patch("paasng.accessories.servicehub.views.api.mixed_service_mgr", mgr),
+    ):
         service_obj = mock.MagicMock()
         service_obj.uuid = SERVICE_ID
 

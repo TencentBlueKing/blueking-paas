@@ -102,6 +102,30 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "get_current_information",
 }
 
+# The url prefix of the system APIs, which are called by other systems instead of the users.
+SYS_API_URL_PREFIX = "sys/api/"
+
+# The module which provides the sysapi client permissions, used to tell a system API view
+# apart from the user-facing ones.
+SYSAPI_ROLE_MODULE = "paasng.infras.sysapi_client.roles"
+
+# These views serve the system APIs but are excluded from the checking process of `sys_api_layout`.
+SYS_API_CHECKING_EXCLUDED_VIEWS: Set[str] = {
+    # The deprecated v1 structured log API, it's not checked for historical reasons.
+    "V1SysStructuredLogAPIView",
+}
+
+# Multi-editions specific start
+
+try:
+    from . import conf_ext  # type: ignore
+
+    SYS_API_CHECKING_EXCLUDED_VIEWS |= set(conf_ext.SYS_API_CHECKING_EXCLUDED_VIEWS)
+except ImportError:
+    pass
+
+# Multi-editions specific end
+
 # Admin42 drf views' namespaces prefix, used to check if a view is an admin42 view
 ADMIN42_MODULE_NAMESPACES = (
     "paasng.plat_admin.admin42.views",

@@ -138,7 +138,7 @@ def list_instances_only(sandbox_env):
         return process
 
     with mock.patch(
-        "paas_wl.bk_app.processes.views.ProcInstByEnvListWatcher.list_instances_only",
+        "paas_wl.bk_app.processes.views.api.ProcInstByEnvListWatcher.list_instances_only",
         return_value=ProcessesInfo(
             processes=[_build_process(wl_app, "web"), _build_process(other_app, "web")],
             rv_proc="300",
@@ -155,11 +155,11 @@ class TestSysListProcesses:
     def list_processes(self, wl_processes_info: ProcessesInfo):
         with (
             mock.patch(
-                "paas_wl.bk_app.processes.views.ProcInstByModuleEnvListWatcher.list",
+                "paas_wl.bk_app.processes.views.api.ProcInstByModuleEnvListWatcher.list",
                 return_value=wl_processes_info,
             ) as watcher_list,
             mock.patch(
-                "paas_wl.bk_app.processes.views.ProcessManager.list_processes_specs",
+                "paas_wl.bk_app.processes.views.api.ProcessManager.list_processes_specs",
                 return_value=[{"name": "web", "target_replicas": 1, "target_status": "start"}],
             ),
         ):
@@ -255,12 +255,12 @@ class TestSysUpdateProcess:
 
     @pytest.fixture()
     def proc_ctl(self):
-        with mock.patch("paas_wl.bk_app.processes.views.get_proc_ctl") as get_proc_ctl:
+        with mock.patch("paas_wl.bk_app.processes.views.api.get_proc_ctl") as get_proc_ctl:
             yield get_proc_ctl.return_value
 
     @pytest.fixture()
     def audit_record(self):
-        with mock.patch("paas_wl.bk_app.processes.views.add_app_audit_record") as add_app_audit_record:
+        with mock.patch("paas_wl.bk_app.processes.views.api.add_app_audit_record") as add_app_audit_record:
             yield add_app_audit_record
 
     @staticmethod

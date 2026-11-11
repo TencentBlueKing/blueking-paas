@@ -206,7 +206,7 @@ class TestSysStreamsHistoryEvents:
     @pytest.fixture()
     def subscriber(self):
         """Stub out the redis channel subscriber."""
-        with mock.patch("paasng.platform.engine.streaming.views.StreamChannelSubscriber") as subscriber_cls:
+        with mock.patch("paasng.platform.engine.streaming.views.api.StreamChannelSubscriber") as subscriber_cls:
             subscriber = subscriber_cls.return_value
             subscriber.get_channel_state.return_value = "running"
             subscriber.get_history_events.return_value = [{"id": 1, "event": "msg", "data": "hello"}]

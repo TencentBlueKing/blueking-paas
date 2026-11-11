@@ -260,6 +260,9 @@ def create_agent(
             # 以保持一致性。env 放在 Shell 而不是 LocalWorkspace 上：denied_env_patterns
             # 只过滤 Shell.env。
             env=uv_environ(os.environ),
+            # harness 默认拦 rm、rmdir、dd 等命令，模型删文件都会被拒。这层只看首个词，
+            # `/bin/rm` 就能绕过，本来也不是边界，隔离靠沙箱。
+            denied_commands=(),
             denied_env_patterns=(
                 *LLM_API_KEY_ENV_PATTERNS,
                 "APP_SPARK_AGENT_*",

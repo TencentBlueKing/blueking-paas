@@ -1,7 +1,8 @@
 import fnmatch
+import json
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -9,8 +10,8 @@ import httpx2
 import pytest
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import LocalWorkspace
-from pydantic_ai.messages import ToolCallPart
-from pydantic_ai.models.function import FunctionModel
+from pydantic_ai.messages import ModelMessage, ToolCallPart
+from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai_harness import (
     ClampOversizedMessages,
@@ -163,6 +164,33 @@ def test_the_shell_runs_uv_against_the_projects_index_not_the_agents_venv(
     assert shell.env["UV_DEFAULT_INDEX"] == "https://pypi.example.com/simple"
     assert not denied("UV_DEFAULT_INDEX", shell.denied_env_patterns)
     assert "VIRTUAL_ENV" not in shell.env
+
+
+async def test_the_shell_lets_the_model_delete_files(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    """The harness denies rm by default, which leaves the model unable to drop a file it wrote."""
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "not-used-by-this-test")
+    (tmp_path / "stale.txt").write_text("unused")
+    model = command_model("rm stale.txt")
+
+    await create_agent(tmp_path).run("clean up", model=model)
+
+    assert not (tmp_path / "stale.txt").exists()
+
+
+def command_model(command: str) -> FunctionModel:
+    """Run command once through the shell, then answer."""
+    issued = False
+
+    async def stream(messages: list[ModelMessage], info: AgentInfo) -> AsyncIterator[str | DeltaToolCalls]:
+        nonlocal issued
+        if issued:
+            yield "done"
+            return
+        issued = True
+        args = json.dumps({"command": command})
+        yield {0: DeltaToolCall(name="run_command", json_args=args, tool_call_id="command-1")}
+
+    return FunctionModel(stream_function=stream)
 
 
 def test_the_shell_does_not_find_the_agents_python_on_path(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:

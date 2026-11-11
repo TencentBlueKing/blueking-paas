@@ -215,6 +215,11 @@ export interface PreviewStartResponse {
   outcome: 'starting' | 'no_project';
 }
 
+/** POST .../conversations/{number}/runs/{run_id}/stop/，202：停止请求已交给 Runtime */
+export interface RunStopResponse {
+  run_id: string;
+}
+
 export type ModelCatalogSource = 'bkaidev' | 'direct';
 
 export interface ModelCatalogItem {

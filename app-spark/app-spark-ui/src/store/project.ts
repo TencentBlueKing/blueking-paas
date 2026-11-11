@@ -14,6 +14,7 @@ import {
   listUiEvents,
   startConversationPreview,
   startConversationRun,
+  stopConversationRun,
 } from '@/http/api';
 import type {
   ConversationHistoryRecord,
@@ -72,6 +73,12 @@ export const useProjectStore = defineStore('project', () => {
   const liveNumber = ref<number | null>(null);
   const uiEventSeq = ref(0);
   const running = ref(false);
+  /** 正在跑的那一轮的 ID，停止时要点名它。直播时取自 RUN_STARTED，其余时候取自会话状态。 */
+  const runId = ref<string | null>(null);
+  /** 本页发出的这一轮还没被 Runtime 接受（多半在准备运行环境），这时还没有 run ID 可点名。 */
+  const awaitingRunStart = ref(false);
+  /** 已经请求停止，等这一轮收尾。回到空闲就清掉，见下面对 status 的 watch。 */
+  const stopping = ref(false);
   const replicationPending = ref(false);
   // 下一轮能不能直接用现有运行环境；不能时，发消息后要先等运行环境准备好。
   const runtimeReady = ref(false);
@@ -93,6 +100,17 @@ export const useProjectStore = defineStore('project', () => {
   const historyCursor = ref<string | null>(null);
   const loadingEarlier = ref(false);
   const busy = computed(() => status.value !== 'idle' || entering.value);
+  /**
+   * 眼前这一轮能不能停。只剩回写（`replication_pending`）时这一轮已经跑完，没有可停的。
+   * 还在等 Runtime 接受时也算能停：先记下，RUN_STARTED 一到就发，见 :func:`stopRun`。
+   */
+  const canStop = computed(() => (
+    status.value !== 'idle'
+    && !entering.value
+    && isLive.value
+    && !stopping.value
+    && (runId.value != null || awaitingRunStart.value)
+  ));
   /** 还有更早的历史可以往前翻。 */
   const hasEarlierHistory = computed(() => historyCursor.value !== null);
   /** 正在翻看归档：会话已经结束，只能读，发不出新的一轮对话。 */
@@ -103,6 +121,12 @@ export const useProjectStore = defineStore('project', () => {
   ));
 
   const applyCtx = createApplyContext(messages.value);
+
+  // 停下的一轮和正常结束的一轮走同一条收尾路线，最后都回到空闲；切走、重置也都会先回到空闲。
+  // 用 sync：同一个 tick 里 idle 之后紧接着又进了下一轮时，不能漏掉这一次。
+  watch(status, (value) => {
+    if (value === 'idle') stopping.value = false;
+  }, { flush: 'sync' });
 
   let enterToken = 0;
   // 只认最后一次「拉起预览」：换了会话再回来的旧请求，不能把新会话的标记清掉。
@@ -144,6 +168,7 @@ export const useProjectStore = defineStore('project', () => {
     liveRunGeneration += 1;
     liveRunAbort?.abort();
     liveRunAbort = null;
+    awaitingRunStart.value = false;
   };
 
   const syncApplyCtx = () => {
@@ -241,6 +266,7 @@ export const useProjectStore = defineStore('project', () => {
     conversationId.value = state.conversation_id;
     isLive.value = state.is_live;
     running.value = state.running;
+    runId.value = state.run_id ?? null;
     replicationPending.value = state.replication_pending;
     runtimeReady.value = state.runtime_ready;
     // 顺手校准「哪个会话是活跃的」。反过来那一支同样重要：我们记着的那个会话被读出来是已结束
@@ -272,6 +298,8 @@ export const useProjectStore = defineStore('project', () => {
     liveNumber.value = null;
     uiEventSeq.value = 0;
     running.value = false;
+    runId.value = null;
+    awaitingRunStart.value = false;
     replicationPending.value = false;
     runtimeReady.value = false;
     entering.value = false;
@@ -850,6 +878,7 @@ export const useProjectStore = defineStore('project', () => {
       liveNumber.value = null;
     }
     running.value = false;
+    runId.value = null;
     replicationPending.value = false;
     runtimeReady.value = false;
     uiEventSeq.value = 0;
@@ -1025,6 +1054,42 @@ export const useProjectStore = defineStore('project', () => {
     });
   };
 
+  /**
+   * 请求停止给定的一轮。失败时把按钮放开，好让用户再试；这一轮已经结束则不算失败。
+   */
+  const requestStop = async (targetRunId: string) => {
+    const targetProjectId = projectId.value;
+    const targetNumber = conversationNumber.value;
+    if (!targetProjectId || targetNumber == null) return;
+    const stillThisRun = () => (
+      projectId.value === targetProjectId
+      && conversationNumber.value === targetNumber
+      && runId.value === targetRunId
+    );
+    try {
+      await stopConversationRun(targetProjectId, targetNumber, targetRunId);
+    } catch (error) {
+      // 已经跑完了，要的本来就是它不再跑。收尾照常交给 SSE 或轮询。
+      if (isApiError(error, ApiErrorCode.RUN_NOT_RUNNING) || !stillThisRun()) return;
+      stopping.value = false;
+      Message({ theme: 'error', message: error instanceof Error ? error.message : '停止失败' });
+    }
+  };
+
+  /**
+   * 停下眼前正在跑的那一轮。
+   *
+   * 只发请求，不改 status：被停下的一轮照常收尾，直播的 SSE 以 RUN_FINISHED 结束，补历史的轮询
+   * 看到 `running` 变回 false，界面沿原路回到空闲。这一轮还没被 Runtime 接受时没有 run ID，只先
+   * 记下，由 sendMessage 在 RUN_STARTED 到达时补发；不能 abort 本页的请求代替，那只会让本页不再读，
+   * Runtime 照样会接下这一轮。
+   */
+  const stopRun = async () => {
+    if (!canStop.value) return;
+    stopping.value = true;
+    if (runId.value) await requestStop(runId.value);
+  };
+
   // TODO: 项目对话暂不上传图片，后续再接入
   const sendMessage = async (text: string, images: ChatImage[] = [], modelId?: string) => {
     void images;
@@ -1070,6 +1135,8 @@ export const useProjectStore = defineStore('project', () => {
     messages.value.push(userMessage, assistantMessage);
     syncApplyCtx();
     status.value = 'thinking';
+    runId.value = null;
+    awaitingRunStart.value = true;
 
     // 经响应式代理改 progress：直接改 assistantMessage 这个原始对象，界面不会跟着变。
     const liveAssistant = messages.value[messages.value.length - 1];
@@ -1115,6 +1182,14 @@ export const useProjectStore = defineStore('project', () => {
           // 开始输出，运行环境已就绪。只清自己设的那句，事件带来的进度留给 applyResult。
           if (liveAssistant.progress === PREPARING_RUNTIME_TEXT) liveAssistant.progress = '';
         }
+        if (event.type === 'RUN_STARTED' && awaitingRunStart.value) {
+          awaitingRunStart.value = false;
+          if (typeof event.runId === 'string' && event.runId) {
+            runId.value = event.runId;
+            // 准备运行环境期间就按了停止。
+            if (stopping.value) void requestStop(event.runId);
+          }
+        }
         if (event.type === 'RUN_FINISHED') sawRunFinished = true;
         syncApplyCtx();
         applyResult(applyCtx, applyAgUiEvent(applyCtx, event, { ignoreUser: true }));
@@ -1142,6 +1217,7 @@ export const useProjectStore = defineStore('project', () => {
       preparingOver = true;
       if (liveRunAbort === controller) liveRunAbort = null;
       if (stillCurrent()) {
+        awaitingRunStart.value = false;
         assistantMessage.progress = '';
         const textBlock = assistantMessage.blocks.find(block => block.type === 'text');
         if (textBlock && !textBlock.text) {
@@ -1178,6 +1254,9 @@ export const useProjectStore = defineStore('project', () => {
     liveNumber,
     uiEventSeq,
     running,
+    runId,
+    stopping,
+    canStop,
     replicationPending,
     entering,
     previewStarting,
@@ -1202,5 +1281,6 @@ export const useProjectStore = defineStore('project', () => {
     setProjectName,
     pollProjectIntRenaming,
     sendMessage,
+    stopRun,
   };
 });

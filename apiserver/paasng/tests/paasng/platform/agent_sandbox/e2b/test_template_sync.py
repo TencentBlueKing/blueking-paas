@@ -58,6 +58,8 @@ class FakeClusters:
         self.objects: dict[tuple[str, str, str], dict] = {}
         self.broken_clusters: set[str] = set()
         self.failing_names: set[str] = set()
+        # 只有池子写入失败，同名的模板照常写入
+        self.failing_pools: set[str] = set()
 
     def put(self, cluster: str, kind: str, name: str, labels: dict | None = None):
         self.objects[(cluster, kind, name)] = {"metadata": {"name": name, "labels": labels or {}}}
@@ -87,7 +89,7 @@ class _FakeResource:
 
     def create_or_update(self, name, namespace, body, **kwargs):
         assert namespace == NAMESPACE
-        if name in self.clusters.failing_names:
+        if name in self.clusters.failing_names or (self.kind == "SandboxPool" and name in self.clusters.failing_pools):
             raise RuntimeError(f"admission webhook denied {name}")
         self.clusters.objects[(self.cluster, self.kind, name)] = body
 
@@ -268,29 +270,39 @@ class TestMarkPending:
 
 
 class TestMarkSyncPending:
-    def test_resets_existing_records(self, clusters):
+    def test_resets_records_not_current(self, clusters):
+        """已成功下发当前配置的不动，同步期间要保持可用"""
         template = make_builtin_template("e2b-envd")
+        changed = make_builtin_template("e2b-changed")
         clusters.broken_clusters.add(OTHER_CLUSTER)
-        template_sync.sync_template("e2b-envd")
+        template_sync.sync_all()
+        # 下发成功之后配置又变了，例如摘要算法调整后上线
+        type(changed).objects.filter(pk=changed.pk).update(image="new:v2")
 
         template_sync.mark_sync_pending()
-
-        records = E2BSandboxTemplateSyncRecord.objects.filter(template=template)
-        assert {(r.status, r.message) for r in records} == {(E2BTemplateSyncStatus.PENDING.value, "")}
-        assert records.count() == 2
-
-    def test_only_resets_records_in_scope(self, clusters):
-        template = make_builtin_template("e2b-envd")
-        other = make_builtin_template("e2b-other")
-        template_sync.sync_all()
-
-        template_sync.mark_sync_pending(cluster_names={OTHER_CLUSTER}, resource_names={"e2b-envd"})
 
         assert _status_of(template) == {
             CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value,
             OTHER_CLUSTER: E2BTemplateSyncStatus.PENDING.value,
         }
-        assert set(_status_of(other).values()) == {E2BTemplateSyncStatus.SUCCEEDED.value}
+        assert set(_status_of(changed).values()) == {E2BTemplateSyncStatus.PENDING.value}
+        assert set(
+            E2BSandboxTemplateSyncRecord.objects.filter(template=template).values_list("message", flat=True)
+        ) == {""}
+
+    def test_only_resets_records_in_scope(self, clusters):
+        template = make_builtin_template("e2b-envd")
+        other = make_builtin_template("e2b-other")
+        template_sync.sync_all()
+        E2BSandboxTemplateSyncRecord.objects.update(status=E2BTemplateSyncStatus.FAILED.value)
+
+        template_sync.mark_sync_pending(cluster_names={OTHER_CLUSTER}, resource_names={"e2b-envd"})
+
+        assert _status_of(template) == {
+            CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.FAILED.value,
+            OTHER_CLUSTER: E2BTemplateSyncStatus.PENDING.value,
+        }
+        assert set(_status_of(other).values()) == {E2BTemplateSyncStatus.FAILED.value}
 
 
 class TestSyncTemplate:
@@ -597,8 +609,8 @@ class TestTemplateStatuses:
 
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
-    def test_resync_keeps_available(self, clusters, bk_app):
-        """运维重新同步会先置为待同步，失败了集群里也还是当前配置，都不影响使用"""
+    def test_available_during_resync_until_it_fails(self, clusters, bk_app):
+        """运维重新同步期间照常可用；只看最近一次下发，重新同步失败了也不再可用"""
         template = make_custom_template(bk_app, "mine")
         template_sync.sync_template(template.resource_name)
 
@@ -607,7 +619,27 @@ class TestTemplateStatuses:
 
         clusters.broken_clusters.add(CLUSTER_NAME_FOR_TESTING)
         template_sync.sync_all()
-        assert _status_of(template) == {CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.FAILED.value}
+        assert self._status(bk_app, template) == E2BTemplateStatus.SYNC_FAILED
+
+    def test_partial_push_then_revert_is_not_available(self, clusters, bk_app):
+        """模板已写入、池子失败时，集群里已是新配置；改回旧配置后不能凭更早的成功判为可用"""
+        template = make_custom_template(bk_app, "mine", image="old:v1")
+        template_sync.sync_template(template.resource_name)
+        template.image = "new:v2"
+        template.save()
+        clusters.failing_pools.add(template.resource_name)
+        template_sync.sync_template(template.resource_name)
+        assert _image_of(clusters, CLUSTER_NAME_FOR_TESTING, template.resource_name) == "new:v2"
+
+        template.image = "old:v1"
+        template.save()
+        template_sync.mark_pending(template)
+
+        assert self._status(bk_app, template) == E2BTemplateStatus.SYNCING
+        assert not template_sync.is_applied(template, CLUSTER_NAME_FOR_TESTING)
+
+        clusters.failing_pools.clear()
+        template_sync.sync_template(template.resource_name)
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
     def test_failed_push_of_current_spec(self, clusters, bk_app):

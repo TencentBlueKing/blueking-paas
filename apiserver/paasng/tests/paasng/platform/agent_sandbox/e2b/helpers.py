@@ -32,7 +32,7 @@ def mark_applied(
     record, _ = E2BSandboxTemplateSyncRecord.objects.update_or_create(
         template=template,
         cluster_name=cluster_name,
-        defaults={"status": E2BTemplateSyncStatus.SUCCEEDED.value, "applied_digest": spec_digest(template)},
+        defaults={"status": E2BTemplateSyncStatus.SUCCEEDED.value, "digest": spec_digest(template)},
     )
     return record
 

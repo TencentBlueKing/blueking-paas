@@ -133,13 +133,13 @@ class Migration(migrations.Migration):
                 ),
                 ("message", models.TextField(blank=True, default="", verbose_name="失败原因")),
                 (
-                    "applied_digest",
+                    "digest",
                     models.CharField(
                         blank=True,
                         default="",
-                        help_text="为空表示从未下发成功",
+                        help_text="为空表示还没有下发过",
                         max_length=64,
-                        verbose_name="已下发的配置摘要",
+                        verbose_name="下发的配置摘要",
                     ),
                 ),
                 (

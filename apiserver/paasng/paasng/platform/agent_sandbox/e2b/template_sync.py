@@ -23,9 +23,10 @@
 
 平台下发的 CR 都带 managed-by 标签。删除与清理只动带标签的 CR，集群里手工创建的不受影响。
 
-下发成功时，记录上留下所下发配置的摘要。创建沙箱前比对选中集群上的摘要与模板当前配置，
-不一致就拒绝，以免用户改完模板后拿到的还是旧配置的沙箱。内置模板已预热的实例不在此列，
-池子不跟随模板变化，它们保持旧配置直到被消耗完。
+每个集群的下发记录只描述最近一次下发：结果，以及所下发配置的摘要。创建沙箱前要求选中集群上
+最近一次下发成功、且摘要与模板当前配置一致，以免用户改完模板后拿到的还是旧配置的沙箱。
+下发失败就不可用：模板与池子分两步写入，失败时集群里可能已是新旧混合的状态。内置模板已预热的
+实例不在此列，池子不跟随模板变化，它们保持旧配置直到被消耗完。
 
 全量同步与单模板同步共用一把全局锁，拿到锁之后才读库，因此最后执行的一方用的总是最新状态。
 锁只串行化向集群的下发，模板的增删改只写库、投递任务，不受影响。代价是下发排队：
@@ -175,7 +176,7 @@ def build_pool_manifest(template: E2BSandboxTemplate, namespace: str) -> dict[st
 
 
 def spec_digest(template: E2BSandboxTemplate) -> str:
-    """模板当前规格的摘要，与记录上的摘要相同即集群里的 SandboxTemplate 已是当前配置。
+    """模板当前规格的摘要，记录上的摘要与它相同且下发成功，即集群里的 SandboxTemplate 已是当前配置。
 
     只算模板字段，不算整份清单：平台生成清单的方式变了（标签、存储类等），集群里的旧 CR 照样能用，
     不该因此拦住所有创建。增删这里的字段会让全部记录对不上，上线后须做一次全量同步
@@ -230,15 +231,21 @@ def mark_pending(template: E2BSandboxTemplate) -> None:
 def mark_sync_pending(cluster_names: set[str] | None = None, resource_names: set[str] | None = None) -> None:
     """投递同步任务前调用：范围内已有的记录置为待同步，概览里没有待同步即同步完成。参数同 ``sync_all``。
 
+    已经成功下发了当前配置的记录不动：重新同步写的还是同一份配置，同步期间模板应当保持可用，
+    真失败了再由同步改成失败。
+
     没有记录的目标集群在概览里本就算未完成，不再是目标的集群不计入概览、由同步删除，
-    所以只需改已有的记录，模板再多也是一条 SQL
+    所以只需改已有的记录
     """
-    records = E2BSandboxTemplateSyncRecord.objects.all()
+    records = E2BSandboxTemplateSyncRecord.objects.select_related("template")
     if cluster_names is not None:
         records = records.filter(cluster_name__in=cluster_names)
     if resource_names is not None:
         records = records.filter(template__resource_name__in=resource_names)
-    records.update(status=E2BTemplateSyncStatus.PENDING.value, message="")
+    stale = [r.pk for r in records if not _is_current(r, r.template)]
+    E2BSandboxTemplateSyncRecord.objects.filter(pk__in=stale).update(
+        status=E2BTemplateSyncStatus.PENDING.value, message=""
+    )
 
 
 def sync_template(resource_name: str) -> None:
@@ -407,7 +414,7 @@ def get_cluster_overviews() -> list[ClusterSyncOverview]:
 def is_applied(template: E2BSandboxTemplate, cluster_name: str) -> bool:
     """集群里的 SandboxTemplate 是否已是模板的当前配置"""
     record = E2BSandboxTemplateSyncRecord.objects.filter(template=template, cluster_name=cluster_name).first()
-    return record is not None and record.applied_digest == spec_digest(template)
+    return record is not None and _is_current(record, template)
 
 
 def get_template_statuses(
@@ -431,12 +438,18 @@ def get_template_statuses(
 
 
 def _template_status(template: E2BSandboxTemplate, record: E2BSandboxTemplateSyncRecord | None) -> E2BTemplateStatus:
-    # 已是当前配置就可用，不看 status：运维重新同步时会先置为待同步，失败了集群里的 CR 也还在
-    if record is not None and record.applied_digest == spec_digest(template):
+    if record is None:
+        return E2BTemplateStatus.SYNCING
+    if _is_current(record, template):
         return E2BTemplateStatus.AVAILABLE
-    if record is not None and record.status == E2BTemplateSyncStatus.FAILED.value:
+    if record.status == E2BTemplateSyncStatus.FAILED.value:
         return E2BTemplateStatus.SYNC_FAILED
     return E2BTemplateStatus.SYNCING
+
+
+def _is_current(record: E2BSandboxTemplateSyncRecord, template: E2BSandboxTemplate) -> bool:
+    """最近一次下发成功，且下发的就是模板当前配置"""
+    return record.status == E2BTemplateSyncStatus.SUCCEEDED.value and record.digest == spec_digest(template)
 
 
 def _enabled_configs() -> list[ClusterE2BConfig]:
@@ -550,10 +563,10 @@ def _prune(client: EnhancedApiClient, namespace: str, known_resource_names: set[
 
 
 def _record(template: E2BSandboxTemplate, cluster_name: str, status: E2BTemplateSyncStatus, message: str = "") -> None:
-    """记录下发结果。成功时 template 须是刚下发的那份，摘要按它计算"""
+    """记录下发状态。下发完成（无论成败）时 template 须是刚下发的那份，摘要按它计算"""
     defaults: dict[str, Any] = {"status": status.value, "message": _truncate(message)}
-    if status == E2BTemplateSyncStatus.SUCCEEDED:
-        defaults["applied_digest"] = spec_digest(template)
+    if status != E2BTemplateSyncStatus.PENDING:
+        defaults["digest"] = spec_digest(template)
     E2BSandboxTemplateSyncRecord.objects.update_or_create(
         template=template, cluster_name=cluster_name, defaults=defaults
     )

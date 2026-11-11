@@ -587,8 +587,9 @@ class E2BSandboxTemplateSyncRecord(UuidAuditedModel):
     每个目标集群恰好一条：保存模板时即为所有目标集群写入待同步，不再是目标的集群的记录随之删除，
     因此记录齐全即可据此判断模板或集群是否同步完成。
 
-    status 是最近一次下发的进度，只供运维排查；集群里是不是当前配置看 applied_digest，
-    能否用模板创建沙箱以它为准。
+    只描述最近一次下发：status 是它的结果，digest 是它所下发配置的摘要。下发成功且摘要与模板
+    当前配置一致，才说明集群里的 SandboxTemplate 是当前配置，能否用模板创建沙箱以此为准。
+    失败时集群里可能只写入了一部分，因此不再沿用更早的成功结果。
 
     [multi-tenancy] This model is not tenant-aware.
     """
@@ -601,9 +602,9 @@ class E2BSandboxTemplateSyncRecord(UuidAuditedModel):
         verbose_name="同步状态", max_length=16, choices=E2BTemplateSyncStatus.get_django_choices()
     )
     message = models.TextField(verbose_name="失败原因", blank=True, default="")
-    # 置为待同步、下发失败时不动：集群里还是上次下发成功的配置
-    applied_digest = models.CharField(
-        verbose_name="已下发的配置摘要", max_length=64, blank=True, default="", help_text="为空表示从未下发成功"
+    # 置为待同步时不动，下发完成（无论成败）时写入
+    digest = models.CharField(
+        verbose_name="下发的配置摘要", max_length=64, blank=True, default="", help_text="为空表示还没有下发过"
     )
 
     class Meta:

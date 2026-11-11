@@ -365,7 +365,7 @@ def set_gateway_settings(monkeypatch: MonkeyPatch) -> None:
 def test_file_read_key_matches_the_harness_read_tool() -> None:
     """A wrong tool name silently disables deduplication; a wrong path blanks live data."""
     # `get_toolset` is typed as the filtered wrapper, so reach the registry through `Any`.
-    toolset = cast(Any, FileSystem(root_dir=Path.cwd()).get_toolset())
+    toolset = cast(Any, FileSystem().get_toolset())
     assert "read_file" in toolset.tools
 
     assert file_read_key(ToolCallPart(tool_name="read_file", args={"path": "a.py"})) == "a.py"

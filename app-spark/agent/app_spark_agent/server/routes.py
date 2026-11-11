@@ -403,11 +403,11 @@ async def _start_run(
         agent=runtime.agent,
         # 'server' mode attaches `ReinjectSystemPrompt(replace_existing=True)`, which
         # strips every `SystemPromptPart` the history starts the run with. It cannot tell a
-        # client's from one an earlier run of this Runtime left there -- `RepoContext` points
-        # at a nested AGENTS.md with one -- so server mode would silently drop those. The
-        # protection it offers is redundant here anyway: `prepare_run` already reduces the
-        # request to a single trusted user turn, so no client-supplied system prompt can
-        # reach the model.
+        # client's from one an earlier run of this Runtime left there -- `RepoContext` leaves
+        # one in the history for each nested AGENTS.md it discovers -- so server mode would
+        # silently drop those. The protection it offers is redundant here anyway:
+        # `prepare_run` already reduces the request to a single trusted user turn, so no
+        # client-supplied system prompt can reach the model.
         manage_system_prompt="client",
     )
     # Recorded here rather than inferred from the run's history: the framework merges

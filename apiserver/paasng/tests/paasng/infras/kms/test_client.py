@@ -16,17 +16,33 @@
 # to the current version of the project delivered to anyone in the future.
 
 import base64
+import datetime
+import json
+import ssl
+import threading
+from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import bk_kms
 import pytest
 import requests
 from bkcrypto.asymmetric.ciphers.sm2 import SM2AsymmetricCipher
-from cryptography.hazmat.primitives import serialization
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
+from django.test import override_settings
 
-from paasng.infras.kms.client import CredentialInfo, KMSClient, KMSScope, ServiceAccountAuth
+from paasng.infras.kms.client import CredentialInfo, KMSClient, KMSScope, ServiceAccountAuth, make_kms_client
 from paasng.infras.kms.constants import ERROR_CODE_RESOURCE_NOT_FOUND, K8S_SECRET_MAX_BYTES, PLAINTEXT_MAX_CHARS
-from paasng.infras.kms.exceptions import KMSAPIError, KMSCryptoError, KMSRequestError, KMSValidationError
+from paasng.infras.kms.exceptions import (
+    KMSAPIError,
+    KMSConfigError,
+    KMSCryptoError,
+    KMSRequestError,
+    KMSValidationError,
+)
 
 NAME = "demo-web-prod-0b1f4c2e8d3a4f6b9c1d2e3f4a5b6c7d"
 SCOPE = KMSScope(scope_id=7)
@@ -246,3 +262,123 @@ class TestRequest:
 
         with pytest.raises(exc_type):
             client._request("POST", "/api/v1/credential", {})
+
+
+def _issue_cert(
+    subject: str, key: rsa.RSAPrivateKey, ca_key: rsa.RSAPrivateKey, san: str | None = None
+) -> x509.Certificate:
+    now = datetime.datetime.now(datetime.timezone.utc)
+    builder = (
+        x509.CertificateBuilder()
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, subject)]))
+        .issuer_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "kms-ca")]))
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now)
+        .not_valid_after(now + datetime.timedelta(days=1))
+    )
+    if key is ca_key:
+        builder = builder.add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+    if san:
+        builder = builder.add_extension(x509.SubjectAlternativeName([x509.DNSName(san)]), critical=False)
+    return builder.sign(ca_key, hashes.SHA256())
+
+
+@pytest.fixture(scope="module")
+def pki(tmp_path_factory) -> Path:
+    """CA 与运维提供的一样不带 Key Usage 扩展，Python 3.13+ 的 ssl.create_default_context 会拒绝它"""
+    directory = tmp_path_factory.mktemp("kms-tls")
+    pem = serialization.Encoding.PEM
+    ca_key, server_key, client_key = (rsa.generate_private_key(public_exponent=65537, key_size=2048) for _ in range(3))
+    (directory / "ca.crt").write_bytes(_issue_cert("kms-ca", ca_key, ca_key).public_bytes(pem))
+    (directory / "server.crt").write_bytes(_issue_cert("kms", server_key, ca_key, san="localhost").public_bytes(pem))
+    (directory / "client.crt").write_bytes(_issue_cert("bkpaas3-saas", client_key, ca_key).public_bytes(pem))
+    for name, key, encryption in [
+        ("server.key", server_key, serialization.NoEncryption()),
+        ("client.key", client_key, serialization.NoEncryption()),
+        ("client.enc.key", client_key, serialization.BestAvailableEncryption(b"secret")),
+    ]:
+        (directory / name).write_bytes(
+            key.private_bytes(pem, serialization.PrivateFormat.TraditionalOpenSSL, encryption)
+        )
+    return directory
+
+
+@pytest.fixture(scope="module")
+def mtls_port(pki) -> Iterator[int]:
+    """要求客户端证书的 KMS 服务，在 crypto_info 响应的 public_key 字段中回显客户端证书的 CN"""
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            self.rfile.read(int(self.headers.get("Content-Length") or 0))
+            subject = dict(item[0] for item in self.connection.getpeercert()["subject"])
+            crypto = {"asymmetric_type": "RSA", "symmetric_type": "AES", "symmetric_mode": "CBC"}
+            body = json.dumps({"code": 0, "data": {"crypto": crypto, "public_key": subject["commonName"]}}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(pki / "server.crt", pki / "server.key")
+    context.load_verify_locations(pki / "ca.crt")
+    context.verify_mode = ssl.CERT_REQUIRED
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server.socket = context.wrap_socket(server.socket, server_side=True)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield server.server_address[1]
+    server.shutdown()
+    server.server_close()
+
+
+def _tls_settings(pki: Path, base_url: str, **overrides):
+    defaults = {
+        "KMS_API_BASE_URL": base_url,
+        "KMS_API_USERNAME": "paas",
+        "KMS_API_TLS_CA_FILE": str(pki / "ca.crt"),
+        "KMS_API_TLS_CERT_FILE": str(pki / "client.crt"),
+        "KMS_API_TLS_KEY_FILE": str(pki / "client.key"),
+        "KMS_API_TLS_CHECK_HOSTNAME": True,
+    }
+    return override_settings(**{**defaults, **overrides})
+
+
+class TestMutualTLS:
+    def test_presents_client_certificate(self, pki, mtls_port):
+        with _tls_settings(pki, f"https://localhost:{mtls_port}"):
+            info = make_kms_client("default").get_crypto_info()
+
+        assert info.public_key == "bkpaas3-saas"
+
+    def test_hostname_mismatch_rejected_unless_disabled(self, pki, mtls_port):
+        with _tls_settings(pki, f"https://127.0.0.1:{mtls_port}"), pytest.raises(KMSRequestError):
+            make_kms_client("default").get_crypto_info()
+
+        with _tls_settings(pki, f"https://127.0.0.1:{mtls_port}", KMS_API_TLS_CHECK_HOSTNAME=False):
+            assert make_kms_client("default").get_crypto_info().public_key == "bkpaas3-saas"
+
+    def test_ignores_requests_ca_bundle_env(self, pki, mtls_port, monkeypatch):
+        monkeypatch.setenv("REQUESTS_CA_BUNDLE", str(pki / "nonexistent.crt"))
+
+        with _tls_settings(pki, f"https://localhost:{mtls_port}"):
+            assert make_kms_client("default").get_crypto_info().public_key == "bkpaas3-saas"
+
+    @pytest.mark.parametrize(
+        ("base_url", "overrides"),
+        [
+            ("http://localhost", {}),
+            ("https://localhost", {"KMS_API_TLS_KEY_FILE": ""}),
+            ("https://localhost", {"KMS_API_TLS_KEY_FILE": "client.enc.key"}),
+        ],
+    )
+    def test_invalid_config(self, pki, base_url, overrides):
+        if overrides.get("KMS_API_TLS_KEY_FILE"):
+            overrides["KMS_API_TLS_KEY_FILE"] = str(pki / overrides["KMS_API_TLS_KEY_FILE"])
+
+        with _tls_settings(pki, base_url, **overrides), pytest.raises(KMSConfigError):
+            make_kms_client("default")

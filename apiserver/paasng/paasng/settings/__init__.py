@@ -1596,6 +1596,14 @@ KMS_API_BASE_URL = settings.get("KMS_API_BASE_URL", "")
 # 调用 KMS 管理接口时携带的 X-Bk-Username
 KMS_API_USERNAME = settings.get("KMS_API_USERNAME", "admin")
 KMS_API_TIMEOUT_SECONDS = settings.get("KMS_API_TIMEOUT_SECONDS", default=10, cast="@float")
+# 访问 KMS 管理接口的 TLS 文件路径（PEM），任一项非空即启用，此时 KMS_API_BASE_URL 须为 https。
+# CA 为空时使用 requests 默认的 CA 集合；同时配置客户端证书与私钥则启用双向认证，私钥不能加密
+KMS_API_TLS_CA_FILE = settings.get("KMS_API_TLS_CA_FILE", "")
+KMS_API_TLS_CERT_FILE = settings.get("KMS_API_TLS_CERT_FILE", "")
+KMS_API_TLS_KEY_FILE = settings.get("KMS_API_TLS_KEY_FILE", "")
+# 是否校验 KMS 服务端证书中的域名，仅在启用 TLS 时生效。关闭后同一 CA 签发的任意证书都能冒充 KMS。
+# 现有 KMS 服务端证书没有有效 SAN，暂时默认关闭；证书补齐 SAN 后应改为默认开启
+KMS_API_TLS_CHECK_HOSTNAME = settings.get("KMS_API_TLS_CHECK_HOSTNAME", False)
 
 # 预建的 KMS scope：数字 ID 用于 KMS 请求，名称用于 OpenBao 路径与 role
 KMS_SAAS_SCOPE_ID = settings.get("KMS_SAAS_SCOPE_ID", default=0, cast="@int")

@@ -21,7 +21,7 @@ cp conf.yaml.tpl settings_local.yaml
 - 可选：
   - `LLM_SOURCE`：设为 `fake`，否则项目自动命名会因为没配 bkaidev 而失败
   - `RABBITMQ_*`：要跑自动命名、发布这些 Celery 任务时必填
-  - `BK_API_URL_TMPL`、`TOKEN_AUTH_ENDPOINT`：改用 bkaidev 模型时必填，见[使用 bkaidev 模型](agent_llm.md#使用-bkaidev-模型)
+  - `BK_API_URL_TMPL`、`TOKEN_AUTH_ENDPOINT`、`USER_ACCESS_TOKEN_APP_CODE` / `USER_ACCESS_TOKEN_APP_SECRET`：改用 bkaidev 模型时必填，见[使用 bkaidev 模型](agent_llm.md#使用-bkaidev-模型)
   - `BLOBSTORE_BKREPO_CONFIG`：要发布到开发者中心时必填
   - `LOG_LEVEL`、`DEBUG`
 

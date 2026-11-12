@@ -94,10 +94,11 @@ def build_access_token_backend_config() -> AccessTokenBackendConfig:
     """Build the token-exchange config from top-level settings."""
     # 换票支持直连 auth api 或 SSM 两种 backend，地址不从 BK_API_URL_TMPL 拼，由部署方填。
     # env_name 只有 AuthApiBackend 会发；配成空时按 prod 处理，不因为一个用不上的字段拦下 SSM 换票。
+    # 换票应用没配时不回落到 APP_CODE：那样换出来的 token 带着本服务的全部授权进 Runtime。
     return AccessTokenBackendConfig(
         token_url=_require_setting("TOKEN_AUTH_ENDPOINT", settings.TOKEN_AUTH_ENDPOINT),
-        app_code=_require_setting("APP_CODE", settings.APP_CODE),
-        app_secret=_require_setting("APP_SECRET", settings.APP_SECRET),
+        app_code=_require_setting("USER_ACCESS_TOKEN_APP_CODE", settings.USER_ACCESS_TOKEN_APP_CODE),
+        app_secret=_require_setting("USER_ACCESS_TOKEN_APP_SECRET", settings.USER_ACCESS_TOKEN_APP_SECRET),
         env_name=str(settings.AUTH_ENV_NAME or "").strip() or "prod",
     )
 

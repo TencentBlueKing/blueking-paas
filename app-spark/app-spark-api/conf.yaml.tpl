@@ -34,10 +34,15 @@
 
 ## ---------------------------------- 应用身份与用户 ----------------------------------
 
-## 必填。本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、换 access_token、调开发者中心）都用这一对。
+## 必填。本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、调开发者中心）都用这一对。
 ## APP_SECRET 只留在本服务里，不会交给 Agent Runtime。
 # APP_CODE: ''
 # APP_SECRET: ''
+
+## 按条件必填：AGENT_MODEL_SOURCE 为 bkaidev 时必填。签发 Agent 用户态 access_token 的专用应用（如 app-spark-pub），
+## 不回落到 APP_CODE。换来的 token 会进入用户沙箱，这个应用只应申请 bkaidev 大模型调用的权限。
+# USER_ACCESS_TOKEN_APP_CODE: ''
+# USER_ACCESS_TOKEN_APP_SECRET: ''
 
 ## 可选，默认 false。是否启用多租户模式，只能在初次部署时配置，部署后不支持调整。
 # ENABLE_MULTI_TENANT_MODE: false
@@ -231,7 +236,7 @@
 
 ## 可选，默认 bkaidev。Agent Runtime 调模型走哪条路：
 ## - bkaidev：走 bkaidev 网关，拉起 Runtime 时用当前用户的登录态换一张用户态 access_token 交给它。
-##   需要 BK_API_URL_TMPL、TOKEN_AUTH_ENDPOINT、APP_CODE / APP_SECRET；
+##   需要 BK_API_URL_TMPL、TOKEN_AUTH_ENDPOINT、USER_ACCESS_TOKEN_APP_CODE / USER_ACCESS_TOKEN_APP_SECRET；
 ## - direct：直连模型厂商，用 AGENT_DIRECT_MODEL_CONFIG 里固定的 key。
 # AGENT_MODEL_SOURCE: bkaidev
 

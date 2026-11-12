@@ -42,6 +42,7 @@ from app_spark_api.agent.runtime.exceptions import (
     ModelNotAvailableError,
 )
 from app_spark_api.agent.runtime.model_access import (
+    build_access_token_backend_config,
     build_bkaidev_llm_base_url,
     fetch_bkaidev_access_token,
     get_model_source,
@@ -96,7 +97,7 @@ class ModelCatalog:
 
 
 class GatewayModelsCache:
-    """Keep the gateway's model list for a while, shared by every user of the same app.
+    """Keep the gateway's model list for a while, shared by every user of the same token app.
 
     Example::
 
@@ -275,7 +276,7 @@ async def _fetch_gateway_models(
     # 网关按「签发 token 的应用」决定开放哪些模型，和是哪个用户无关，所以按应用缓存、所有用户共用。
     # 命中时连换票都省了。
     base_url = build_bkaidev_llm_base_url()
-    key = (base_url, settings.APP_CODE)
+    key = (base_url, build_access_token_backend_config().app_code)
 
     # 登录态在查缓存之前就检查：否则同一个请求会不会 401，取决于别人刚才有没有把缓存填上。
     if credential is None:

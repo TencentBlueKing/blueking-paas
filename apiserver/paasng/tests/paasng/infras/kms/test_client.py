@@ -336,16 +336,15 @@ def mtls_port(pki) -> Iterator[int]:
     server.server_close()
 
 
-def _tls_settings(pki: Path, base_url: str, **overrides):
-    defaults = {
-        "KMS_API_BASE_URL": base_url,
-        "KMS_API_USERNAME": "paas",
-        "KMS_API_TLS_CA_FILE": str(pki / "ca.crt"),
-        "KMS_API_TLS_CERT_FILE": str(pki / "client.crt"),
-        "KMS_API_TLS_KEY_FILE": str(pki / "client.key"),
-        "KMS_API_TLS_CHECK_HOSTNAME": True,
-    }
-    return override_settings(**{**defaults, **overrides})
+def _tls_settings(pki: Path, base_url: str, key_file: str = "client.key"):
+    return override_settings(
+        KMS_API_BASE_URL=base_url,
+        KMS_API_USERNAME="paas",
+        KMS_API_TLS_CA_FILE=str(pki / "ca.crt"),
+        KMS_API_TLS_CERT_FILE=str(pki / "client.crt"),
+        KMS_API_TLS_KEY_FILE=str(pki / key_file) if key_file else "",
+        KMS_API_TLS_CHECK_HOSTNAME=True,
+    )
 
 
 class TestMutualTLS:
@@ -362,16 +361,13 @@ class TestMutualTLS:
             assert make_kms_client("default").get_crypto_info().public_key == "bkpaas3-saas"
 
     @pytest.mark.parametrize(
-        ("base_url", "overrides"),
+        ("base_url", "key_file"),
         [
-            ("http://localhost", {}),
-            ("https://localhost", {"KMS_API_TLS_KEY_FILE": ""}),
-            ("https://localhost", {"KMS_API_TLS_KEY_FILE": "client.enc.key"}),
+            ("http://localhost", "client.key"),
+            ("https://localhost", ""),
+            ("https://localhost", "client.enc.key"),
         ],
     )
-    def test_invalid_config(self, pki, base_url, overrides):
-        if overrides.get("KMS_API_TLS_KEY_FILE"):
-            overrides["KMS_API_TLS_KEY_FILE"] = str(pki / overrides["KMS_API_TLS_KEY_FILE"])
-
-        with _tls_settings(pki, base_url, **overrides), pytest.raises(KMSConfigError):
+    def test_invalid_config(self, pki, base_url, key_file):
+        with _tls_settings(pki, base_url, key_file), pytest.raises(KMSConfigError):
             make_kms_client("default")

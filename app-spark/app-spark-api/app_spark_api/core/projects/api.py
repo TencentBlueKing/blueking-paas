@@ -67,7 +67,8 @@ async def create_project(request: HttpRequest, payload: ProjectCreateRequest):
     """创建一个 Project。"""
     user = authenticated_user(request)
 
-    # 注册失败只记日志：人可以继续用 AppSpark，发布时再按开发者中心的报错找人处理。
+    # 建项目时注册：这个人接下来才会在开发者中心建应用。AppSpark 进站不会创建 UserProfile。
+    # 失败只记日志，不挡住这次创建；下次再建项目还会再试。
     await aregister_user_profile(request)
 
     try:

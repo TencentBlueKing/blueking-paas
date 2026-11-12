@@ -64,8 +64,6 @@ class BkPaaSClient:
         transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
-        self._app_code = app_code
-        self._app_secret = app_secret
         self._client = httpx2.AsyncClient(
             base_url=self.base_url,
             headers={BKAPI_AUTHORIZATION_HEADER: json.dumps({"bk_app_code": app_code, "bk_app_secret": app_secret})},
@@ -116,7 +114,7 @@ class BkPaaSClient:
             payload["app_tenant_id"] = app_tenant_id or ""
 
         response = await self._client.post("/system/bkapps/app_spark/", json=payload)
-        return CreatedApp.from_payload(self._read_json(response))
+        return CreatedApp.from_payload(read_gateway_json(response))
 
     async def upload_package_via_link(  # noqa: PLR0917
         self,
@@ -143,7 +141,7 @@ class BkPaaSClient:
         response = await self._client.post(
             f"{self._build_module_path(code, module)}/source_package/link/", json=payload
         )
-        self._read_json(response)
+        read_gateway_json(response)
 
     async def deploy(self, code: str, module: str, version: str, operator: str) -> Deployment:
         """Deploy an uploaded source package version to the production environment."""
@@ -151,47 +149,32 @@ class BkPaaSClient:
         response = await self._client.post(
             f"{self._build_module_path(code, module)}/envs/prod/deployments/", json=payload
         )
-        return structure_payload(self._read_json(response), Deployment)
+        return structure_payload(read_gateway_json(response), Deployment)
 
     async def get_deployment_result(self, code: str, module: str, deployment_id: str) -> DeploymentResult:
         """Return where a deployment has got to."""
         response = await self._client.get(
             f"{self._build_module_path(code, module)}/deployments/{deployment_id}/result/"
         )
-        return structure_payload(self._read_json(response), DeploymentResult)
-
-    async def register_user_profile(self, access_token: str) -> None:
-        """Register the user identified by access_token, or return their existing profile."""
-
-        # 客户端默认头只有应用身份。这个接口要校验用户，所以这一次把 access_token 一并放进鉴权头。
-        authorization = json.dumps(
-            {
-                "bk_app_code": self._app_code,
-                "bk_app_secret": self._app_secret,
-                "access_token": access_token,
-            }
-        )
-        response = await self._client.post(
-            "/accounts/user_profile/",
-            headers={BKAPI_AUTHORIZATION_HEADER: authorization},
-        )
-        self._read_json(response)
+        return structure_payload(read_gateway_json(response), DeploymentResult)
 
     @staticmethod
     def _build_module_path(code: str, module: str) -> str:
         return f"/system/bkapps/applications/{code}/modules/{module}"
 
-    def _read_json(self, response: httpx2.Response) -> Any:
-        """Return a 2xx response's JSON body, or raise the error a non-2xx one describes."""
-        if response.is_success:
-            try:
-                return response.json()
-            except ValueError as exc:
-                raise BkPaaSUnavailableError(
-                    f"The developer center answered HTTP {response.status_code} with a body that is not JSON"
-                ) from exc
 
-        raise _build_api_error(response)
+def read_gateway_json(response: httpx2.Response) -> Any:
+    """Return a 2xx response's JSON body, or raise the error a non-2xx one describes."""
+
+    if response.is_success:
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise BkPaaSUnavailableError(
+                f"The developer center answered HTTP {response.status_code} with a body that is not JSON"
+            ) from exc
+
+    raise _build_api_error(response)
 
 
 def _build_api_error(response: httpx2.Response) -> BkPaaSApiError:

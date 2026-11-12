@@ -17,19 +17,25 @@
 """Best-effort registration of the current user in the developer center."""
 
 import asyncio
+import json
 import logging
 from typing import TYPE_CHECKING
 
+import httpx2
 from django.conf import settings
 
 from app_spark_api.infras.accounts.auth import authenticated_user
 from app_spark_api.infras.accounts.credentials import get_user_credential
 from app_spark_api.infras.bk_access_token import AccessTokenBackendConfig, get_access_token_backend_cls
-from app_spark_api.infras.bk_paas.client import BkPaaSClient
+from app_spark_api.infras.bk_paas.client import (
+    BKAPI_AUTHORIZATION_HEADER,
+    DEFAULT_TIMEOUT_SECONDS,
+    build_gateway_base_url,
+    read_gateway_json,
+)
 from app_spark_api.infras.bk_paas.exceptions import BkPaaSConfigurationError
 
 if TYPE_CHECKING:
-    import httpx2
     from django.http import HttpRequest
 
     from app_spark_api.infras.bk_access_token import UserCredential
@@ -84,8 +90,34 @@ async def _register(
     access_token = await backend.fetch_user_token(credential)
 
     # 地址和发布走同一套网关配置。外层 asyncio.timeout 会在 5 秒时取消，这里不再单独缩短客户端超时。
-    async with BkPaaSClient.from_settings(transport=paas_transport) as client:
-        await client.register_user_profile(access_token)
+    await _post_user_profile(config, access_token, transport=paas_transport)
+
+
+async def _post_user_profile(
+    config: AccessTokenBackendConfig,
+    access_token: str,
+    *,
+    transport: httpx2.AsyncBaseTransport | None,
+) -> None:
+    """Register this user at the developer center with their own access_token."""
+
+    # BkPaaSClient 只带应用身份，给后台发布用。这个接口要校验当前用户，所以单独发。
+    authorization = json.dumps(
+        {
+            "bk_app_code": config.app_code,
+            "bk_app_secret": config.app_secret,
+            "access_token": access_token,
+        }
+    )
+    async with httpx2.AsyncClient(
+        base_url=build_gateway_base_url(),
+        headers={BKAPI_AUTHORIZATION_HEADER: authorization},
+        timeout=DEFAULT_TIMEOUT_SECONDS,
+        transport=transport,
+    ) as client:
+        response = await client.post("/accounts/user_profile/")
+
+    read_gateway_json(response)
 
 
 def _build_token_config() -> AccessTokenBackendConfig:

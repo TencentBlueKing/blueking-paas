@@ -78,11 +78,30 @@ async def test_a_logged_in_user_is_registered_with_the_exchanged_token(settings)
 
 async def test_a_refused_registration_does_not_raise(settings):
     configure(settings)
-    token_transport, _ = recording_transport(200, {"data": {"access_token": "user-token"}})
-    paas_transport, _ = recording_transport(403, {"detail": "closed"})
+    token_transport, token_requests = recording_transport(200, {"data": {"access_token": "user-token"}})
+    paas_transport, paas_requests = recording_transport(403, {"detail": "closed"})
 
     await aregister_user_profile(
         make_request(create_user(username="alice"), cookies={"bk_token": "login-cookie"}),
         token_transport=token_transport,
         paas_transport=paas_transport,
     )
+
+    # 配置提前失败时同样不会抛。这里要确认请求确实发出去了。
+    assert token_requests
+    assert paas_requests
+
+
+async def test_a_request_without_a_blueking_login_is_skipped(settings):
+    configure(settings)
+    token_transport, token_requests = recording_transport(200, {"data": {"access_token": "user-token"}})
+    paas_transport, paas_requests = recording_transport(200, {})
+
+    await aregister_user_profile(
+        make_request(create_user(username="alice")),
+        token_transport=token_transport,
+        paas_transport=paas_transport,
+    )
+
+    assert token_requests == []
+    assert paas_requests == []

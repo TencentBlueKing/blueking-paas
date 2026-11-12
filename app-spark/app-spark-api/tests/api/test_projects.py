@@ -264,6 +264,21 @@ async def create_from_prompt_via_api(client, content: str):
     return await client.post(FROM_PROMPT_URL, data={"content": content}, content_type="application/json")
 
 
+async def test_creating_from_a_prompt_tries_to_register_the_user(aapi_client, monkeypatch):
+    """和手动建项目一样，创建前会去注册一次。"""
+    seen = []
+
+    async def register(request):
+        seen.append(request)
+
+    monkeypatch.setattr("app_spark_api.core.projects.api.aregister_user_profile", register)
+
+    response = await create_from_prompt_via_api(aapi_client, "做一个番茄钟小工具")
+
+    assert response.status_code == HTTPStatus.CREATED
+    assert len(seen) == 1
+
+
 async def test_creating_from_a_prompt_names_the_project_after_its_generated_id(aapi_client, bk_user):
     response = await create_from_prompt_via_api(aapi_client, "做一个番茄钟小工具")
 

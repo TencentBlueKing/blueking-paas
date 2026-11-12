@@ -2421,7 +2421,7 @@ paths:
   /accounts/user_profile/:
     post:
       operationId: register_user_profile
-      description: 为当前用户在开发者中心注册，已注册时直接返回
+      description: 为当前用户在开发者中心注册。浏览器首次访问会自动建档；只经 API 网关调用开发者中心时，要靠本接口预先注册，之后该用户才能被设为应用管理员。已注册时原样返回
       tags:
       - 用户信息
       x-bk-apigateway-resource:
@@ -2440,7 +2440,7 @@ paths:
           userVerifiedRequired: true
           appVerifiedRequired: true
           resourcePermissionRequired: true
-        descriptionEn: Register the current user in the Developer Center, returning the existing profile if already registered
+        descriptionEn: Register the current user in the Developer Center. A first browser visit creates the profile automatically; callers that only reach the Developer Center through the API gateway use this API to register the user beforehand, which is required before that user can be an application administrator. An existing profile is returned unchanged
   /bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/aggregate_by_interval:
     get:
       operationId: aggregate_by_interval

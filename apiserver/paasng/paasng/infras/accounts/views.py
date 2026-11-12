@@ -86,7 +86,7 @@ class UserProfileRegistrationView(APIView):
 
     @swagger_auto_schema(tags=["accounts"], responses={200: serializers.UserProfileOutputSLZ})
     def post(self, request):
-        """确保当前用户有 UserProfile，已有时原样返回。"""
+        """为当前用户建档。浏览器首次访问会自动建档，经网关调用需本接口预先注册；已有档案时原样返回。"""
 
         # 首次访问时建档的逻辑在 SiteAccessControlMiddleware 里，它早于网关 JWT 中间件执行，
         # 经网关来的请求到那一步还是匿名用户，所以没用过开发者中心的用户只能靠这里显式建档。

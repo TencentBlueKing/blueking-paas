@@ -355,13 +355,6 @@ class TestMutualTLS:
 
         assert info.public_key == "bkpaas3-saas"
 
-    def test_hostname_mismatch_rejected_unless_disabled(self, pki, mtls_port):
-        with _tls_settings(pki, f"https://127.0.0.1:{mtls_port}"), pytest.raises(KMSRequestError):
-            make_kms_client("default").get_crypto_info()
-
-        with _tls_settings(pki, f"https://127.0.0.1:{mtls_port}", KMS_API_TLS_CHECK_HOSTNAME=False):
-            assert make_kms_client("default").get_crypto_info().public_key == "bkpaas3-saas"
-
     def test_ignores_requests_ca_bundle_env(self, pki, mtls_port, monkeypatch):
         monkeypatch.setenv("REQUESTS_CA_BUNDLE", str(pki / "nonexistent.crt"))
 

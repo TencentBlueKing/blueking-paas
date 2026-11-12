@@ -1602,7 +1602,7 @@ KMS_API_TLS_CA_FILE = settings.get("KMS_API_TLS_CA_FILE", "")
 KMS_API_TLS_CERT_FILE = settings.get("KMS_API_TLS_CERT_FILE", "")
 KMS_API_TLS_KEY_FILE = settings.get("KMS_API_TLS_KEY_FILE", "")
 # 是否校验 KMS 服务端证书中的域名，仅在启用 TLS 时生效。关闭后同一 CA 签发的任意证书都能冒充 KMS。
-# 现有 KMS 服务端证书没有有效 SAN，暂时默认关闭；证书补齐 SAN 后应改为默认开启
+# 现有 KMS 服务端证书没有有效 SAN，因此默认关闭
 KMS_API_TLS_CHECK_HOSTNAME = settings.get("KMS_API_TLS_CHECK_HOSTNAME", False)
 
 # 预建的 KMS scope：数字 ID 用于 KMS 请求，名称用于 OpenBao 路径与 role

@@ -142,11 +142,12 @@ export const createPublicationDeployment = (
 export const validatePublicationAppName = (
   projectId: string,
   name: string,
+  signal?: AbortSignal,
 ): Promise<PublicationAppNameValidateResponse> => (
   http.get(
     `${apiPrefix}/projects/${projectId}/publication/app-name-validate/`,
     { name },
-    { globalError: false },
+    { globalError: false, signal },
   )
 );
 

@@ -3,7 +3,7 @@ import type { Ref } from 'vue';
 import { validatePublicationAppName } from '@/http/api';
 import type { PublicationAppNameValidateResponse } from '@/http/types';
 
-const CHECK_DEBOUNCE_MS = 400;
+const CHECK_DEBOUNCE_MS = 1000;
 
 /**
  * 首次发布时检查蓝鲸应用名能否使用。
@@ -19,6 +19,7 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
 
   let timer = 0;
   let sequence = 0;
+  let inflight: AbortController | null = null;
 
   const clearTimer = () => {
     if (!timer) return;
@@ -26,33 +27,43 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
     timer = 0;
   };
 
+  // 输入还在变时，上一次检查的结果用不上。取消它，避免返回后占掉这次输入的结论。
+  const dropInflight = () => {
+    sequence += 1;
+    inflight?.abort();
+    inflight = null;
+  };
+
   const run = async (input: string) => {
     const id = projectId.value;
     const current = ++sequence;
+    const controller = new AbortController();
+    inflight = controller;
     try {
-      const data = await validatePublicationAppName(id, input);
+      const data = await validatePublicationAppName(id, input, controller.signal);
       // 更晚发出的检查、或切换了项目之后，这次的结果已经不算数。
       if (current !== sequence || projectId.value !== id) return;
       result.value = data;
       checkedInput.value = input;
     } catch (error) {
-      if (current !== sequence || projectId.value !== id) return;
+      if (controller.signal.aborted || current !== sequence || projectId.value !== id) return;
       // 问不到开发者中心时不给结论，发布时后端会再校验一次。
       console.error('[publication] 检查应用名称失败', error);
       result.value = null;
       checkedInput.value = input;
     } finally {
+      if (inflight === controller) inflight = null;
       // 请求在路上时用户可能已经改了名，新名字还在等防抖：只清掉属于这次输入的等待。
       if (current === sequence && pendingInput.value === input) pendingInput.value = null;
     }
   };
 
-  /** 检查 input；immediate 为 false 时等用户停止输入一会儿再问。 */
+  /** 检查 input；immediate 为 false 时等用户停止输入 1 秒再问。 */
   const validate = (input: string, immediate = false) => {
     clearTimer();
+    dropInflight();
     const trimmed = input.trim();
     if (!trimmed || !projectId.value) {
-      sequence += 1;
       pendingInput.value = null;
       result.value = null;
       checkedInput.value = '';
@@ -74,7 +85,7 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
   /** 发布时开发者中心报了重名：不等下一次检查，直接按重名展示。 */
   const markTaken = (input: string) => {
     clearTimer();
-    sequence += 1;
+    dropInflight();
     pendingInput.value = null;
     const trimmed = input.trim();
     result.value = { name: trimmed, is_available: false, problem: 'taken', message: null };
@@ -91,14 +102,17 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
 
   const reset = () => {
     clearTimer();
-    sequence += 1;
+    dropInflight();
     pendingInput.value = null;
     result.value = null;
     checkedInput.value = '';
   };
 
   watch(projectId, reset);
-  onScopeDispose(clearTimer);
+  onScopeDispose(() => {
+    clearTimer();
+    dropInflight();
+  });
 
   return {
     validate,

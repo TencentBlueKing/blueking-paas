@@ -248,6 +248,15 @@ def mark_sync_pending(cluster_names: set[str] | None = None, resource_names: set
     )
 
 
+def forget_cluster(cluster_name: str) -> None:
+    """集群的 e2b 配置删除后调用：删掉该集群的全部下发记录。
+
+    记录按集群名关联，不会随配置一起删除。留着的话，同名集群换了命名空间重新配置后，
+    新命名空间里还没有 CR，旧记录却会让模板显示为可用
+    """
+    E2BSandboxTemplateSyncRecord.objects.filter(cluster_name=cluster_name).delete()
+
+
 def sync_template(resource_name: str) -> None:
     """把单个模板的当前状态下发到它的目标集群，模板保存或删除后异步调用。
 

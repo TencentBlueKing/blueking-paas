@@ -51,6 +51,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from app_spark_api.agent.conversations import checkpoints
 from app_spark_api.agent.conversations import services as conversation_services
 from app_spark_api.agent.conversations.entities import MAX_MODEL_ID_LENGTH
+from app_spark_api.agent.conversations.lifecycle import start
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.model_catalog import services as model_catalog_services
@@ -874,7 +875,7 @@ async def test_an_attached_image_reaches_the_model_as_bytes(aapi_client, setting
         return attrs.evolve(catalog, models=[attrs.evolve(model, supports_vision=True) for model in catalog.models])
 
     # direct 的内置模型不报 supports_vision，这里只放开图片校验，模型本身仍是 fake:chat。
-    monkeypatch.setattr(conversation_services, "list_models", list_vision_models)
+    monkeypatch.setattr(start, "list_models", list_vision_models)
     state = await create_conversation(aapi_client)
     image = b"\x89PNG\r\n\x1a\n" + b"\x00" * 120
     uploaded = await aapi_client.post(

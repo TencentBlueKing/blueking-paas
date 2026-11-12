@@ -16,7 +16,7 @@ from starlette.responses import JSONResponse, Response
 from app_spark_agent import VERSION, settings
 from app_spark_agent.agent import build_run_model
 from app_spark_agent.app_supervisor import AppLaunchConflict, AppLaunchFailed
-from app_spark_agent.attachments import ATTACHMENT_URI_SCHEME
+from app_spark_agent.attachments import ATTACHMENT_URI_SCHEME, AttachmentImages
 from app_spark_agent.git import GitError
 
 # Imported under a different name: `log` already means "append-only channel" in this module.
@@ -431,6 +431,11 @@ async def _start_run(
         run_id=prepared.run_id,
     )
     stopper = RunStopper()
+
+    # 本轮模型读不了图时，历史里的图一律换成占位，不取字节：最近几轮的图本来会照发，换了纯文本
+    # 模型之后发过去只会让模型调用失败。不共用 runtime 上那份，它的缓存留给能看图的轮次。
+    attachment_images = runtime.attachment_images if prepared.image_input else AttachmentImages(None, recent_turns=0)
+
     # Set by the agent itself, not inferred from the stop request: a stop that lands as the
     # turn is finishing anyway is a no-op, and that turn did complete.
     cancelled = False
@@ -482,7 +487,7 @@ async def _start_run(
         run_id=prepared.run_id,
         # None 时 pydantic-ai 用 agent 构造时的默认模型。
         model=run_model,
-        capabilities=[recorder, stopper, runtime.attachment_images],
+        capabilities=[recorder, stopper, attachment_images],
         on_complete=commit_context,
         on_cancel=commit_stopped_context,
     )

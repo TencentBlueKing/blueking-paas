@@ -33,12 +33,13 @@ e2b 模式每个 Pod 跑 4 个 uvicorn worker，与 Dockerfile 的默认命令�
 它消费 RabbitMQ 上的后台任务。队列由环境提供，chart 只把 `externalRabbitmq` 的 host、port、user、password、vhost
 注入 API 和该 worker。
 
-e2b 模式可以多副本（`replicaCount` 大于 1），前提是 `agent.contextStorage.backend` 为 `bk_repo`。其余后端
-（包括默认的 `host_tmp_path`）只存在单个 Pod 内，会话换到别的副本冷启动时读不回上下文，Chart 渲染时直接拒绝。
+e2b 模式可以多副本（`replicaCount` 大于 1），前提是 `agent.contextStorage.backend` 和
+`agent.attachmentStorage.backend` 都为 `bk_repo`。其余后端（包括默认的 `host_tmp_path`）只存在单个 Pod 内，
+会话换到别的副本时读不回上下文和图片附件，Chart 渲染时直接拒绝。
 改用 `bk_repo` 时 `root` 要一起改成通用仓库名：只改 `backend`，Helm 会把默认的路径合并进来，Chart 会拒绝以 `/` 开头的 `root`。
 
-e2b 模式按 RollingUpdate 升级：API 进程退出不会停掉沙箱，新旧 Pod 可以同时在线。上下文存在 `bk_repo` 时，
-API Pod 不往 `/data/app-spark` 写东西，不需要 `persistence`；单副本仍用 `host_tmp_path` 时上下文写在这里。
+e2b 模式按 RollingUpdate 升级：API 进程退出不会停掉沙箱，新旧 Pod 可以同时在线。上下文和附件都存在 `bk_repo` 时，
+API Pod 不往 `/data/app-spark` 写东西，不需要 `persistence`；单副本仍用 `host_tmp_path` 时它们写在这里。
 设置了 `existingClaim` 时，它必须是 ReadWriteMany：滚动升级和多副本都会让两个 Pod 同时挂这个卷，
 ReadWriteOnce 的卷挂不到别的节点上，新 Pod 会一直 Pending。
 

@@ -253,10 +253,11 @@ class ConversationUserMessageManager(models.Manager["ConversationUserMessage"]):
                 tenant_id=locked.tenant_id,
                 owner=locked.owner,
             )
-            if attachments:
-                ConversationAttachment.objects.filter(id__in=[attachment.id for attachment in attachments]).update(
-                    user_message=message
-                )
+            # 逐张记下它在本轮里的位置：模型按 attachment_ids 的顺序看图，历史也得按这个顺序展示，
+            # 上传先后可能因为并发上传而与之不同。一轮最多几张，逐行更新的开销可以忽略。
+            for position, attachment_id in enumerate(attachment_ids):
+                ConversationAttachment.objects.filter(id=attachment_id).update(user_message=message, position=position)
+
             return message
 
 
@@ -289,7 +290,7 @@ class ConversationAttachment(OwnerTimestampedModel):
     """用户在会话里上传的一张图片：字节在 blob 存储里，这里只记元数据和它放在哪。
 
     上传和发送是两步：前端粘贴即上传，拿到 ID，发起一轮对话时再引用。还没被引用的附件
-    user_message 为空，回收未使用的草稿附件就靠它。
+    user_message 为空。
 
     backend 与 config 记在行上而不是每次从配置推，理由同 ConversationContextVersion：部署改了
     存储配置之后，已经写出去的附件还找得回来。
@@ -312,6 +313,7 @@ class ConversationAttachment(OwnerTimestampedModel):
         default=None,
         related_name="attachments",
     )
+    position = models.PositiveSmallIntegerField(verbose_name="在所属输入中的位置", default=0)
     filename = models.CharField(verbose_name="原始文件名", max_length=255)
     # 由文件头识别得出，不取客户端声明的 Content-Type。
     mime_type = models.CharField(verbose_name="文件类型", max_length=64)

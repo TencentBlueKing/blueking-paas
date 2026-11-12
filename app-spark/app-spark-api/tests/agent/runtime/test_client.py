@@ -127,6 +127,17 @@ async def test_a_turn_names_its_model_in_forwarded_props():
     assert body["forwardedProps"] == {"contextVersion": 3, "modelId": "hy3"}
 
 
+async def test_a_turn_on_a_text_only_model_tells_the_runtime_to_send_no_images():
+    sent: list[httpx2.Request] = []
+    client = runtime_answering({"/runs": (200, b"data: {}\n\n")}, recorder=sent)
+
+    run = await client.start_run(content="hello", context_version=3, image_input=False)
+    await run.aclose()
+
+    body = json.loads(sent[0].content)
+    assert body["forwardedProps"] == {"contextVersion": 3, "imageInput": False}
+
+
 async def test_every_runtime_client_request_uses_the_handle_bearer():
     sent: list[httpx2.Request] = []
     client = runtime_answering(

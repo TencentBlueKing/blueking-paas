@@ -191,7 +191,7 @@ async def upload_attachment(
 ):
     """上传一张图片，返回附件 ID；发起一轮对话时把 ID 放进 attachment_ids 引用它。
 
-    - 添加图片时就上传；没发出去的附件之后统一回收，不需要调用删除；
+    - 添加图片时就上传；没发出去的附件留在会话里，没有删除接口；
     - 类型按文件头识别，非图片返回 422，超过 5MB 返回 413，已结束的会话返回 409。
     """
     conversation = await _get_conversation(request, project_id, number)

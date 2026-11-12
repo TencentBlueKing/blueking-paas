@@ -35,6 +35,8 @@ class PreparedRun:
     body: bytes
     # None runs the turn on the sandbox's default model.
     model_id: str | None = None
+    # False when the control plane says this turn's model cannot read images.
+    image_input: bool = True
 
 
 def prepare_run(
@@ -100,6 +102,7 @@ def prepare_run(
         )
 
     model_id = _read_model_id(typed_forwarded_props)
+    image_input = _read_image_input(typed_forwarded_props)
 
     user_message = next(
         (message for message in reversed(run_input.messages) if isinstance(message, UserMessage)),
@@ -128,6 +131,7 @@ def prepare_run(
         context_version=context_version,
         body=filtered_input.model_dump_json(by_alias=True).encode(),
         model_id=model_id,
+        image_input=image_input,
     )
 
 
@@ -186,6 +190,20 @@ def _read_model_id(forwarded_props: dict[str, object]) -> str | None:
     # Stripped like MODEL_ID, or a padded default ID is neither recognised as the default nor
     # understood by the gateway.
     return model_id.strip()
+
+
+def _read_image_input(forwarded_props: dict[str, object]) -> bool:
+    """Return whether this turn's model may be sent images; absent means it may."""
+    image_input = forwarded_props.get("imageInput", True)
+
+    # 只认布尔值：把 "false" 之类读成真值，会把图片发给一个读不了图的模型。
+    if not isinstance(image_input, bool):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="forwardedProps.imageInput must be a boolean.",
+        )
+
+    return image_input
 
 
 def request_with_body(request: Request, body: bytes) -> Request:

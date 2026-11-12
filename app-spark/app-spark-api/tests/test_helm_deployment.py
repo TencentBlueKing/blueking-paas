@@ -1,4 +1,4 @@
-"""Render the chart to verify what each runtime provider accepts: replicas, context storage, config."""
+"""Render the chart to verify what each runtime provider accepts: replicas, blob storage, config."""
 
 import json
 import shutil
@@ -20,6 +20,8 @@ E2B_CONFIG = {
     "template": "app-spark-agent",
 }
 BK_REPO_CONTEXTS = {"backend": "bk_repo", "root": "app-spark-contexts"}
+BK_REPO_ATTACHMENTS = {"backend": "bk_repo", "root": "app-spark-attachments"}
+SHARED_STORAGES = {"agent.contextStorage": BK_REPO_CONTEXTS, "agent.attachmentStorage": BK_REPO_ATTACHMENTS}
 
 
 def run_helm_template(overrides: dict[str, Any]) -> subprocess.CompletedProcess[str]:
@@ -62,8 +64,8 @@ def make_e2b_overrides(replicas: int, extra: dict[str, Any] | None = None) -> di
     }
 
 
-def test_e2b_runs_several_replicas_on_shared_context_storage():
-    deployment = render_deployment(make_e2b_overrides(2, {"agent.contextStorage": BK_REPO_CONTEXTS}))
+def test_e2b_runs_several_replicas_on_shared_blob_storage():
+    deployment = render_deployment(make_e2b_overrides(2, SHARED_STORAGES))
 
     assert deployment["spec"]["replicas"] == 2
 
@@ -83,11 +85,19 @@ def test_e2b_runs_several_replicas_on_shared_context_storage():
     ],
 )
 def test_several_replicas_need_bk_repo_context_storage(context_storage, named_backend):
-    error = collect_render_error(make_e2b_overrides(2, {"agent.contextStorage": context_storage}))
+    error = collect_render_error(make_e2b_overrides(2, {**SHARED_STORAGES, "agent.contextStorage": context_storage}))
 
     assert "replicaCount=2" in error
     assert "agent.contextStorage.backend=bk_repo" in error
     assert f'got "{named_backend}"' in error
+
+
+def test_several_replicas_need_bk_repo_attachment_storage():
+    """Images are read back on every turn, from whichever replica serves it."""
+    error = collect_render_error(make_e2b_overrides(2, {"agent.contextStorage": BK_REPO_CONTEXTS}))
+
+    assert "agent.attachmentStorage.backend=bk_repo" in error
+    assert 'got "host_tmp_path"' in error
 
 
 def test_one_e2b_replica_keeps_per_pod_context_storage():
@@ -97,12 +107,21 @@ def test_one_e2b_replica_keeps_per_pod_context_storage():
 
 
 @pytest.mark.parametrize("replicas", [1, 2])
-def test_bk_repo_does_not_take_the_merged_host_path_for_its_repository(replicas):
+@pytest.mark.parametrize(
+    ("storage", "default_root"),
+    [
+        ("contextStorage", "/data/app-spark/agent-contexts"),
+        ("attachmentStorage", "/data/app-spark/agent-attachments"),
+    ],
+)
+def test_bk_repo_does_not_take_the_merged_host_path_for_its_repository(replicas, storage, default_root):
     """Switching only the backend keeps the default host path as root, which bk_repo would read as a repository."""
-    error = collect_render_error(make_e2b_overrides(replicas, {"agent.contextStorage.backend": "bk_repo"}))
+    overrides: dict[str, Any] = {key: value for key, value in SHARED_STORAGES.items() if key != f"agent.{storage}"}
+    overrides[f"agent.{storage}.backend"] = "bk_repo"
+    error = collect_render_error(make_e2b_overrides(replicas, overrides))
 
-    assert "agent.contextStorage.root" in error
-    assert "/data/app-spark/agent-contexts" in error
+    assert f"agent.{storage}.root" in error
+    assert default_root in error
 
 
 @pytest.mark.parametrize("field", list(E2B_CONFIG))
@@ -130,7 +149,7 @@ def test_the_update_strategy_follows_the_runtime_provider(overrides, strategy):
 
 @pytest.mark.parametrize("provider", [None, "local_process"])
 def test_local_process_still_requires_one_replica(provider):
-    overrides: dict[str, Any] = {"replicaCount": 2, "agent.contextStorage": BK_REPO_CONTEXTS}
+    overrides: dict[str, Any] = {"replicaCount": 2, **SHARED_STORAGES}
     if provider is not None:
         overrides["agent.runtimeProvider"] = provider
 

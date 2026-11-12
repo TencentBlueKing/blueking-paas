@@ -28,7 +28,11 @@ from uuid import uuid4
 
 from asgiref.sync import sync_to_async
 
-from app_spark_api.agent.conversations.attachments import acheck_run_attachments, build_attachment_uri
+from app_spark_api.agent.conversations.attachments import (
+    acheck_run_attachments,
+    ahas_sent_attachments,
+    build_attachment_uri,
+)
 from app_spark_api.agent.conversations.exceptions import ConversationClosedError, ModelImageInputUnsupportedError
 from app_spark_api.agent.conversations.lifecycle.utils import (
     CLOSED_MESSAGE,
@@ -98,8 +102,7 @@ async def start_run(
 
     # 附件归属和模型能力同理，在拉起沙箱之前查。绑定时还会在锁下复查一次归属。
     run_attachments = await acheck_run_attachments(conversation, attachment_ids)
-    if run_attachments:
-        await _reject_if_model_cannot_read_images(model_id, credential)
+    image_input = await _check_image_input(conversation, model_id, credential, sends_images=bool(run_attachments))
 
     client, health = await _open_resumed_client(conversation, credential)
     logger.info(
@@ -132,6 +135,7 @@ async def start_run(
                 ImageInput(url=build_attachment_uri(attachment.id), mime_type=attachment.mime_type)
                 for attachment in run_attachments
             ],
+            image_input=image_input,
         )
     except AgentWorkspaceSavePendingError as exc:
         # 409 不会进 API 的异常日志，而页面上的文案是固定的，沙箱地址和 Runtime 的说明只在这里。
@@ -198,20 +202,43 @@ async def start_preview(
     return outcome
 
 
-async def _reject_if_model_cannot_read_images(model_id: str | None, credential: UserCredential | None) -> None:
-    """Refuse a turn with images when the model it runs on does not support image input.
+async def _check_image_input(
+    conversation: Conversation,
+    model_id: str | None,
+    credential: UserCredential | None,
+    *,
+    sends_images: bool,
+) -> bool:
+    """Return whether this turn's model may be handed the conversation's images.
 
+    :param conversation: Conversation the turn belongs to.
     :param model_id: The model the turn asked for; None means the catalog's default model.
     :param credential: The caller's BlueKing login, needed to read the bkaidev model list.
-    :raises ModelImageInputUnsupportedError: If that model does not support image input.
+    :param sends_images: Whether this turn itself carries images.
+    :return: False when the model cannot read images, so the Runtime sends none of them.
+    :raises ModelImageInputUnsupportedError: If this turn carries images its model cannot read.
     """
+    # 会话里从没发过图，就没有图会被发给模型，纯文字对话不必为此多查一次模型列表。
+    if not sends_images and not await ahas_sent_attachments(conversation):
+        return True
+
+    # Runtime 会把最近几轮的历史图片也发给模型，所以本轮没带图也要看模型能不能读图：
+    # 上一轮在多模态模型上发了图、这一轮换成纯文本模型时，图片不能跟着发过去。
     catalog = await list_models(credential)
+
+    # 不选模型时按列表的默认模型判断：沙箱的 MODEL_ID 由 resolve_model_access 取同一个默认模型，
+    # 改了一边就要同步改另一边。
     effective_model_id = model_id or catalog.default_model_id
 
-    # 列表里找不到也按不支持处理：说不清能不能看图的模型，宁可拒绝，也不让图片被悄悄忽略。
+    # 列表里找不到也按不支持处理：说不清能不能看图的模型，宁可不发图，也不让模型调用因此失败。
     option = next((model for model in catalog.models if model.id == effective_model_id), None)
-    if option is None or not option.supports_vision:
+    supports_vision = option is not None and option.supports_vision
+
+    # 本轮自己带的图被拒绝而不是换成占位：用户会拿到一个无视了图片的回答，却不知道为什么。
+    if sends_images and not supports_vision:
         raise ModelImageInputUnsupportedError(f"Model {effective_model_id!r} does not support image input")
+
+    return supports_vision
 
 
 async def _open_resumed_client(

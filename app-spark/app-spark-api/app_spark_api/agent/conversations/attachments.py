@@ -59,7 +59,7 @@ ATTACHMENT_URI_SCHEME = "app-spark-attachment"
 BK_REPO_KEY_PREFIX = "attachments"
 
 # 用户侧内容接口的路由名，AttachmentResponse.url 由它反解出来。
-ATTACHMENT_CONTENT_URL_NAME = "conversations-attachment-content"
+ATTACHMENT_CONTENT_URL_NAME = "conversations-attachments-content"
 
 
 def blob_location(conversation_id: uuid.UUID, attachment_id: uuid.UUID) -> tuple[str, dict[str, str]]:
@@ -218,3 +218,8 @@ async def acheck_run_attachments(
         raise AttachmentAlreadyUsedError(f"Attachments {used} of conversation {conversation.id} are already in use")
 
     return attachments
+
+
+async def ahas_sent_attachments(conversation: Conversation) -> bool:
+    """Return whether any earlier turn of the conversation was sent with an attachment."""
+    return await ConversationAttachment.objects.filter(conversation=conversation, user_message__isnull=False).aexists()

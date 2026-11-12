@@ -28,10 +28,10 @@ import pytest
 
 from app_spark_api.agent.conversations import services
 from app_spark_api.agent.conversations.lifecycle import start
-from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
+from app_spark_api.agent.conversations.models import Conversation, ConversationAttachment, ConversationUserMessage
 from app_spark_api.agent.model_catalog import services as model_catalog_services
 from app_spark_api.core.projects.models import Project
-from app_spark_api.infras.bkaidev import GatewayModel
+from app_spark_api.infras.bkaidev import GatewayModel, GatewayModelProperty
 from tests.agent.conversations.support import HANDLE, FakeClient, FakeProvider, FakeRun, install_fake_provider
 
 if TYPE_CHECKING:
@@ -72,6 +72,7 @@ async def test_a_turn_can_be_stopped_as_soon_as_its_runtime_has_it(provider, con
             run_id: str,
             model_id: str | None = None,
             images: Any = (),
+            image_input: bool = True,
         ) -> FakeRun:
             owned = ConversationUserMessage.objects.filter(conversation=conversation, run_id=run_id)
             owned_when_started.append(await owned.aexists())
@@ -115,6 +116,7 @@ async def test_a_turn_that_names_a_model_reaches_the_runtime(provider, conversat
             run_id: str,
             model_id: str | None = None,
             images: Any = (),
+            image_input: bool = True,
         ) -> FakeRun:
             seen.append(model_id)
             run = FakeRun([])
@@ -133,3 +135,78 @@ async def test_a_turn_that_names_a_model_reaches_the_runtime(provider, conversat
     await start.start_run(conversation, content="hi", model_id="hy3")
 
     assert seen == ["hy3"]
+
+
+@pytest.fixture
+def one_vision_model(settings, monkeypatch) -> None:
+    """Offer hy3, which cannot read images and is the default, and kimi-vl, which can."""
+    settings.AGENT_MODEL_SOURCE = "bkaidev"
+    settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "hy3", "available_models": ["hy3", "kimi-vl"]}
+
+    async def fetch_gateway_models(*_args: Any, **_kwargs: Any) -> list[GatewayModel]:
+        return [
+            GatewayModel(id="hy3"),
+            GatewayModel(id="kimi-vl", properties=GatewayModelProperty(support_vision=True)),
+        ]
+
+    monkeypatch.setattr(model_catalog_services, "_fetch_gateway_models", fetch_gateway_models)
+
+
+@pytest.mark.usefixtures("provider", "one_vision_model")
+@pytest.mark.parametrize(
+    ("has_sent_images", "model_id", "image_input"),
+    [
+        pytest.param(True, "hy3", False, id="switched-to-a-text-only-model-after-an-image"),
+        pytest.param(True, "kimi-vl", True, id="still-on-a-vision-model"),
+        pytest.param(False, "hy3", True, id="no-image-ever-sent"),
+    ],
+)
+async def test_a_text_turn_tells_the_runtime_whether_its_model_reads_earlier_images(
+    conversation, monkeypatch, has_sent_images, model_id, image_input
+):
+    """本轮只有文字，但 Runtime 会把最近几轮的图也发给模型，换成纯文本模型时得让它别发。"""
+    seen: list[bool] = []
+
+    class StartingClient(FakeClient):
+        async def start_run(
+            self,
+            *,
+            content: str,
+            context_version: int,
+            run_id: str,
+            model_id: str | None = None,
+            images: Any = (),
+            image_input: bool = True,
+        ) -> FakeRun:
+            seen.append(image_input)
+            run = FakeRun([])
+            run.run_id = run_id
+            return run
+
+    async def open_client(_conversation: Conversation, **_kwargs: Any) -> StartingClient:
+        return StartingClient(HANDLE)
+
+    async def already_warm(_conversation: Conversation, _client: Any, health: RuntimeHealth) -> RuntimeHealth:
+        return health
+
+    monkeypatch.setattr(start, "open_client", open_client)
+    monkeypatch.setattr(start, "resume_if_cold", already_warm)
+    if has_sent_images:
+        earlier = await ConversationUserMessage.objects.acreate(
+            conversation=conversation, content="", run_id="earlier", owner=conversation.owner
+        )
+        await ConversationAttachment.objects.acreate(
+            conversation=conversation,
+            user_message=earlier,
+            filename="shot.png",
+            mime_type="image/png",
+            size=8,
+            sha256="0" * 64,
+            backend="host_tmp_path",
+            config={"path": "/nonexistent"},
+            owner=conversation.owner,
+        )
+
+    await start.start_run(conversation, content="hi", model_id=model_id)
+
+    assert seen == [image_input]

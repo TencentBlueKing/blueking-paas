@@ -149,11 +149,11 @@ def read_page(
     page_events = list(events.filter(seq__gte=start_seq).order_by("seq"))
     # 下界取 `start_seq - 1` 那一组输入的**整组之前**，而不是 `start_seq` 本身：发起这一轮的用户
     # 输入挂在上一轮最后一个事件后面，它和这一轮在界面上是同一个气泡对，不能被分到两页去。
-    # 附件一次预取，不按消息逐条查；按上传顺序排，和用户添加图片的顺序一致。
+    # 附件一次预取，不按消息逐条查；按发送时的位置排，和模型看到的顺序一致。
     page_messages = list(
         messages.filter(after_seq__gte=max(start_seq - 1, 0))
         .order_by("after_seq", "id")
-        .prefetch_related(Prefetch("attachments", queryset=ConversationAttachment.objects.order_by("created_at")))
+        .prefetch_related(Prefetch("attachments", queryset=ConversationAttachment.objects.order_by("position")))
     )
 
     return HistoryPage(

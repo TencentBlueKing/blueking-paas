@@ -154,9 +154,7 @@ class AttachmentResponse(Schema):
     filename: str = Field(description="上传时的文件名，仅用于展示")
     mime_type: str = Field(description="按文件头识别出的图片类型")
     size: int = Field(description="字节数")
-    url: str | None = Field(
-        description=("读取图片内容的地址，需要登录态，不会过期，可直接用作 img 的 src；图片已被回收时为 null"),
-    )
+    url: str = Field(description="读取图片内容的地址，需要登录态，不会过期，可直接用作 img 的 src")
     created_at: datetime = Field(description="上传时间")
 
 

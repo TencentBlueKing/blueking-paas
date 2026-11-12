@@ -158,6 +158,31 @@ async def test_an_uploaded_image_can_be_read_back_and_shows_in_history(
     assert [r["user_message"]["attachments"] for r in json.loads(history.content)["records"]] == [[body]]
 
 
+async def test_history_lists_images_in_the_order_they_were_sent(aapi_client, conversation) -> None:
+    """模型按 attachment_ids 的顺序看图，历史得一样：「第一张图」在两边说的才是同一张。"""
+    uploaded_first = await upload_ok(aapi_client, conversation.number)
+    uploaded_second = await upload_ok(aapi_client, conversation.number)
+
+    await sync_to_async(bind)(conversation, uploaded_second["id"], uploaded_first["id"])
+
+    history = await aapi_client.get(f"{CONVERSATIONS_URL}{conversation.number}/history/")
+    [record] = json.loads(history.content)["records"]
+    assert [a["id"] for a in record["user_message"]["attachments"]] == [uploaded_second["id"], uploaded_first["id"]]
+
+
+async def test_deleting_a_projects_conversations_deletes_their_image_bytes(aapi_client, project, conversation) -> None:
+    body = await upload_ok(aapi_client, conversation.number)
+    attachment = await ConversationAttachment.objects.aget(id=body["id"])
+    blob = attachment.get_blob_store()
+    assert blob.get_bytes() == PNG_BYTES
+
+    await services.adelete_project_conversations(project.id)
+
+    assert not await ConversationAttachment.objects.aexists()
+    with pytest.raises(FileNotFoundError):
+        blob.get_bytes()
+
+
 @pytest.mark.parametrize(
     ("case", "code"),
     [

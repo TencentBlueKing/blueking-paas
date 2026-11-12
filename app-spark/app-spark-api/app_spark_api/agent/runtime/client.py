@@ -287,6 +287,7 @@ class AgentRuntimeClient:
         run_id: str | None = None,
         model_id: str | None = None,
         images: Sequence[ImageInput] = (),
+        image_input: bool = True,
     ) -> AgentRun:
         """Submit one conversation turn and return its still-open event stream.
 
@@ -301,6 +302,8 @@ class AgentRuntimeClient:
             a replayed one.
         :param model_id: Model to run this turn on; None leaves the Runtime on its default.
         :param images: Images sent with this turn, as references the Runtime resolves itself.
+        :param image_input: False when this turn's model cannot read images, so the Runtime
+            sends it none of the conversation's earlier images either.
         :return: The accepted run.
         :raises AgentBusyError: If a run is already occupying the Runtime.
         :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the turn.
@@ -310,6 +313,10 @@ class AgentRuntimeClient:
         # 不带这个键 Runtime 就用沙箱默认模型。
         if model_id is not None:
             forwarded_props["modelId"] = model_id
+
+        # 只在不能看图时带上：缺省就是能看，纯文字的一轮请求体保持不变。
+        if not image_input:
+            forwarded_props["imageInput"] = False
 
         body = {
             # AG-UI's own document, so it keeps AG-UI's camelCase -- `threadId` included, which

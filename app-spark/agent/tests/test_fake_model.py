@@ -15,6 +15,7 @@ from pydantic_ai.messages import (
     TextPart,
     ToolCallPart,
     ToolReturnPart,
+    UserContent,
     UserPromptPart,
 )
 from pydantic_ai.models.function import FunctionModel
@@ -172,6 +173,6 @@ def test_a_fake_runtime_writes_a_real_file_and_reports_it(
 
 
 def test_an_image_prompt_is_echoed_as_a_summary_not_its_bytes() -> None:
-    content = ["look at", BinaryContent(data=b"\x89PNG" + b"\x00" * 6, media_type="image/png")]
+    content: list[UserContent] = ["look at", BinaryContent(data=b"\x89PNG" + b"\x00" * 6, media_type="image/png")]
 
     assert render_user_content(content) == "look at [image image/png 10 bytes]"

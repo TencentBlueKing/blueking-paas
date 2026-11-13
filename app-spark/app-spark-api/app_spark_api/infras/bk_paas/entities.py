@@ -69,27 +69,19 @@ class CreatedApp:
             raise BkPaaSUnavailableError(f"Unreadable create-app response: {exc!r}") from exc
 
 
-class AppFieldProblem(StrEnum):
-    """Why the developer center would refuse an application ID or name."""
-
-    # 已被其他应用占用，换一个即可。
-    TAKEN = "taken"
-    # 格式不合法，如超长、含保留字。
-    INVALID = "invalid"
-
-
-# 开发者中心表示「已被占用」的字段错误码，其余错误码都算格式不合法。
-_UNIQUE_ERROR_CODE = "unique"
+# 开发者中心表示「已被占用」的字段错误码。只有这个要单独处理（让用户换名），其余 code 原样传出。
+UNIQUE_APP_FIELD_CODE = "unique"
 
 
 @attrs.frozen
 class AppFieldError:
     """One field the developer center would refuse.
 
+    :param problem: 开发者中心的错误码，如 unique、max_length。没有 code 时记为 invalid。
     :param message: 开发者中心给出的说明，可以直接展示给用户。
     """
 
-    problem: AppFieldProblem
+    problem: str
     message: str
 
 
@@ -121,11 +113,14 @@ def _read_field_error(errors: Any) -> AppFieldError | None:
     if not errors:
         return None
 
-    # 同一字段可能同时有多条错误；只要有一条是占用，就让用户换名字，格式问题换名字时一并解决。
-    taken = any(error.get("code") == _UNIQUE_ERROR_CODE for error in errors)
-    return AppFieldError(
-        problem=AppFieldProblem.TAKEN if taken else AppFieldProblem.INVALID, message=str(errors[0]["message"])
-    )
+    # 同一字段可能有多条。有占用就报 unique，换名字时格式问题一并解决；否则原样传第一条的 code。
+    chosen = errors[0]
+    for error in errors:
+        if error.get("code") == UNIQUE_APP_FIELD_CODE:
+            chosen = error
+            break
+
+    return AppFieldError(problem=str(chosen.get("code") or "invalid"), message=str(chosen["message"]))
 
 
 @attrs.frozen

@@ -158,7 +158,7 @@ class AppNameValidateResponse(Schema):
     name: str = Field(description="按开发者中心的规则过滤、截断后实际会用的名称；什么也不剩时为空字符串")
     is_available: bool = Field(description="能否用这个名称创建应用")
     problem: str | None = Field(
-        description="不能用的原因：taken 表示已被其他应用使用，invalid 表示格式不合法；能用时为空"
+        description="不能用时为开发者中心的错误码，unique 表示已被其他应用使用；过滤后为空时为 invalid。能用时为空"
     )
     message: str | None = Field(description="给用户看的说明，能用时为空")
 

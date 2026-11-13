@@ -27,7 +27,6 @@ from app_spark_api.core.projects.models import Project
 from app_spark_api.infras.bk_paas import (
     AppBasicInfoValidation,
     AppFieldError,
-    AppFieldProblem,
     BkPaaSApiError,
     DeploymentResult,
 )
@@ -190,7 +189,7 @@ async def test_an_app_name_without_usable_characters_is_refused_up_front(project
 async def test_a_taken_app_name_is_refused_before_any_task(project, bkpaas, queued):
     bkpaas.queue(
         "validate_app_basic_info",
-        AppBasicInfoValidation(None, AppFieldError(AppFieldProblem.TAKEN, "名称已存在")),
+        AppBasicInfoValidation(None, AppFieldError("unique", "名称已存在")),
     )
 
     with pytest.raises(PublicationAppNameConflictError):
@@ -206,9 +205,7 @@ async def test_a_refused_app_id_is_told_before_any_task(project, bkpaas):
     # 名称也重名时先说应用 ID：用户改不了它，只让改名会白改一次。
     bkpaas.queue(
         "validate_app_basic_info",
-        AppBasicInfoValidation(
-            AppFieldError(AppFieldProblem.TAKEN, "应用 ID 已存在"), AppFieldError(AppFieldProblem.TAKEN, "名称已存在")
-        ),
+        AppBasicInfoValidation(AppFieldError("unique", "应用 ID 已存在"), AppFieldError("unique", "名称已存在")),
     )
 
     with pytest.raises(PublicationSubmitError, match="应用 ID 已存在"):
@@ -247,8 +244,8 @@ async def test_a_name_taken_meanwhile_is_answered_as_a_conflict(project, bkpaas,
         ("Spa rk", AppBasicInfoValidation(None, None), ("Spark", None, None)),
         (
             "Spark",
-            AppBasicInfoValidation(None, AppFieldError(AppFieldProblem.TAKEN, "名称已存在")),
-            ("Spark", AppFieldProblem.TAKEN, "名称已存在"),
+            AppBasicInfoValidation(None, AppFieldError("unique", "名称已存在")),
+            ("Spark", "unique", "名称已存在"),
         ),
     ],
 )
@@ -265,7 +262,7 @@ async def test_validating_a_name_reports_what_would_be_used(project, bkpaas, nam
 async def test_validating_a_name_without_usable_characters_does_not_ask(project, bkpaas):
     validation = await services.validate_app_name(project, "!!!")
 
-    assert (validation.name, validation.problem, validation.is_available) == ("", AppFieldProblem.INVALID, False)
+    assert (validation.name, validation.problem, validation.is_available) == ("", "invalid", False)
     assert bkpaas.calls == []
 
 

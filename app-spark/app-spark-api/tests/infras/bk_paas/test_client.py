@@ -23,7 +23,6 @@ import pytest
 
 from app_spark_api.infras.bk_paas import (
     AppFieldError,
-    AppFieldProblem,
     BkPaaSClient,
     BkPaaSConfigurationError,
     BkPaaSUnavailableError,
@@ -68,8 +67,8 @@ async def test_validating_sends_the_tenant_and_reads_each_field():
         "app_tenant_mode": "single",
         "app_tenant_id": "t1",
     }
-    assert result.name_error == AppFieldError(AppFieldProblem.TAKEN, "名称已存在")
-    assert result.code_error == AppFieldError(AppFieldProblem.INVALID, "太长了")
+    assert result.name_error == AppFieldError("unique", "名称已存在")
+    assert result.code_error == AppFieldError("max_length", "太长了")
 
 
 async def test_validating_only_the_name_leaves_out_the_code():

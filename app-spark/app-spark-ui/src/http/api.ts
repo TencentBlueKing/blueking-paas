@@ -53,7 +53,6 @@ export type {
   PreviewResponse,
   PreviewStartResponse,
   PublicationAppNameValidateResponse,
-  PublicationAppNameProblem,
   PublicationDeploymentRequest,
   PublicationDevCenterLinks,
   PublicationFailure,

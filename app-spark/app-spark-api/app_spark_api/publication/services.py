@@ -34,7 +34,7 @@ from django.utils import timezone
 
 from app_spark_api.core.projects.models import Project
 from app_spark_api.infras.bk_paas import (
-    AppFieldProblem,
+    UNIQUE_APP_FIELD_CODE,
     BkPaaSClient,
     BkPaaSConfigurationError,
     BkPaaSError,
@@ -111,12 +111,12 @@ class AppNameValidation:
     """Whether the first deployment could create the application under a name.
 
     :param name: 按开发者中心的规则过滤、截断后实际会用的名称，什么也不剩时为空字符串。
-    :param problem: 不能用的原因，能用时为 None。
+    :param problem: 开发者中心的错误码，能用时为 None。unique 表示已被占用。
     :param message: 给用户看的说明，能用时为 None。
     """
 
     name: str
-    problem: AppFieldProblem | None
+    problem: str | None
     message: str | None
 
     @property
@@ -209,9 +209,9 @@ async def validate_app_name(project: Project, name: str) -> AppNameValidation:
     """
     normalized = normalize_app_name(name)
 
-    # 过滤后什么也不剩，开发者中心会当成空名称，不必去问。
+    # 过滤后什么也不剩，不必问开发者中心，所以没有它的错误码。invalid 表示格式过不去。
     if not normalized:
-        return AppNameValidation(name="", problem=AppFieldProblem.INVALID, message=MSG_APP_NAME_UNUSABLE)
+        return AppNameValidation(name="", problem="invalid", message=MSG_APP_NAME_UNUSABLE)
 
     try:
         async with BkPaaSClient.from_settings() as client:
@@ -244,7 +244,7 @@ async def _ensure_app_creatable(project: Project, client_factory: Callable[[], B
     if result.code_error is not None:
         raise PublicationSubmitError(result.code_error.message, steps.FailureCause.REJECTED)
 
-    if result.name_error is not None and result.name_error.problem == AppFieldProblem.TAKEN:
+    if result.name_error is not None and result.name_error.problem == UNIQUE_APP_FIELD_CODE:
         raise PublicationAppNameConflictError(name)
 
     # 名称已按开发者中心的规则过滤、截断过，格式问题基本不会出现，照开发者中心的说法拒绝。

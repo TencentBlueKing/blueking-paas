@@ -28,7 +28,6 @@ from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.infras.bk_paas import (
     AppBasicInfoValidation,
     AppFieldError,
-    AppFieldProblem,
     BkPaaSApiError,
     BkPaaSClient,
 )
@@ -201,7 +200,7 @@ async def test_a_failed_submission_answers_with_the_reason(aapi_client, owned_pr
 async def test_a_taken_app_name_answers_409_without_a_task(aapi_client, owned_project, bkpaas):
     bkpaas.queue(
         "validate_app_basic_info",
-        AppBasicInfoValidation(None, AppFieldError(AppFieldProblem.TAKEN, "名称已存在")),
+        AppBasicInfoValidation(None, AppFieldError("unique", "名称已存在")),
     )
 
     response = await post_deployment(aapi_client, app_name="Spark")
@@ -220,8 +219,8 @@ async def test_a_taken_app_name_answers_409_without_a_task(aapi_client, owned_pr
         ),
         (
             "Spark",
-            AppBasicInfoValidation(None, AppFieldError(AppFieldProblem.TAKEN, "名称已存在")),
-            {"name": "Spark", "is_available": False, "problem": "taken", "message": "名称已存在"},
+            AppBasicInfoValidation(None, AppFieldError("unique", "名称已存在")),
+            {"name": "Spark", "is_available": False, "problem": "unique", "message": "名称已存在"},
         ),
     ],
 )

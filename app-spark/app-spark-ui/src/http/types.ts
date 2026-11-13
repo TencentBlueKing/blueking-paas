@@ -114,15 +114,13 @@ export interface PublicationDeploymentRequest {
   app_name?: string;
 }
 
-/** `taken`：已被开发者中心的其他应用使用；`invalid`：格式不合法。 */
-export type PublicationAppNameProblem = 'taken' | 'invalid';
-
 /** 首次发布时某个蓝鲸应用名能否使用。 */
 export interface PublicationAppNameValidateResponse {
   /** 按开发者中心规则过滤、截断后实际会用的名称；什么也不剩时为空字符串。 */
   name: string;
   is_available: boolean;
-  problem: PublicationAppNameProblem | null;
+  /** 开发者中心的错误码。`unique` 表示已被占用；其余原样传来。能用时为 null。 */
+  problem: string | null;
   message: string | null;
 }
 

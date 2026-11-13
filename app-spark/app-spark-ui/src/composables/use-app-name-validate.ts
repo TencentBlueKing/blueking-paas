@@ -88,7 +88,7 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
     dropInflight();
     pendingInput.value = null;
     const trimmed = input.trim();
-    result.value = { name: trimmed, is_available: false, problem: 'taken', message: null };
+    result.value = { name: trimmed, is_available: false, problem: 'unique', message: null };
     checkedInput.value = trimmed;
   };
 

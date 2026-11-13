@@ -50,6 +50,7 @@ import type { PublicationAppNameValidateResponse } from '@/http/types';
 
 const APP_NAME_HELP = '开发者中心内应用名不允许重名，冲突时需要以其他名字发布（默认取当前项目名）。';
 const MSG_INVALID = '名称只能包含中文、英文字母、数字、连接符和下划线';
+const TAKEN_PROBLEM = 'unique';
 
 const props = defineProps<{
   modelValue: string;
@@ -69,8 +70,11 @@ const problemText = computed(() => {
   if (!props.modelValue.trim()) return editing.value ? '' : '请输入蓝鲸应用名';
   if (!props.result || props.result.is_available) return '';
   // 带上过滤后的名字：输入「Spa rk」时实际撞的是「Spark」。
-  if (props.result.problem === 'taken') return `「${props.result.name}」已被开发者中心的其他应用使用，请换一个名称`;
-  return props.result.message || MSG_INVALID;
+  if (props.result.problem === TAKEN_PROBLEM) return `「${props.result.name}」已被开发者中心的其他应用使用，请换一个名称`;
+  if (props.result.message) return props.result.message;
+
+  // 不认识的错误码没有现成说明时，把 code 露出来。
+  return props.result.problem ? `${MSG_INVALID}（${props.result.problem}）` : MSG_INVALID;
 });
 
 // 开发者中心会静默去掉不支持的字符，提前告诉用户实际会用哪个名字。

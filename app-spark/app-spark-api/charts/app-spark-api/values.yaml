@@ -137,7 +137,7 @@ appSecret: ""
 # 各网关单独的环境名，例如 bkaidev 用 prod、开发者中心用 stag；不填时用 apigwEnvironment。
 # bkaidevApigwEnvironment: prod
 # bkpaasApigwEnvironment: stag
-# 开发者中心在 API 网关上的网关名，与 bkApiUrlTmpl 拼出发布用的系统 API 地址；不同版本的开发者中心不一样，默认 bkpaas3。
+# 开发者中心在 API 网关上的网关名，与 bkApiUrlTmpl 拼出系统 API 地址；发布和建项目时注册用户都用它。不同版本不一样，默认 bkpaas3。
 # bkpaasApigwName: bkpaas3
 # 开发者中心前端站点地址，只用来拼发布结果里的开发者中心页面链接；不填时不返回这些链接。
 # bkpaasUrl: ""

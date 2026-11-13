@@ -114,7 +114,7 @@ class BkPaaSClient:
             payload["app_tenant_id"] = app_tenant_id or ""
 
         response = await self._client.post("/system/bkapps/app_spark/", json=payload)
-        return CreatedApp.from_payload(self._read_json(response))
+        return CreatedApp.from_payload(read_gateway_json(response))
 
     async def upload_package_via_link(  # noqa: PLR0917
         self,
@@ -141,7 +141,7 @@ class BkPaaSClient:
         response = await self._client.post(
             f"{self._build_module_path(code, module)}/source_package/link/", json=payload
         )
-        self._read_json(response)
+        read_gateway_json(response)
 
     async def deploy(self, code: str, module: str, version: str, operator: str) -> Deployment:
         """Deploy an uploaded source package version to the production environment."""
@@ -149,30 +149,32 @@ class BkPaaSClient:
         response = await self._client.post(
             f"{self._build_module_path(code, module)}/envs/prod/deployments/", json=payload
         )
-        return structure_payload(self._read_json(response), Deployment)
+        return structure_payload(read_gateway_json(response), Deployment)
 
     async def get_deployment_result(self, code: str, module: str, deployment_id: str) -> DeploymentResult:
         """Return where a deployment has got to."""
         response = await self._client.get(
             f"{self._build_module_path(code, module)}/deployments/{deployment_id}/result/"
         )
-        return structure_payload(self._read_json(response), DeploymentResult)
+        return structure_payload(read_gateway_json(response), DeploymentResult)
 
     @staticmethod
     def _build_module_path(code: str, module: str) -> str:
         return f"/system/bkapps/applications/{code}/modules/{module}"
 
-    def _read_json(self, response: httpx2.Response) -> Any:
-        """Return a 2xx response's JSON body, or raise the error a non-2xx one describes."""
-        if response.is_success:
-            try:
-                return response.json()
-            except ValueError as exc:
-                raise BkPaaSUnavailableError(
-                    f"The developer center answered HTTP {response.status_code} with a body that is not JSON"
-                ) from exc
 
-        raise _build_api_error(response)
+def read_gateway_json(response: httpx2.Response) -> Any:
+    """Return a 2xx response's JSON body, or raise the error a non-2xx one describes."""
+
+    if response.is_success:
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise BkPaaSUnavailableError(
+                f"The developer center answered HTTP {response.status_code} with a body that is not JSON"
+            ) from exc
+
+    raise _build_api_error(response)
 
 
 def _build_api_error(response: httpx2.Response) -> BkPaaSApiError:

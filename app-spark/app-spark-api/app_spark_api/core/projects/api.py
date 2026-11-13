@@ -43,6 +43,7 @@ from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
 from app_spark_api.infras.accounts.credentials import get_user_credential
+from app_spark_api.infras.bk_paas.registration import aregister_user_profile
 from app_spark_api.utils.api_errors.error_codes import error_codes
 
 if TYPE_CHECKING:
@@ -65,6 +66,11 @@ PROJECT_ID = Path(
 async def create_project(request: HttpRequest, payload: ProjectCreateRequest):
     """创建一个 Project。"""
     user = authenticated_user(request)
+
+    # 建项目时注册：这个人接下来才会在开发者中心建应用。AppSpark 进站不会创建 UserProfile。
+    # 失败只记日志，不挡住这次创建；下次再建项目还会再试。
+    await aregister_user_profile(request)
+
     try:
         project = await services.create_project(
             project_id=payload.id,
@@ -94,6 +100,10 @@ async def create_project_from_prompt(request: HttpRequest, payload: ProjectFromP
     - 自动命名在后台执行，客户端可轮询 `GET /projects/{project_id}/int-renaming/` 获取结果。
     """
     user = authenticated_user(request)
+
+    # 和手动建项目一样：注册失败只记日志，不挡住这次创建。
+    await aregister_user_profile(request)
+
     created = await services.create_project_from_prompt(
         content=payload.content,
         owner=user.pk,

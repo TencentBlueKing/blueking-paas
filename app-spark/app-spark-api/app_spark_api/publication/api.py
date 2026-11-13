@@ -27,7 +27,7 @@ from ninja import Path, Query, Router, Status
 from app_spark_api.core.shortcuts import aget_project_or_404
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
-from app_spark_api.publication import services
+from app_spark_api.publication import app_name, services
 from app_spark_api.publication.entities import (
     AppNameValidationRetResponse,
     DeploymentCreateRequest,
@@ -128,7 +128,7 @@ async def validate_app_name(
     project = await aget_project_or_404(request, project_id)
 
     try:
-        validation = await services.validate_app_name(project, name)
+        validation = await app_name.validate_app_name(project, name)
     except PublicationStepError as exc:
         raise _SUBMIT_ERRORS[exc.cause].f(reason=exc.message) from exc
 

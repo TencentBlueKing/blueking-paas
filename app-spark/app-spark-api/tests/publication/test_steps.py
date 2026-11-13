@@ -30,7 +30,7 @@ from app_spark_api.infras.bk_paas import (
     BkPaaSApiError,
     DeploymentResult,
 )
-from app_spark_api.publication import packaging, services, steps
+from app_spark_api.publication import app_name, packaging, services, steps
 from app_spark_api.publication.constants import PublicationTaskStatus
 from app_spark_api.publication.exceptions import (
     PublicationAppNameConflictError,
@@ -252,7 +252,7 @@ async def test_a_name_taken_meanwhile_is_answered_as_a_conflict(project, bkpaas,
 async def test_validating_a_name_reports_what_would_be_used(project, bkpaas, name, answer, expected):
     bkpaas.queue("validate_app_basic_info", answer)
 
-    validation = await services.validate_app_name(project, name)
+    validation = await app_name.validate_app_name(project, name)
 
     assert (validation.name, validation.problem, validation.message) == expected
     # 只问名称，不带应用 ID。
@@ -260,7 +260,7 @@ async def test_validating_a_name_reports_what_would_be_used(project, bkpaas, nam
 
 
 async def test_validating_a_name_without_usable_characters_does_not_ask(project, bkpaas):
-    validation = await services.validate_app_name(project, "!!!")
+    validation = await app_name.validate_app_name(project, "!!!")
 
     assert (validation.name, validation.problem, validation.is_available) == ("", "invalid", False)
     assert bkpaas.calls == []
@@ -270,7 +270,7 @@ async def test_validating_a_name_when_the_developer_center_is_down_says_so(proje
     bkpaas.queue("validate_app_basic_info", httpx2.ConnectError("refused"))
 
     with pytest.raises(steps.PublicationStepError, match=steps.MSG_BKPAAS_UNAVAILABLE):
-        await services.validate_app_name(project, "Spark")
+        await app_name.validate_app_name(project, "Spark")
 
 
 async def test_a_project_deleted_before_the_task_is_created_is_not_published(project, bkpaas):

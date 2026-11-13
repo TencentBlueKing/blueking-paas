@@ -23,7 +23,8 @@ import attrs
 from ninja import Field, Schema
 
 if TYPE_CHECKING:
-    from app_spark_api.publication.services import AppNameValidationRet, PublicationState
+    from app_spark_api.publication.app_name import AppNameValidationRet
+    from app_spark_api.publication.services import PublicationState
 
 
 class DeploymentCreateRequest(Schema):

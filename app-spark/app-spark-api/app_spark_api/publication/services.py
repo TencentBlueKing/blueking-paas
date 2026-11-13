@@ -22,7 +22,6 @@
 
 import asyncio
 import logging
-import re
 from typing import TYPE_CHECKING, Any
 
 import attrs
@@ -43,8 +42,8 @@ from app_spark_api.infras.bk_paas import (
     build_deployment_detail_url,
 )
 from app_spark_api.publication import packaging, steps, tasks
+from app_spark_api.publication.app_name import normalize_app_name, resolve_default_app_name
 from app_spark_api.publication.constants import (
-    APP_NAME_MAX_LENGTH,
     DEPLOY_REQUEST_TIMEOUT,
     DEPLOY_TIMEOUT,
     PREPARE_TIMEOUT,
@@ -68,10 +67,6 @@ if TYPE_CHECKING:
     from datetime import datetime
 
 logger = logging.getLogger(__name__)
-
-# 开发者中心的应用名称（NickNameField）去掉首尾空白后只保留这些字符，其余静默丢掉。
-_APP_NAME_CHAR = re.compile(r"[\u4e00-\u9fa5\w\-_]")
-MSG_APP_NAME_UNUSABLE = "应用名称只能包含中文、英文字母、数字、连接符和下划线"
 
 
 @attrs.frozen
@@ -104,25 +99,6 @@ class UnseenResult:
 
     kind: str
     status: str
-
-
-@attrs.frozen
-class AppNameValidationRet:
-    """Whether the first deployment could create the application under a name.
-
-    :param name: 按开发者中心的规则过滤、截断后实际会用的名称，什么也不剩时为空字符串。
-    :param problem: 开发者中心的错误码，能用时为 None。unique 表示已被占用。
-    :param message: 给用户看的说明，能用时为 None。
-    """
-
-    name: str
-    problem: str | None
-    message: str | None
-
-    @property
-    def is_available(self) -> bool:
-        """Whether the name can be used."""
-        return self.problem is None
 
 
 @attrs.frozen
@@ -200,32 +176,6 @@ async def start_deployment(
     return task
 
 
-async def validate_app_name(project: Project, name: str) -> AppNameValidationRet:
-    """Tell whether the first deployment could create the Project's application under this name.
-
-    已绑定应用的项目发布时不再用到名称，前端不必为它调用。
-
-    :raises PublicationStepError: 开发者中心没能给出结论，message 是给用户看的原因。
-    """
-    normalized = normalize_app_name(name)
-
-    # 过滤后什么也不剩，不必问开发者中心，所以没有它的错误码。invalid 表示格式过不去。
-    if not normalized:
-        return AppNameValidationRet(name="", problem="invalid", message=MSG_APP_NAME_UNUSABLE)
-
-    try:
-        async with BkPaaSClient.from_settings() as client:
-            result = await client.validate_app_basic_info(normalized, **steps.build_app_tenant_kwargs(project))
-    except (BkPaaSError, httpx2.HTTPError) as exc:
-        raise steps.to_step_error(exc) from exc
-
-    error = result.name_error
-    if error is None:
-        return AppNameValidationRet(name=normalized, problem=None, message=None)
-
-    return AppNameValidationRet(name=normalized, problem=error.problem, message=error.message)
-
-
 async def _ensure_app_creatable(project: Project, client_factory: Callable[[], BkPaaSClient], name: str) -> None:
     """Refuse up front a first deployment whose application the developer center would not create."""
     try:
@@ -250,17 +200,6 @@ async def _ensure_app_creatable(project: Project, client_factory: Callable[[], B
     # 名称已按开发者中心的规则过滤、截断过，格式问题基本不会出现，照开发者中心的说法拒绝。
     if result.name_error is not None:
         raise PublicationSubmitError(result.name_error.message, steps.FailureCause.REJECTED)
-
-
-def resolve_default_app_name(project: Project) -> str:
-    """Return the application name to suggest on the first deployment."""
-    # 项目名称一般比 ID 好读；全是开发者中心不认的字符时退回 ID。
-    return normalize_app_name(project.name) or project.id
-
-
-def normalize_app_name(name: str) -> str:
-    """Return the name the developer center would keep, cut to its length limit."""
-    return "".join(_APP_NAME_CHAR.findall(name.strip()))[:APP_NAME_MAX_LENGTH]
 
 
 async def afail_pending_tasks(project: Project, error: str) -> None:

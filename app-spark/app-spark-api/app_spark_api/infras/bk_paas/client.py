@@ -146,7 +146,7 @@ class BkPaaSClient:
             payload["app_tenant_id"] = app_tenant_id or ""
 
         response = await self._client.post("/system/bkapps/applications/validations/", json=payload)
-        return AppBasicInfoValidation.from_payload(self._read_json(response))
+        return AppBasicInfoValidation.from_payload(read_gateway_json(response))
 
     async def upload_package_via_link(  # noqa: PLR0917
         self,

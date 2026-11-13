@@ -131,5 +131,11 @@ async def _load_basic_info(
     client_factory: Callable[[], BkPaaSClient],
 ) -> AppBasicInfoValidation:
     """Ask the developer center about this name and, when given, this application ID."""
+
+    # 预检查不传 code。显式传 None 会变成请求里带了应用 ID，和「只问名称」不是一回事。
+    payload = steps.build_app_tenant_kwargs(project)
+    if code is not None:
+        payload["code"] = code
+
     async with client_factory() as client:
-        return await client.validate_app_basic_info(name, code=code, **steps.build_app_tenant_kwargs(project))
+        return await client.validate_app_basic_info(name, **payload)

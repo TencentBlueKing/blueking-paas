@@ -40,8 +40,6 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
-            seccompProfile:
-              type: RuntimeDefault
           ports:
             - name: http
               containerPort: 5000

@@ -18,26 +18,27 @@ repos:
 
       # === 通用 Python 质量检查（Poetry 项目）===
       # 这些 hook 复用仓库根目录的 Ruff 配置，并默认服务于 apiserver 等现有 Poetry 项目。
-      # app-spark-api 使用独立的 Python/uv 环境，因此在这里显式排除，避免被根 Poetry 环境误伤。
+      # app-spark-api 和 agent 使用独立的 Python/uv 环境，因此在这里显式排除，避免被根 Poetry 环境误伤。
+      # app-spark-ui 的测试是 unittest，不走这套 pytest 规则。
       # 总是使用 --force-exclude 来让 ruff 配置文件中的 exclude 生效
       - id: ruff-check-fix
         name: ruff-check-fix
         language: system
         types: [python]
-        exclude: '^app-spark/(app-spark-api|agent)/'
+        exclude: '^app-spark/(app-spark-api|agent|app-spark-ui)/'
         # 修复包导入顺序问题，类似 isort 工具
         entry: poetry run ruff check --force-exclude --select I --fix --no-cache 
       - id: ruff-format
         name: ruff-format
         language: system
         types: [python]
-        exclude: '^app-spark/(app-spark-api|agent)/'
+        exclude: '^app-spark/(app-spark-api|agent|app-spark-ui)/'
         entry: poetry run ruff format --force-exclude --no-cache
       - id: ruff-check
         name: ruff-check
         language: system
         types: [python]
-        exclude: '^app-spark/(app-spark-api|agent)/'
+        exclude: '^app-spark/(app-spark-api|agent|app-spark-ui)/'
         entry: poetry run ruff check --force-exclude --no-cache
 
       # === app-spark-api 专用 Python 质量检查（uv 项目）===

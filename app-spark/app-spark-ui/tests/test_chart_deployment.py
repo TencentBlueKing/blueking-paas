@@ -125,10 +125,16 @@ class ChartDeploymentTests(unittest.TestCase):
                 self.assertNotIn("ingressClassName:", ingress)
                 self.assertNotIn("tls:", ingress)
 
-    def test_clusters_before_stable_ingress_api_are_rejected(self):
-        result = self.render(version="1.18.0")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("kubeVersion", result.stderr)
+    def test_kubernetes_1_18_uses_beta_ingress(self):
+        for version in ("1.18.4", "1.18.4-tke.8"):
+            with self.subTest(version=version):
+                ingress = self.manifests(self.render(version=version))["Ingress"]
+                # networking.k8s.io/v1 从 1.19 才稳定。1.18 只能用 v1beta1，backend 还是扁平字段。
+                self.assertIn("apiVersion: networking.k8s.io/v1beta1", ingress)
+                self.assertIn("pathType: Prefix", ingress)
+                self.assertIn("serviceName: regression-app-spark-ui", ingress)
+                self.assertIn("servicePort: 5000", ingress)
+                self.assertNotIn("number:", ingress)
 
     def test_ingress_normalizes_root_and_trailing_slash_prefixes(self):
         for prefix, site, expected in (

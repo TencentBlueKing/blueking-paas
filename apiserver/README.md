@@ -37,7 +37,7 @@ apiserver 为 blueking-paas 项目的主控模块。
 - 使用 pyenv 安装 Python 3.11
 
 ```shell
-❯ pyenv install 3.11.10
+❯ pyenv install 3.11.18
 ```
 
 2. 安装项目依赖

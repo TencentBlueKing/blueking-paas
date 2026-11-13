@@ -5451,6 +5451,46 @@ msgstr "This value does not match the required pattern."
 msgid "zh-cn"
 msgstr "zh-cn"
 
+#: paasng/misc/audit/constants.py:68
+msgid "txt 校验文件"
+msgstr "txt Verification File"
+
+#: paasng/utils/error_codes.py:228
+msgid "仅云原生应用支持配置 txt 校验文件"
+msgstr "Only cloud-native applications support txt verification files"
+
+#: paasng/utils/error_codes.py:229
+msgid "txt 校验文件访问集群失败，请稍候重试"
+msgstr "Failed to access the cluster for txt verification files, please try again later"
+
+#: paas_wl/workloads/networking/ingress/txt_files/serializers.py:36
+msgid "路径格式错误，仅支持根目录下的 .txt 文件，如 /verify.txt"
+msgstr "Invalid path, only .txt files under the root directory are supported, e.g. /verify.txt"
+
+#: paas_wl/workloads/networking/ingress/txt_files/serializers.py
+msgid "该域名不可用，仅支持已部署环境的子域名和路径为 / 的独立域名"
+msgstr "The domain is unavailable, only sub-domains and custom domains with path \"/\" of a deployed environment are supported"
+
+#: paas_wl/workloads/networking/ingress/txt_files/serializers.py
+msgid "该域名下已存在相同路径的文件"
+msgstr "A file with the same path already exists on this domain"
+
+#: paas_wl/workloads/networking/ingress/txt_files/serializers.py:64
+msgid "内容不能包含 $ 字符"
+msgstr "The content must not contain the $ character"
+
+#: paas_wl/workloads/networking/ingress/txt_files/serializers.py:66
+msgid "内容只能包含可打印字符"
+msgstr "The content must contain only printable characters"
+
+#: paas_wl/workloads/networking/ingress/txt_files/serializers.py:68
+msgid "内容不能超过 {} 字节"
+msgstr "The content must not exceed {} bytes"
+
+#: paas_wl/workloads/networking/ingress/txt_files/serializers.py:76
+msgid "每个环境最多配置 {} 个 txt 文件"
+msgstr "Each environment can have at most {} txt files"
+
 #~ msgid ""
 #~ "进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"
 #~ msgstr ""

@@ -24,7 +24,7 @@ from django.db import models
 from paas_wl.bk_app.applications.models import AuditedModel, WlApp
 from paas_wl.bk_app.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromID
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.utils.models import Char32UUIDField, TimestampedModel
+from paas_wl.utils.models import BkUserField, Char32UUIDField, TimestampedModel
 from paas_wl.utils.text import DNS_SAFE_PATTERN
 from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol, AppSubpathSource
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -179,3 +179,24 @@ class Domain(TimestampedModel):
 
 
 # PaaS "custom domain"(end-user) model end
+
+
+class TxtFile(AuditedModel):
+    """A txt file served by ingress-nginx directly at the root path of the environment's domains,
+    usually used for domain ownership verification by third-party platforms.
+    """
+
+    environment_id = models.BigIntegerField(help_text="关联的环境 ID", null=False)
+    host = models.CharField(max_length=253, help_text="生效的域名")
+    path = models.CharField(max_length=128, help_text="访问路径，如 /verify.txt")
+    content = models.TextField(help_text="文件内容")
+    remark = models.CharField(max_length=128, blank=True, default="", help_text="备注")
+    operator = BkUserField(help_text="最近一次修改的操作人")
+    tenant_id = tenant_id_field_factory(db_index=False)
+    environment = ModuleEnvAttrFromID()
+
+    class Meta:
+        unique_together = ("environment_id", "host", "path")
+
+    def __str__(self):
+        return f"env={self.environment_id}-{self.host}{self.path}"

@@ -25,7 +25,6 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import attrs
-import httpx2
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db import transaction
@@ -33,16 +32,14 @@ from django.utils import timezone
 
 from app_spark_api.core.projects.models import Project
 from app_spark_api.infras.bk_paas import (
-    UNIQUE_APP_FIELD_CODE,
     BkPaaSClient,
     BkPaaSConfigurationError,
-    BkPaaSError,
     ConsoleLinks,
     build_console_links,
     build_deployment_detail_url,
 )
 from app_spark_api.publication import packaging, steps, tasks
-from app_spark_api.publication.app_name import normalize_app_name, resolve_default_app_name
+from app_spark_api.publication.app_name import ensure_app_creatable, normalize_app_name, resolve_default_app_name
 from app_spark_api.publication.constants import (
     DEPLOY_REQUEST_TIMEOUT,
     DEPLOY_TIMEOUT,
@@ -166,7 +163,7 @@ async def start_deployment(
         if not name:
             raise PublicationAppNameInvalidError(app_name or "")
 
-        await _ensure_app_creatable(project, factory, name)
+        await ensure_app_creatable(project, factory, name)
 
     task = await sync_to_async(_create_deployment_task)(project, version_id, operator)
 
@@ -174,32 +171,6 @@ async def start_deployment(
     # 这边却没记下绑定。应用 ID 就是项目 ID，规则由开发者中心校验。
     await _complete_even_if_cancelled(_bind_and_queue(task, project, factory, project.id, name))
     return task
-
-
-async def _ensure_app_creatable(project: Project, client_factory: Callable[[], BkPaaSClient], name: str) -> None:
-    """Refuse up front a first deployment whose application the developer center would not create."""
-    try:
-        async with client_factory() as client:
-            result = await client.validate_app_basic_info(
-                name, code=project.id, **steps.build_app_tenant_kwargs(project)
-            )
-    except BkPaaSError, httpx2.HTTPError:
-        # 提前校验只为把话说清楚。问不到时照常发起，创建应用时开发者中心会再校验一次，失败原因照样告诉用户。
-        logger.warning(
-            "Validating the app of project %s failed, leaving it to app creation", project.pk, exc_info=True
-        )
-        return
-
-    # 应用 ID 就是项目 ID，用户改不了，先说它：否则用户改完名再发，还是被 ID 挡住。
-    if result.code_error is not None:
-        raise PublicationSubmitError(result.code_error.message, steps.FailureCause.REJECTED)
-
-    if result.name_error is not None and result.name_error.problem == UNIQUE_APP_FIELD_CODE:
-        raise PublicationAppNameConflictError(name)
-
-    # 名称已按开发者中心的规则过滤、截断过，格式问题基本不会出现，照开发者中心的说法拒绝。
-    if result.name_error is not None:
-        raise PublicationSubmitError(result.name_error.message, steps.FailureCause.REJECTED)
 
 
 async def afail_pending_tasks(project: Project, error: str) -> None:

@@ -68,7 +68,6 @@ async def test_validating_sends_the_tenant_and_reads_each_field():
         "app_tenant_mode": "single",
         "app_tenant_id": "t1",
     }
-    assert result.is_valid is False
     assert result.name_error == AppFieldError(AppFieldProblem.TAKEN, "名称已存在")
     assert result.code_error == AppFieldError(AppFieldProblem.INVALID, "太长了")
 
@@ -81,7 +80,7 @@ async def test_validating_only_the_name_leaves_out_the_code():
         result = await client.validate_app_basic_info("Spark")
 
     assert json.loads(requests[0].content) == {"name": "Spark"}
-    assert (result.is_valid, result.code_error, result.name_error) == (True, None, None)
+    assert (result.code_error, result.name_error) == (None, None)
 
 
 async def test_an_unreadable_validation_answer_counts_as_unavailable():

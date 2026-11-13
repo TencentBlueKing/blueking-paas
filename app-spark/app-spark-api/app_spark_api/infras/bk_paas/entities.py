@@ -104,11 +104,6 @@ class AppBasicInfoValidation:
     code_error: AppFieldError | None
     name_error: AppFieldError | None
 
-    @property
-    def is_valid(self) -> bool:
-        """Whether both the ID and the name can be used."""
-        return self.code_error is None and self.name_error is None
-
     @classmethod
     def from_payload(cls, payload: Any) -> AppBasicInfoValidation:
         """Read the result out of a sys_validate_app_basic_info response."""

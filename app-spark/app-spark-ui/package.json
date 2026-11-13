@@ -8,7 +8,7 @@
     "build:container": "node ./scripts/build-container.js",
     "server": "node ./paas-server/index.js",
     "lint:style": "stylelint **/*.{html,vue,css,sass,scss,less} --fix",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test src/composables/preview-frame-url.test.ts src/common/model-catalog.test.ts src/common/publication.test.ts"
+    "test": "node --import ./scripts/test-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test 'src/**/*.test.ts'"
   },
   "keywords": [
     "vue3",
@@ -26,6 +26,7 @@
     "dompurify": "^3.2.6",
     "express": "^4.18.2",
     "express-art-template": "^1.0.1",
+    "humanize-duration": "^3.35.1",
     "marked": "^9.1.6",
     "pinia": "^2.0.23",
     "vue": "^3.2.41",
@@ -37,6 +38,7 @@
     "@blueking/eslint-config-bk": "2.1.0-beta.12",
     "@blueking/stylelint-config-bk": "^2.1.0-beta.9",
     "@types/dompurify": "^3.0.5",
+    "@types/humanize-duration": "^3.27.4",
     "enhanced-resolve": "^5.10.0",
     "less": "^4.2.0",
     "postcss": "~8.4.16",

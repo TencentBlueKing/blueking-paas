@@ -195,7 +195,9 @@ async def test_a_stopped_run_ends_like_a_finished_one(tmp_path: Path, save_calls
 
         response = await asyncio.wait_for(streaming, timeout=BUSY_TIMEOUT_SECONDS)
         assert response.status_code == 200
-        assert [event["type"] for event in sse_events(response.text)][-1] == "RUN_FINISHED"
+        last_event = sse_events(response.text)[-1]
+        assert last_event["type"] == "RUN_FINISHED"
+        assert last_event["outcome"] == {"type": "cancelled"}
 
         health: dict[str, Any] = (await client.get("/health")).json()
         assert health["running"] is False

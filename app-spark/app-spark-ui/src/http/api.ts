@@ -22,6 +22,7 @@ import type {
   ProjectIntRenamingResponse,
   ProjectRenameRequest,
   ProjectResponse,
+  RunStopResponse,
   RuntimeStateResponse,
   StartRunRequest,
   UiEventPageResponse,
@@ -64,6 +65,7 @@ export type {
   ProjectIntRenamingResponse,
   ProjectRenameRequest,
   ProjectResponse,
+  RunStopResponse,
   RuntimeStateResponse,
   StartRunRequest,
   UiEventPageResponse,
@@ -235,6 +237,24 @@ export const listHistory = (
   query: ListHistoryQuery = {},
 ): Promise<ConversationHistoryResponse> => (
   http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/history/`, query)
+);
+
+/**
+ * 请求停止正在跑的那一轮，不等它收尾就返回。
+ *
+ * 被停下的一轮照常收尾：SSE 以 `RUN_FINISHED` 结束，会话状态的 `running` 变回 false。这一轮已经
+ * 结束时回 409 `RUN_NOT_RUNNING`，由调用方决定怎么处理，所以关掉全局报错。
+ */
+export const stopConversationRun = (
+  projectId: string,
+  number: number,
+  runId: string,
+): Promise<RunStopResponse> => (
+  http.post(
+    `${apiPrefix}/projects/${projectId}/conversations/${number}/runs/${encodeURIComponent(runId)}/stop/`,
+    {},
+    { globalError: false },
+  )
 );
 
 /** 发起一轮对话，返回 AG-UI SSE Response，调用方自行读流 */

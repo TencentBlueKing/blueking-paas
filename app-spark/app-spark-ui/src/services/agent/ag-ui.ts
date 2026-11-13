@@ -1,4 +1,5 @@
 import type { ChatBlock, ChatMessage, ChatToolCall } from '@/components/project/interaction/types';
+import { resolveApiUrl } from '@/http/fetch';
 import type { AgUiEvent, UserMessageRecord } from '@/http/types';
 import { describeToolCall } from '@/services/agent/tool-call';
 
@@ -248,12 +249,21 @@ export const appendUserMessage = (
   record: UserMessageRecord,
 ): ChatMessage | null => {
   const text = String(record.content ?? '');
-  if (!text) return null;
+  const attachments = record.attachments || [];
+  if (!text && !attachments.length) return null;
 
   const message: ChatMessage = {
     id: `user-${record.id}`,
     role: 'user',
-    blocks: [{ type: 'text', text }],
+    blocks: [
+      ...(text ? [{ type: 'text' as const, text }] : []),
+      ...attachments.map(attachment => ({
+        type: 'image' as const,
+        src: attachment.url ? resolveApiUrl(attachment.url) : undefined,
+        filename: attachment.filename,
+        unavailable: !attachment.url,
+      })),
+    ],
   };
   ctx.messages.push(message);
   return message;
@@ -273,7 +283,7 @@ export const hasConversationContent = (messages: ChatMessage[]) => (
     message.id !== 'welcome'
     && message.blocks.some(block => (
       (block.type === 'text' && Boolean(block.text))
-      || (block.type === 'image' && Boolean(block.src))
+      || block.type === 'image'
       || block.type === 'tool'
     ))
   ))

@@ -32,12 +32,23 @@
           :tool="block.tool"
           :live="status !== 'idle'"
         />
-        <img
-          v-else-if="block.type === 'image' && block.src"
-          class="chat-message__thumb"
-          :src="block.src"
-          alt=""
-        >
+        <figure v-else-if="block.type === 'image'" class="chat-message__image">
+          <img
+            v-if="block.src"
+            class="chat-message__thumb"
+            :src="block.src"
+            :alt="block.filename || '会话图片'"
+          >
+          <div
+            v-else
+            class="chat-message__image-unavailable"
+            role="img"
+            :aria-label="block.filename ? `${block.filename} 已不可用` : '图片已不可用'"
+          >
+            图片已不可用
+          </div>
+          <figcaption v-if="block.filename">{{ block.filename }}</figcaption>
+        </figure>
         <ul v-else-if="block.type === 'summary'" class="chat-message__summary">
           <li v-for="item in block.items" :key="item">
             <Done class="chat-message__icon" />
@@ -69,7 +80,7 @@ const props = defineProps<{
 }>();
 
 const hasContent = (block: ChatBlock) => Boolean(
-  block.text || block.src || block.items?.length || block.tool,
+  block.text || block.type === 'image' || block.items?.length || block.tool,
 );
 
 const visibleMessages = computed(() => (
@@ -239,15 +250,44 @@ const pendingText = (message: ChatMessage) => {
   font-size: 13px;
 }
 
+.chat-message__image {
+  max-width: 100%;
+  margin: 8px 0 0;
+}
+
 .chat-message__thumb {
   display: block;
   max-width: 100%;
   max-height: 160px;
-  margin-top: 8px;
   object-fit: cover;
   background: #f5f7fa;
   border: 1px solid #e4e8ef;
   border-radius: 8px;
+}
+
+.chat-message__image-unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 160px;
+  max-width: 100%;
+  height: 96px;
+  color: #8b93a0;
+  font-size: 12px;
+  background: #f5f7fa;
+  border: 1px dashed #c9ced8;
+  border-radius: 8px;
+}
+
+.chat-message__image figcaption {
+  max-width: 240px;
+  margin-top: 4px;
+  overflow: hidden;
+  color: #7a8494;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .chat-message__summary {

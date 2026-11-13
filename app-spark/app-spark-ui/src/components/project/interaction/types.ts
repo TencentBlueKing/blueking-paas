@@ -1,10 +1,22 @@
 export type ChatRole = 'user' | 'assistant';
 
+export type ChatImageStatus = 'processing' | 'uploading' | 'ready' | 'failed';
+
 export interface ChatImage {
-  data: string;
+  localId: string;
+  file: File | null;
   mimeType: string;
   preview: string;
-  name?: string;
+  name: string;
+  status: ChatImageStatus;
+  attachmentId?: string;
+  errorMessage?: string;
+}
+
+export interface ChatSendLifecycle {
+  onAccepted?: () => void;
+  onAttachmentsInvalid?: (attachmentIds: string[]) => void;
+  onImageInputUnsupported?: () => void;
 }
 
 /**
@@ -31,6 +43,8 @@ export interface ChatBlock {
   text?: string;
   items?: string[];
   src?: string;
+  filename?: string;
+  unavailable?: boolean;
   tool?: ChatToolCall;
 }
 

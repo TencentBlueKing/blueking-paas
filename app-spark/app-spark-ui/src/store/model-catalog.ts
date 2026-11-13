@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import { resolveModelId } from '@/common/model-catalog';
+import { resolveImageInputModel, resolveModelId } from '@/common/model-catalog';
 import { listModels } from '@/http/api';
 import type { ModelCatalogResponse } from '@/http/types';
 
@@ -44,6 +44,16 @@ export const useModelCatalogStore = defineStore('model-catalog', () => {
   const requestModelId = computed(() => (
     canSwitchModel.value ? selectedModelId.value ?? undefined : undefined
   ));
+  const imageInputModel = computed(() => {
+    if (status.value !== 'ready' || !catalog.value) return null;
+    return resolveImageInputModel(
+      models.value,
+      catalog.value.default_model_id,
+      catalog.value.allow_user_switch,
+      selectedModelId.value,
+    );
+  });
+  const supportsImageInput = computed(() => imageInputModel.value?.supports_vision === true);
   const displayName = computed(() => {
     if (status.value === 'loading') return '加载模型…';
     return selectedModel.value?.name || '默认模型';
@@ -101,6 +111,8 @@ export const useModelCatalogStore = defineStore('model-catalog', () => {
     selectedModel,
     canSwitchModel,
     requestModelId,
+    imageInputModel,
+    supportsImageInput,
     displayName,
     loadCatalog,
     selectModel,

@@ -3,6 +3,7 @@ import type { IFetchConfig } from './fetch';
 import RequestError from './fetch/request-error';
 import type {
   AuthenticatedUserResponse,
+  ConversationAttachment,
   ConversationHistoryResponse,
   ConversationResponse,
   GitRepositoryResponse,
@@ -31,6 +32,7 @@ export type {
   AgUiEvent,
   AnonymousUserResponse,
   AuthenticatedUserResponse,
+  ConversationAttachment,
   ConversationHistoryRecord,
   ConversationHistoryResponse,
   ConversationResponse,
@@ -73,6 +75,18 @@ export type {
 
 // 业务 API 前缀，不含 SITE_URL。绝对 BK_API_URL 只给本地 webpack 代理用
 const apiPrefix = '/api-svc/api';
+
+const createRequestError = async (response: Response, fallback: string) => {
+  let detail = response.statusText || fallback;
+  let data: any = null;
+  try {
+    data = await response.json();
+    detail = data.detail || data.message || detail;
+  } catch {
+    // 非 JSON 错误保持 HTTP 状态文案。
+  }
+  return new RequestError(data?.code ?? response.status, detail, data);
+};
 
 export const getUserInfo = (): Promise<AuthenticatedUserResponse> => (
   http.get(`${apiPrefix}/accounts/userinfo/`, {}, { globalError: false })
@@ -237,6 +251,31 @@ export const listHistory = (
   http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/history/`, query)
 );
 
+/** 压缩后的单张图片附件。FormData 的 boundary 必须由浏览器生成，不能复用 JSON 请求封装。 */
+export const uploadConversationAttachment = async (
+  projectId: string,
+  number: number,
+  file: File,
+  signal?: AbortSignal,
+): Promise<ConversationAttachment> => {
+  const formData = new FormData();
+  formData.append('file', file, file.name);
+  const response = await fetch(resolveApiUrl(
+    `${apiPrefix}/projects/${projectId}/conversations/${number}/attachments/`,
+  ), {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'fetch',
+    },
+    body: formData,
+    signal,
+  });
+  if (!response.ok) throw await createRequestError(response, '图片上传失败');
+  return response.json();
+};
+
 /** 发起一轮对话，返回 AG-UI SSE Response，调用方自行读流 */
 export const startConversationRun = async (
   projectId: string,
@@ -258,15 +297,7 @@ export const startConversationRun = async (
   });
 
   if (!response.ok) {
-    let detail = response.statusText || '发起对话失败';
-    let data: any = null;
-    try {
-      data = await response.json();
-      detail = data.detail || data.message || detail;
-    } catch {
-      // 保持 statusText
-    }
-    throw new RequestError(data?.code ?? response.status, detail, data);
+    throw await createRequestError(response, '发起对话失败');
   }
 
   return response;

@@ -5,6 +5,7 @@ import type { ModelCatalogItem } from '../http/types.ts';
 import {
   createStartRunRequest,
   filterModels,
+  resolveImageInputModel,
   resolveModelId,
 } from './model-catalog.ts';
 
@@ -58,4 +59,28 @@ test('run payload includes a selected model and omits an unavailable selection',
     createStartRunRequest('build a page'),
     { content: 'build a page' },
   );
+});
+
+test('run payload keeps unique attachment ids in draft order', () => {
+  assert.deepEqual(
+    createStartRunRequest('', 'vision-auto', ['a', 'a', 'b', 'c', 'd']),
+    {
+      content: '',
+      model_id: 'vision-auto',
+      attachment_ids: ['a', 'b', 'c'],
+    },
+  );
+});
+
+test('image input model follows switchability rules', () => {
+  assert.equal(
+    resolveImageInputModel(models, 'glm-online', true, 'vision-auto')?.id,
+    'vision-auto',
+  );
+  assert.equal(
+    resolveImageInputModel(models, 'glm-online', false, 'vision-auto')?.id,
+    'glm-online',
+  );
+  assert.equal(resolveImageInputModel(models, 'removed', false, 'vision-auto'), null);
+  assert.equal(resolveImageInputModel(models, 'glm-online', true, 'removed'), null);
 });

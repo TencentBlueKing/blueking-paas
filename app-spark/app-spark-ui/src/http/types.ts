@@ -233,9 +233,20 @@ export interface ModelCatalogResponse {
   models: ModelCatalogItem[];
 }
 
+export interface ConversationAttachment {
+  id: string;
+  filename: string;
+  mime_type: string;
+  size: number;
+  /** 历史里的附件可能已经不可用，此时不再请求内容地址。 */
+  url: string | null;
+  created_at: string;
+}
+
 export interface StartRunRequest {
   content: string;
   model_id?: string;
+  attachment_ids?: string[];
 }
 
 export interface ListUiEventsQuery {
@@ -266,6 +277,7 @@ export interface UserMessageRecord {
   after_seq: number;
   created_at: string;
   content: string;
+  attachments: ConversationAttachment[];
 }
 
 /** 一条展示历史，两个字段恰好一个非空。 */

@@ -29,9 +29,8 @@
     <ChatComposer
       v-if="!viewingArchive"
       :disabled="composerDisabled"
-      :enable-upload="false"
+      :enable-upload="true"
       :hint="composerHint"
-      placeholder="描述你想做的改动"
       @send="sendMessage"
     />
     <div v-else class="interaction-panel__archived" role="status">

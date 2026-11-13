@@ -2,7 +2,11 @@ import { computed, ref, watch } from 'vue';
 import { defineStore } from 'pinia';
 import Message from '@/common/message';
 import { createStartRunRequest } from '@/common/model-catalog';
-import type { ChatImage, ChatMessage } from '@/components/project/interaction/types';
+import type {
+  ChatImage,
+  ChatMessage,
+  ChatSendLifecycle,
+} from '@/components/project/interaction/types';
 import { usePageVisibility } from '@/composables/use-page-visibility';
 import {
   closeConversation,
@@ -1024,11 +1028,30 @@ export const useProjectStore = defineStore('project', () => {
     });
   };
 
-  // TODO: 项目对话暂不上传图片，后续再接入
-  const sendMessage = async (text: string, images: ChatImage[] = [], modelId?: string) => {
-    void images;
+  const sendMessage = async (
+    text: string,
+    images: ChatImage[] = [],
+    modelId?: string,
+    lifecycle?: ChatSendLifecycle,
+  ) => {
     const content = text.trim();
-    if (!content || busy.value || !projectId.value || conversationNumber.value == null || !isLive.value) {
+    const readyImages = images.filter(image => (
+      image.status === 'ready' && Boolean(image.attachmentId)
+    ));
+    const attachmentIds = [...new Set(readyImages
+      .map(image => image.attachmentId)
+      .filter((id): id is string => Boolean(id)))];
+    if (
+      (!content && !attachmentIds.length)
+      || images.length !== readyImages.length
+      || attachmentIds.length !== readyImages.length
+      || attachmentIds.length > 3
+      || (attachmentIds.length > 0 && !modelCatalogStore.supportsImageInput)
+      || busy.value
+      || !projectId.value
+      || conversationNumber.value == null
+      || !isLive.value
+    ) {
       return;
     }
 
@@ -1039,7 +1062,14 @@ export const useProjectStore = defineStore('project', () => {
     const userMessage: ChatMessage = {
       id: createId(),
       role: 'user',
-      blocks: [{ type: 'text', text: content }],
+      blocks: [
+        ...(content ? [{ type: 'text' as const, text: content }] : []),
+        ...readyImages.map(image => ({
+          type: 'image' as const,
+          src: image.preview,
+          filename: image.name,
+        })),
+      ],
     };
     const assistantMessage: ChatMessage = {
       id: createId(),
@@ -1102,10 +1132,15 @@ export const useProjectStore = defineStore('project', () => {
       const response = await startConversationRun(
         runProjectId,
         runNumber,
-        createStartRunRequest(content, modelId),
+        createStartRunRequest(content, modelId, attachmentIds),
         controller.signal,
       );
       if (!stillCurrent()) return;
+      try {
+        lifecycle?.onAccepted?.();
+      } catch (error) {
+        console.error('[project] 清理已发送草稿失败', error);
+      }
       for await (const event of readSseEvents(response)) {
         // 读到的是上一轮的事件。列表已经换成别的项目或会话，不能再 syncApplyCtx 跟着写过去。
         if (!stillCurrent()) break;
@@ -1123,10 +1158,28 @@ export const useProjectStore = defineStore('project', () => {
       if (!stillCurrent()) return;
       refused = error instanceof RequestError;
       const modelUnavailable = isApiError(error, ApiErrorCode.MODEL_NOT_AVAILABLE);
+      const imageInputUnsupported = isApiError(error, ApiErrorCode.MODEL_IMAGE_INPUT_UNSUPPORTED);
+      const attachmentNotFound = isApiError(error, ApiErrorCode.ATTACHMENT_NOT_FOUND);
+      const attachmentAlreadyUsed = isApiError(error, ApiErrorCode.ATTACHMENT_ALREADY_USED);
+      if (imageInputUnsupported) {
+        try {
+          lifecycle?.onImageInputUnsupported?.();
+        } catch (lifecycleError) {
+          console.error('[project] 更新图片模型能力失败', lifecycleError);
+        }
+        const optimisticIds = new Set([userMessage.id, assistantMessage.id]);
+        for (let index = messages.value.length - 1; index >= 0; index--) {
+          if (optimisticIds.has(messages.value[index].id)) messages.value.splice(index, 1);
+        }
+        resetApplyCtx();
+        Message({ theme: 'warning', message: '当前模型不支持图片输入' });
+        return;
+      }
       const textBlock = liveAssistant.blocks.find(block => block.type === 'text');
-      const detail = modelUnavailable
-        ? '该模型已不可用，请重新选择后重试。'
-        : error instanceof Error ? error.message : '发起对话失败';
+      let detail = error instanceof Error ? error.message : '发起对话失败';
+      if (modelUnavailable) detail = '该模型已不可用，请重新选择后重试。';
+      else if (attachmentNotFound) detail = '图片已不可用，请重新添加后重试。';
+      else if (attachmentAlreadyUsed) detail = '图片已经随另一轮发出，请重新添加后重试。';
       liveAssistant.tone = 'error';
       if (textBlock && !textBlock.text) {
         textBlock.text = detail;
@@ -1136,6 +1189,14 @@ export const useProjectStore = defineStore('project', () => {
       if (modelUnavailable) {
         Message({ theme: 'warning', message: '该模型已不可用' });
         await modelCatalogStore.recoverFromUnavailableModel();
+      }
+      if (attachmentNotFound || attachmentAlreadyUsed) {
+        try {
+          lifecycle?.onAttachmentsInvalid?.(attachmentIds);
+        } catch (lifecycleError) {
+          console.error('[project] 清理失效附件草稿失败', lifecycleError);
+        }
+        Message({ theme: 'warning', message: detail });
       }
     } finally {
       preparingOver = true;

@@ -20,10 +20,25 @@ export const filterModels = (models: ModelCatalogItem[], keyword: string): Model
   ));
 };
 
+export const resolveImageInputModel = (
+  models: ModelCatalogItem[],
+  defaultModelId: string,
+  allowUserSwitch: boolean,
+  selectedModelId?: string | null,
+): ModelCatalogItem | null => {
+  const targetId = allowUserSwitch ? selectedModelId : defaultModelId;
+  return models.find(model => model.id === targetId) ?? null;
+};
+
 export const createStartRunRequest = (
   content: string,
   modelId?: string,
-): StartRunRequest => ({
-  content,
-  ...(modelId ? { model_id: modelId } : {}),
-});
+  attachmentIds: string[] = [],
+): StartRunRequest => {
+  const uniqueAttachmentIds = [...new Set(attachmentIds.filter(Boolean))].slice(0, 3);
+  return {
+    content,
+    ...(modelId ? { model_id: modelId } : {}),
+    ...(uniqueAttachmentIds.length ? { attachment_ids: uniqueAttachmentIds } : {}),
+  };
+};

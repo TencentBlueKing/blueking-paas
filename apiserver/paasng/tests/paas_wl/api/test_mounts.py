@@ -304,6 +304,82 @@ class TestVolumeMountViewSet:
         assert response.status_code == 200
         assert mount_updated.name == "mount-configmap-test"
 
+    def test_create_configmap_with_extension_not_allowed(self, settings, api_client, bk_app, bk_module):
+        """文件后缀不在白名单中时, 确认提交返回 400 与指定错误码"""
+        settings.MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS = ["json", "yaml"]
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
+        request_body = {
+            "environment_name": "_global_",
+            "configmap_source": {"source_config_data": {"evil.exe": "malicious"}},
+            "mount_path": "/path/",
+            "name": "mount-configmap-test",
+            "source_type": "ConfigMap",
+        }
+        response = api_client.post(url, request_body)
+
+        assert response.status_code == 400
+        assert response.json()["code"] == "VOLUME_FILE_EXTENSION_NOT_ALLOWED"
+        assert not Mount.objects.filter(name="mount-configmap-test").exists()
+        assert not ConfigMapSource.objects.filter(name__contains="mount-configmap-test").exists()
+
+    def test_create_configmap_with_file_too_large(self, settings, api_client, bk_app, bk_module):
+        """单个文件大小超限时, 确认提交返回 400 与指定错误码"""
+        settings.MOUNT_FILE_UPLOAD_MAX_SIZE = 8
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
+        request_body = {
+            "environment_name": "_global_",
+            "configmap_source": {"source_config_data": {"config.json": "a" * 9}},
+            "mount_path": "/path/",
+            "name": "mount-configmap-test",
+            "source_type": "ConfigMap",
+        }
+        response = api_client.post(url, request_body)
+
+        assert response.status_code == 400
+        assert response.json()["code"] == "VOLUME_FILE_TOO_LARGE"
+        assert not Mount.objects.filter(name="mount-configmap-test").exists()
+
+    def test_create_configmap_with_source_size_exceeded(self, settings, api_client, bk_app, bk_module):
+        """内容总量超过 ConfigMap 上限时, 确认提交返回 400 与指定错误码"""
+        settings.MOUNT_FILE_UPLOAD_MAX_SOURCE_SIZE = 32
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
+        request_body = {
+            "environment_name": "_global_",
+            "configmap_source": {"source_config_data": {"a.conf": "x" * 20, "b.conf": "y" * 20}},
+            "mount_path": "/path/",
+            "name": "mount-configmap-test",
+            "source_type": "ConfigMap",
+        }
+        response = api_client.post(url, request_body)
+
+        assert response.status_code == 400
+        assert response.json()["code"] == "VOLUME_SOURCE_SIZE_EXCEEDED"
+        assert not Mount.objects.filter(name="mount-configmap-test").exists()
+        assert not ConfigMapSource.objects.filter(name__contains="mount-configmap-test").exists()
+
+    def test_update_configmap_with_extension_not_allowed(
+        self, settings, api_client, bk_app, bk_module, mount_configmap
+    ):
+        """更新挂载卷时提交不在白名单中的文件后缀, 返回 400 且内容不被修改"""
+        settings.MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS = ["json", "yaml"]
+        url = (
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_configmap.id}/"
+        )
+        body = MountSLZ(mount_configmap).data
+        body["configmap_source"] = {"source_config_data": {"evil.exe": "malicious"}}
+
+        response = api_client.put(url, body)
+
+        assert response.status_code == 400
+        assert response.json()["code"] == "VOLUME_FILE_EXTENSION_NOT_ALLOWED"
+        controller = init_volume_source_controller(mount_configmap.source_type)
+        source = controller.get_by_env(
+            app_id=mount_configmap.module.application.id,
+            env_name=mount_configmap.environment_name,
+            source_name=mount_configmap.source_name,
+        )
+        assert source.data == {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
+
     def test_destroy_configmap(self, api_client, bk_app, bk_module, mount_configmap):
         url = (
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_configmap.id}/"

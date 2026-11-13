@@ -560,7 +560,7 @@ class E2BSandboxTemplate(UuidAuditedModel):
     )
     env_vars = models.JSONField(verbose_name="环境变量", default=dict, blank=True)
     workdir = models.CharField(verbose_name="工作目录", max_length=256, blank=True, default="")
-    # 自定义模板固定为 0，靠网关在无库存时现场创建
+    # 自定义模板固定为 0，靠集群内 e2b 控制器在无库存时现场创建
     prewarm_count = models.PositiveIntegerField(verbose_name="预热数量", default=0)
     enabled = models.BooleanField(verbose_name="是否启用", default=True)
     # 默认不公开：漏配时只是页面上看不到，不会把内部模板误展示出去

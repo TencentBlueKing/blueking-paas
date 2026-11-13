@@ -32,7 +32,6 @@ from .constants import (
     MAX_TEMPLATE_MEMORY_MB,
     MAX_TEMPLATE_PREWARM_COUNT,
     MIN_TEMPLATE_DISK_SIZE_MB,
-    MIN_TEMPLATE_MEMORY_MB,
     TEMPLATE_ID_PATTERN,
 )
 
@@ -157,14 +156,12 @@ class E2BTemplateSpecInputSLZ(serializers.Serializer):
     name = serializers.CharField(max_length=64, help_text="展示名称")
     description = serializers.CharField(allow_blank=True, default="", help_text="描述")
     image = serializers.CharField(max_length=256, help_text="镜像，须内置 envd")
+    # 下限只要求为正：0 写进 CR 会被网关当作未设置，换成它自己的默认值
     cpu_count = serializers.IntegerField(
         min_value=1, max_value=MAX_TEMPLATE_CPU_COUNT, default=DEFAULT_TEMPLATE_CPU_COUNT, help_text="CPU 核数"
     )
     memory_mb = serializers.IntegerField(
-        min_value=MIN_TEMPLATE_MEMORY_MB,
-        max_value=MAX_TEMPLATE_MEMORY_MB,
-        default=DEFAULT_TEMPLATE_MEMORY_MB,
-        help_text="内存（MB）",
+        min_value=1, max_value=MAX_TEMPLATE_MEMORY_MB, default=DEFAULT_TEMPLATE_MEMORY_MB, help_text="内存（MB）"
     )
     disk_size_mb = serializers.IntegerField(
         min_value=MIN_TEMPLATE_DISK_SIZE_MB,

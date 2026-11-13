@@ -73,7 +73,7 @@ class TestApply:
   name: Base
   image: {IMAGE}
   cpu_count: 4
-  memory_mb: 8192
+  memory_mb: 2048
   env_vars: {{FOO: bar}}
   workdir: /home/user
   prewarm_count: 2
@@ -94,7 +94,7 @@ class TestApply:
         assert t.resource_name == TEMPLATE_ID
         assert (t.cpu_count, t.memory_mb, t.env_vars, t.workdir, t.prewarm_count, t.is_public) == (
             4,
-            8192,
+            2048,
             {"FOO": "bar"},
             "/home/user",
             2,

@@ -54,18 +54,18 @@ COMMON_MUTABLE_FIELDS = (
 BUILTIN_MUTABLE_FIELDS = (*COMMON_MUTABLE_FIELDS, "prewarm_count", "enabled", "is_public")
 
 
-def custom_resource_prefix(application: Application) -> str:
+def get_custom_resource_prefix(application: Application) -> str:
     """自定义模板资源名的应用前缀。S-mart 应用的 code 允许下划线，k8s 资源名不接受，按平台惯例转义"""
     return application.code.lower().replace("_", "0us0") + CUSTOM_RESOURCE_NAME_SEPARATOR
 
 
 def make_custom_resource_name(application: Application, template_id: str) -> str:
-    return custom_resource_prefix(application) + template_id
+    return get_custom_resource_prefix(application) + template_id
 
 
 def to_sdk_template_id(application: Application, resource_name: str) -> str:
     """把网关返回的资源名还原成用户使用的模板标识。内置模板的资源名不带前缀，原样返回"""
-    prefix = custom_resource_prefix(application)
+    prefix = get_custom_resource_prefix(application)
     if resource_name.startswith(prefix):
         return resource_name[len(prefix) :]
     return resource_name
@@ -95,7 +95,7 @@ def create_custom_template(application: Application, template_id: str, **spec: A
     """
     resource_name = make_custom_resource_name(application, template_id)
     if len(resource_name) > RESOURCE_NAME_MAX_LENGTH:
-        max_length = RESOURCE_NAME_MAX_LENGTH - len(custom_resource_prefix(application))
+        max_length = RESOURCE_NAME_MAX_LENGTH - len(get_custom_resource_prefix(application))
         raise E2BTemplateIDTooLong(f"template id of app {application.code} must be at most {max_length} characters")
 
     custom = E2BSandboxTemplate.objects.custom_of(application)

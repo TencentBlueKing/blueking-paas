@@ -22,20 +22,25 @@ from typing import TYPE_CHECKING
 from django.db import models, transaction
 from django.db.models import F
 
+from app_spark_api.agent.conversations.exceptions import AttachmentAlreadyUsedError, AttachmentNotFoundError
 from app_spark_api.agent.conversations.state_models import (
     ConversationMessage,
     ConversationUiEvent,
 )
 from app_spark_api.core.tenant.fields import tenant_id_field_factory
+from app_spark_api.repository.storage.blob_stores import BlobStore, make_blob_store
 from app_spark_api.utils.models import OwnerTimestampedModel
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from app_spark_api.core.projects.models import Project
 
 # Django 只会 import `<app>.models`，所以拆出去的状态表必须从这里能够到，否则不会被注册。
 # 它们通过字符串引用 Conversation，因此这个方向的 import 不会成环。
 __all__ = [
     "Conversation",
+    "ConversationAttachment",
     "ConversationManager",
     "ConversationMessage",
     "ConversationNumber",
@@ -201,18 +206,38 @@ class ConversationUserMessageManager(models.Manager["ConversationUserMessage"]):
     """保存用户输入及创建时的 UI event 游标。"""
 
     def create_for_conversation(
-        self, conversation: Conversation, *, content: str, run_id: str | None = None
+        self,
+        conversation: Conversation,
+        *,
+        content: str,
+        run_id: str | None = None,
+        attachment_ids: Sequence[uuid.UUID] = (),
     ) -> ConversationUserMessage:
-        """在同一个事务里固定用户输入的位置并保存原文。
+        """在同一个事务里固定用户输入的位置、保存原文，并把附件绑定到这条输入上。
 
         :param conversation: 输入所属的会话。
-        :param content: 用户输入原文。
+        :param content: 用户输入原文，只带附件时可以为空串。
         :param run_id: 即将用来提交这条输入的 run，由调用方在请求 Runtime 之前生成。
+        :param attachment_ids: 本轮引用的附件，必须属于这个会话且尚未被任何一轮使用。
         :return: 带租户、所有者和 after_seq 的消息；空事件频道使用游标 0。
+        :raises AttachmentNotFoundError: 有附件不属于这个会话。
+        :raises AttachmentAlreadyUsedError: 有附件已经绑定到别的输入上。
         """
         with transaction.atomic():
             # 与 state.append_records 使用同一把会话行锁，避免读游标和创建消息之间插入事件。
             locked = Conversation.objects.select_for_update().get(pk=conversation.pk)
+
+            # 调用方在拉起 Runtime 之前已经查过一遍，这里在锁下复查：两轮并发抢同一张附件时，
+            # 只有先拿到行锁的那一轮能绑上，另一轮在这里看到它已被占用。
+            attachments = list(
+                ConversationAttachment.objects.select_for_update().filter(conversation=locked, id__in=attachment_ids)
+            )
+            if len(attachments) != len(set(attachment_ids)):
+                raise AttachmentNotFoundError(f"Conversation {locked.id} does not own every attachment of this turn")
+
+            if any(attachment.user_message_id is not None for attachment in attachments):
+                raise AttachmentAlreadyUsedError(f"An attachment of conversation {locked.id} is already in use")
+
             # 按联合索引的顺序取第一条即可得到最大 seq，无需取回完整事件内容。
             after_seq = (
                 ConversationUiEvent.objects.filter(conversation=locked)
@@ -220,7 +245,7 @@ class ConversationUserMessageManager(models.Manager["ConversationUserMessage"]):
                 .values_list("seq", flat=True)
                 .first()
             )
-            return self.create(
+            message = self.create(
                 conversation=locked,
                 content=content,
                 run_id=run_id,
@@ -228,6 +253,12 @@ class ConversationUserMessageManager(models.Manager["ConversationUserMessage"]):
                 tenant_id=locked.tenant_id,
                 owner=locked.owner,
             )
+            # 逐张记下它在本轮里的位置：模型按 attachment_ids 的顺序看图，历史也得按这个顺序展示，
+            # 上传先后可能因为并发上传而与之不同。一轮最多几张，逐行更新的开销可以忽略。
+            for position, attachment_id in enumerate(attachment_ids):
+                ConversationAttachment.objects.filter(id=attachment_id).update(user_message=message, position=position)
+
+            return message
 
 
 class ConversationUserMessage(OwnerTimestampedModel):
@@ -253,3 +284,53 @@ class ConversationUserMessage(OwnerTimestampedModel):
             models.UniqueConstraint(fields=["conversation", "run_id"], name="uniq_conversation_user_run"),
         ]
         indexes = [models.Index(fields=["conversation", "after_seq", "id"])]
+
+
+class ConversationAttachment(OwnerTimestampedModel):
+    """用户在会话里上传的一张图片：字节在 blob 存储里，这里只记元数据和它放在哪。
+
+    上传和发送是两步：前端粘贴即上传，拿到 ID，发起一轮对话时再引用。还没被引用的附件
+    user_message 为空。
+
+    backend 与 config 记在行上而不是每次从配置推，理由同 ConversationContextVersion：部署改了
+    存储配置之后，已经写出去的附件还找得回来。
+    """
+
+    id = models.UUIDField(verbose_name="附件 ID", primary_key=True, default=uuid.uuid4, editable=False)
+    conversation = models.ForeignKey(
+        Conversation,
+        verbose_name="所属会话",
+        on_delete=models.CASCADE,
+        related_name="attachments",
+    )
+    # SET_NULL 而不是 CASCADE：Runtime 拒绝一轮时会删掉那条输入，附件应当回到未使用状态，
+    # 让用户原样重发，而不是跟着消失。
+    user_message = models.ForeignKey(
+        ConversationUserMessage,
+        verbose_name="引用它的用户输入",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        related_name="attachments",
+    )
+    position = models.PositiveSmallIntegerField(verbose_name="在所属输入中的位置", default=0)
+    filename = models.CharField(verbose_name="原始文件名", max_length=255)
+    # 由文件头识别得出，不取客户端声明的 Content-Type。
+    mime_type = models.CharField(verbose_name="文件类型", max_length=64)
+    size = models.PositiveIntegerField(verbose_name="字节数")
+    sha256 = models.CharField(verbose_name="内容摘要", max_length=64)
+    # 当前支持 host_tmp_path 与 bk_repo，实际取值校验由 make_blob_store 负责。
+    backend = models.CharField(verbose_name="存储引擎", max_length=32)
+    config = models.JSONField(verbose_name="存储引擎配置", default=dict)
+    tenant_id = tenant_id_field_factory(db_index=False)
+
+    class Meta:
+        indexes = [models.Index(fields=["conversation", "created_at"])]
+
+    def get_blob_store(self) -> BlobStore:
+        """构造这张附件实际存放位置的 blob 存储。
+
+        :return: 已校验的 blob 存储。
+        :raises StorageConfigurationError: 引擎未知或配置结构不对。
+        """
+        return make_blob_store(self.backend, self.config)

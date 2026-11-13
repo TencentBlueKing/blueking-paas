@@ -79,12 +79,13 @@ Runtime 在后台把状态推过来，会话历史的权威副本在本服务的
 | AG-UI 事件历史 | `ConversationUiEvent` | 查看历史，直接读库、不起 Runtime |
 | 会话上下文 | blob + `ConversationContextVersion`（一版一行） | 冷启动时注入回 Runtime |
 | 检查点 | `ConversationCheckpoint` | 冷启动时据此把文件放回去 |
+| 图片附件 | blob + `ConversationAttachment` | 历史展示，Runtime 调模型前按 ID 取回字节 |
 
-上下文可能有好几 MB，所以存 blob 而不是塞进数据库行里。本地和 Chart 默认存本机目录 `host_tmp_path`；多副本 e2b
-要用制品库 `bk_repo`，因为上下文不能只留在单个 Pod 的磁盘上。
+上下文可能有好几 MB，所以存 blob 而不是塞进数据库行里，图片附件同理。本地和 Chart 默认存本机目录 `host_tmp_path`；
+多副本 e2b 要用制品库 `bk_repo`，因为上下文和附件都不能只留在单个 Pod 的磁盘上。
 
-- 可选：`AGENT_CONTEXT_STORAGE`；`DATA_UPLOAD_MAX_MEMORY_SIZE`（Runtime 回写的请求体很大，不要调回 Django 默认值）
-- 按条件必填：`AGENT_CONTEXT_STORAGE.backend` 为 `bk_repo` 时要配 `BLOBSTORE_BKREPO_CONFIG`
+- 可选：`AGENT_CONTEXT_STORAGE`；`AGENT_ATTACHMENT_STORAGE`；`DATA_UPLOAD_MAX_MEMORY_SIZE`（Runtime 回写的请求体很大，不要调回 Django 默认值）
+- 按条件必填：`AGENT_CONTEXT_STORAGE` 或 `AGENT_ATTACHMENT_STORAGE` 的 backend 为 `bk_repo` 时要配 `BLOBSTORE_BKREPO_CONFIG`
 
 说明和默认值见 [conf.yaml.tpl](../conf.yaml.tpl)「会话状态」。
 

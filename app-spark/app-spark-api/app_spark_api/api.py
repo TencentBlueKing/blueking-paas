@@ -30,8 +30,14 @@ from ninja.errors import AuthenticationError, HttpError, ValidationError
 
 from app_spark_api.agent.conversations.api import router as conversations_router
 from app_spark_api.agent.conversations.exceptions import (
+    AttachmentAlreadyUsedError,
+    AttachmentNotFoundError,
+    AttachmentStorageError,
+    AttachmentTooLargeError,
+    AttachmentTypeUnsupportedError,
     ConversationClosedError,
     InvalidHistoryCursorError,
+    ModelImageInputUnsupportedError,
     RunNotFoundError,
     RunNotInProgressError,
 )
@@ -95,6 +101,12 @@ _EXCEPTION_ERROR_CODES: dict[type[Exception], APIError] = {
     InvalidHistoryCursorError: error_codes.INVALID_HISTORY_CURSOR,
     RunNotFoundError: error_codes.RUN_NOT_FOUND,
     RunNotInProgressError: error_codes.RUN_NOT_RUNNING,
+    AttachmentNotFoundError: error_codes.ATTACHMENT_NOT_FOUND,
+    AttachmentAlreadyUsedError: error_codes.ATTACHMENT_ALREADY_USED,
+    AttachmentTooLargeError: error_codes.ATTACHMENT_TOO_LARGE,
+    AttachmentTypeUnsupportedError: error_codes.ATTACHMENT_TYPE_UNSUPPORTED,
+    AttachmentStorageError: error_codes.ATTACHMENT_STORAGE_UNAVAILABLE,
+    ModelImageInputUnsupportedError: error_codes.MODEL_IMAGE_INPUT_UNSUPPORTED,
     ConversationStateError: error_codes.CONVERSATION_STATE_UNAVAILABLE,
     StorageConfigurationError: error_codes.STORAGE_CONFIGURATION_ERROR,
     AgentBusyError: error_codes.AGENT_BUSY,

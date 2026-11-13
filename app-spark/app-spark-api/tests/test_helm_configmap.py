@@ -119,6 +119,14 @@ def test_the_local_process_defaults_stay_for_local_process():
         assert field in data["APP_SPARK_API_AGENT_RUNTIME_PROVIDER_CONFIG"]
 
 
+def test_attachment_storage_reaches_the_application(monkeypatch):
+    data = _render_configmap()
+
+    monkeypatch.setenv("CHART_TEST_STORAGE", data["APP_SPARK_API_AGENT_ATTACHMENT_STORAGE"])
+    loaded = LazySettings(environments=False, envvar_prefix="CHART_TEST", settings_files=[])
+    assert dict(loaded.get("STORAGE")) == {"backend": "host_tmp_path", "root": "/data/app-spark/agent-attachments"}
+
+
 def test_null_leaf_preserves_application_fallback(monkeypatch):
     data = _render_configmap({"django.secretKey": None, "django.languageCode": None, "django.forceScriptName": None})
     assert "APP_SPARK_API_SECRET_KEY" not in data

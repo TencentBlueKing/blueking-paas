@@ -1,7 +1,7 @@
 # local_process provider 在进程内维护 Runtime，只支持单副本、单 worker。
-# e2b provider 的 Runtime 在沙箱里，可以多副本，前提是 agent.contextStorage.backend 为 bk_repo：
-# 其余后端（包括默认的 host_tmp_path）只存在单个 Pod 内，换到别的副本冷启动时读不回来，Chart 渲染时直接拒绝。
-# e2b 模式按 RollingUpdate 升级，上下文在 bk_repo 时 API Pod 不往 /data/app-spark 写东西，不需要 persistence。
+# e2b provider 的 Runtime 在沙箱里，可以多副本，前提是 agent.contextStorage 和 agent.attachmentStorage 的 backend
+# 都为 bk_repo：其余后端（包括默认的 host_tmp_path）只存在单个 Pod 内，换到别的副本时读不回来，Chart 渲染时直接拒绝。
+# e2b 模式按 RollingUpdate 升级，上下文和附件都在 bk_repo 时 API Pod 不往 /data/app-spark 写东西，不需要 persistence。
 # 若设置了 existingClaim，它必须是 ReadWriteMany：滚动升级和多副本都会让两个 Pod 同时挂这个卷，ReadWriteOnce 的
 # 卷挂不到别的节点上，新 Pod 会一直 Pending（Chart 看不到卷的访问模式，无法替你检查）。
 replicaCount: 1
@@ -217,6 +217,13 @@ agent:
   # contextStorage:
   #   backend: bk_repo
   #   root: app-spark-contexts
+  # 会话里用户上传的图片附件存在哪，字段和多副本要求都与 contextStorage 相同，两者各用一个仓库。
+  attachmentStorage:
+    backend: host_tmp_path
+    root: /data/app-spark/agent-attachments
+  # attachmentStorage:
+  #   backend: bk_repo
+  #   root: app-spark-attachments
   # 调模型走哪条路：bkaidev（默认，不填即是）或 direct（直连厂商）。
   # modelSource: bkaidev
   # modelSource 为 direct 时必填。本地验证可把 model 设为 fake:write-file。

@@ -30,12 +30,14 @@ from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field
 
 from pydantic_ai.messages import (
+    BinaryContent,
     ModelMessage,
     ModelRequest,
     ModelResponse,
     TextPart,
     ToolCallPart,
     ToolReturnPart,
+    UserContent,
     UserPromptPart,
 )
 from pydantic_ai.models import Model
@@ -201,17 +203,35 @@ def count_user_prompts(messages: Sequence[ModelMessage]) -> int:
 
 
 def last_user_prompt(messages: Sequence[ModelMessage]) -> str:
-    """返回最后一条用户消息的文本，没有则返回空串。
-
-    多模态输入的 ``content`` 不是字符串，假模型只需要一个能回显的摘要，因此原样 ``str()``。
-    """
+    """返回最后一条用户消息的文本，没有则返回空串。"""
     for message in reversed(messages):
         if not isinstance(message, ModelRequest):
             continue
         for part in reversed(message.parts):
             if isinstance(part, UserPromptPart):
-                return part.content if isinstance(part.content, str) else str(part.content)
+                return render_user_content(part.content)
     return ""
+
+
+def render_user_content(content: str | Sequence[UserContent]) -> str:
+    """把多模态的用户输入渲染成一行可回显的摘要。
+
+    图片只写类型和字节数：原样 str() 会把整张图的字节塞进回复和文件里。写出字节数也让测试能
+    断言模型这一轮真的收到了图片，而不是一个附件引用或占位文字。
+    """
+    if isinstance(content, str):
+        return content
+
+    rendered: list[str] = []
+    for item in content:
+        if isinstance(item, str):
+            rendered.append(item)
+        elif isinstance(item, BinaryContent):
+            rendered.append(f"[image {item.media_type} {len(item.data)} bytes]")
+        else:
+            rendered.append(str(item))
+
+    return " ".join(rendered)
 
 
 def chunks(text: str) -> tuple[str, ...]:

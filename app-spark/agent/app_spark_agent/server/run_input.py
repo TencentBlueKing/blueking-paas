@@ -5,14 +5,23 @@ to act on: a single new user turn. The trusted history comes from the Runtime's 
 no display history, tool list, or system prompt submitted by the caller ever reaches the model.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
 from uuid import UUID
 
-from ag_ui.core import RunAgentInput, UserMessage
+from ag_ui.core import (
+    ImageInputContent,
+    InputContent,
+    InputContentUrlSource,
+    RunAgentInput,
+    TextInputContent,
+    UserMessage,
+)
 from fastapi import HTTPException, Request, status
 from starlette.types import Message
 
+from app_spark_agent.attachments import IMAGE_MEDIA_TYPES, parse_attachment_id
 from app_spark_agent.state import AppendLog, ConversationContext
 
 
@@ -26,6 +35,8 @@ class PreparedRun:
     body: bytes
     # None runs the turn on the sandbox's default model.
     model_id: str | None = None
+    # False when the control plane says this turn's model cannot read images.
+    image_input: bool = True
 
 
 def prepare_run(
@@ -91,15 +102,16 @@ def prepare_run(
         )
 
     model_id = _read_model_id(typed_forwarded_props)
+    image_input = _read_image_input(typed_forwarded_props)
 
     user_message = next(
         (message for message in reversed(run_input.messages) if isinstance(message, UserMessage)),
         None,
     )
-    if user_message is None or not isinstance(user_message.content, str):
-        raise HTTPException(status_code=422, detail="A text user message is required.")
-    if not user_message.content.strip():
-        raise HTTPException(status_code=422, detail="The user message cannot be empty.")
+    if user_message is None:
+        raise HTTPException(status_code=422, detail="A user message is required.")
+
+    _check_user_content(user_message.content)
 
     filtered_input = run_input.model_copy(
         update={
@@ -119,7 +131,42 @@ def prepare_run(
         context_version=context_version,
         body=filtered_input.model_dump_json(by_alias=True).encode(),
         model_id=model_id,
+        image_input=image_input,
     )
+
+
+def _check_user_content(content: str | Sequence[InputContent]) -> None:
+    """Refuse user content other than text and images referenced as app-spark-attachment://."""
+    if isinstance(content, str):
+        if not content.strip():
+            raise HTTPException(status_code=422, detail="The user message cannot be empty.")
+
+        return
+
+    has_input = False
+    for part in content:
+        if isinstance(part, TextInputContent):
+            has_input = has_input or bool(part.text.strip())
+            continue
+
+        # 图片只认控制面签发的附件引用。外部 URL 会让 Agent 替调用方去拉任意地址，内联 data
+        # 会把字节带进上下文，两者都不放行。
+        if (
+            isinstance(part, ImageInputContent)
+            and isinstance(part.source, InputContentUrlSource)
+            and parse_attachment_id(part.source.value) is not None
+            and part.source.mime_type in IMAGE_MEDIA_TYPES
+        ):
+            has_input = True
+            continue
+
+        raise HTTPException(
+            status_code=422,
+            detail="Only text and app-spark-attachment image references are accepted.",
+        )
+
+    if not has_input:
+        raise HTTPException(status_code=422, detail="The user message cannot be empty.")
 
 
 def _read_model_id(forwarded_props: dict[str, object]) -> str | None:
@@ -143,6 +190,20 @@ def _read_model_id(forwarded_props: dict[str, object]) -> str | None:
     # Stripped like MODEL_ID, or a padded default ID is neither recognised as the default nor
     # understood by the gateway.
     return model_id.strip()
+
+
+def _read_image_input(forwarded_props: dict[str, object]) -> bool:
+    """Return whether this turn's model may be sent images; absent means it may."""
+    image_input = forwarded_props.get("imageInput", True)
+
+    # 只认布尔值：把 "false" 之类读成真值，会把图片发给一个读不了图的模型。
+    if not isinstance(image_input, bool):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="forwardedProps.imageInput must be a boolean.",
+        )
+
+    return image_input
 
 
 def request_with_body(request: Request, body: bytes) -> Request:

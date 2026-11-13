@@ -46,7 +46,7 @@ from app_spark_api.agent.conversations.exceptions import (
     RunNotInProgressError,
 )
 from app_spark_api.agent.conversations.internal_api import state_ingest_path
-from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
+from app_spark_api.agent.conversations.models import Conversation, ConversationAttachment, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.conversations.tokens import mint_state_token
 from app_spark_api.agent.model_catalog.services import resolve_model_access
@@ -196,15 +196,17 @@ async def aclose_project_conversations(project_id: str) -> None:
 
 
 def delete_project_conversations(project_id: str) -> None:
-    """Delete every conversation and context document belonging to a Project."""
+    """Delete every conversation, context document and image attachment belonging to a Project."""
     with transaction.atomic():
-        # 级联删除会带走记着 blob 位置的版本行，所以要先读出来。
+        # 级联删除会带走记着 blob 位置的版本行和附件行，所以要先读出来。
         versions = list(
             ConversationContextVersion.objects.filter(
                 conversation__project_id=project_id,
             ).select_related("conversation")
         )
         stores = [version.get_blob_store() for version in versions]
+        attachments = list(ConversationAttachment.objects.filter(conversation__project_id=project_id))
+        attachment_stores = [attachment.get_blob_store() for attachment in attachments]
 
         Conversation.objects.filter(project_id=project_id).delete()
         for version, store in zip(versions, stores, strict=True):
@@ -212,6 +214,15 @@ def delete_project_conversations(project_id: str) -> None:
                 "Deleting context version %s of conversation %s for project %s",
                 version.context_version,
                 version.conversation_id,
+                project_id,
+            )
+            store.delete()
+
+        for attachment, store in zip(attachments, attachment_stores, strict=True):
+            logger.debug(
+                "Deleting attachment %s of conversation %s for project %s",
+                attachment.id,
+                attachment.conversation_id,
                 project_id,
             )
             store.delete()

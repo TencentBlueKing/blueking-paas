@@ -14,13 +14,14 @@ from uuid import uuid4
 import httpx2
 import pytest
 from fastapi.testclient import TestClient
-from pydantic_ai.messages import ModelMessage, ToolReturnPart
+from pydantic_ai.messages import ModelMessage, ToolReturnPart, UserPromptPart
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 
 from app_spark_agent import settings
 from app_spark_agent.agent import _build_gateway_model
 from app_spark_agent.app_arch.architecture import SYNC_FILENAMES
 from app_spark_agent.app_arch.python import PYTHON_PROJECT_FILES
+from app_spark_agent.attachments import OMITTED_IMAGE_TEXT, UNAVAILABLE_IMAGE_TEXT
 from app_spark_agent.tools import build_init_project_tool
 from tests.api.support import (
     ApiFactory,
@@ -32,6 +33,17 @@ from tests.api.support import (
 )
 from tests.support.ag_ui import SSE_HEADERS, run_body, sse_events
 from tests.support.fake_models import failing_model
+
+ATTACHMENT_REF = "app-spark-attachment://6f1c5c3e-5d5b-4e43-9a43-6a7d6c3c2e11"
+
+
+def make_image(value: str = ATTACHMENT_REF, *, mime_type: str = "image/png", kind: str = "url") -> dict[str, Any]:
+    return {"type": "image", "source": {"type": kind, "value": value, "mimeType": mime_type}}
+
+
+def make_user_turn(*parts: dict[str, Any]) -> dict[str, Any]:
+    """Return a run body override whose only user message is the given multipart content."""
+    return {"messages": [{"id": str(uuid4()), "role": "user", "content": list(parts)}]}
 
 
 def test_a_run_streams_the_reply_as_ag_ui_events(api: TestClient) -> None:
@@ -143,11 +155,18 @@ def test_a_replayed_run_id_is_rejected(api: TestClient) -> None:
         pytest.param({"forwardedProps": {"contextVersion": 0, "modelId": ""}}, id="model-id-empty"),
         pytest.param({"forwardedProps": {"contextVersion": 0, "modelId": None}}, id="model-id-null"),
         pytest.param({"forwardedProps": {"contextVersion": 0, "modelId": 3}}, id="model-id-not-a-string"),
+        pytest.param({"forwardedProps": {"contextVersion": 0, "imageInput": "false"}}, id="image-input-not-a-bool"),
         pytest.param({"messages": []}, id="no-user-message"),
         pytest.param(
             {"messages": [{"id": "blank", "role": "user", "content": "   "}]},
             id="blank-user-message",
         ),
+        pytest.param(make_user_turn({"type": "text", "text": "   "}), id="only-blank-text-parts"),
+        pytest.param(make_user_turn(make_image("https://example.com/a.png")), id="image-from-an-external-url"),
+        pytest.param(make_user_turn(make_image("iVBORw0KGgo=", kind="data")), id="inline-image-data"),
+        pytest.param(make_user_turn(make_image("app-spark-attachment://x")), id="reference-is-not-a-uuid"),
+        pytest.param(make_user_turn(make_image(mime_type="image/svg+xml")), id="not-an-allowed-image-type"),
+        pytest.param(make_user_turn(make_image(kind="url") | {"type": "document"}), id="not-an-image"),
     ],
 )
 def test_a_malformed_run_is_rejected(api: TestClient, mutation: dict[str, Any]) -> None:
@@ -157,6 +176,52 @@ def test_a_malformed_run_is_rejected(api: TestClient, mutation: dict[str, Any]) 
 
     assert response.status_code == 422, response.text
     assert get_transcript_messages(api) == [], "a rejected run must not reach the model"
+
+
+def test_an_attachment_reference_stays_a_reference_in_the_context(make_api: ApiFactory) -> None:
+    """Without a control plane the model gets a placeholder; the stored context keeps the reference."""
+    seen: list[list[ModelMessage]] = []
+
+    async def stream(messages: list[ModelMessage], info: AgentInfo) -> AsyncIterator[str]:
+        seen.append(messages)
+        yield "noted"
+
+    api = make_api(model=FunctionModel(stream_function=stream))
+
+    body = run_body(conversation_id=str(uuid4()), run_id=str(uuid4()), context_version=0)
+    response = api.post(
+        "/runs", headers=SSE_HEADERS, json=body | make_user_turn({"type": "text", "text": "copy this"}, make_image())
+    )
+
+    assert response.status_code == 200, response.text
+    sent = seen[-1][-1].parts[-1]
+    assert isinstance(sent, UserPromptPart)
+    assert sent.content == ["copy this", UNAVAILABLE_IMAGE_TEXT]
+    context = json.dumps(api.get("/context").json(), ensure_ascii=False)
+    assert ATTACHMENT_REF in context
+    assert UNAVAILABLE_IMAGE_TEXT not in context
+
+
+def test_a_run_whose_model_cannot_read_images_is_sent_none(make_api: ApiFactory) -> None:
+    """The control plane says the model is text-only: every image becomes a placeholder, none is fetched."""
+    seen: list[list[ModelMessage]] = []
+
+    async def stream(messages: list[ModelMessage], info: AgentInfo) -> AsyncIterator[str]:
+        seen.append(messages)
+        yield "noted"
+
+    api = make_api(model=FunctionModel(stream_function=stream))
+
+    body = run_body(conversation_id=str(uuid4()), run_id=str(uuid4()), context_version=0)
+    body["forwardedProps"] = {"contextVersion": 0, "imageInput": False}
+    response = api.post(
+        "/runs", headers=SSE_HEADERS, json=body | make_user_turn({"type": "text", "text": "copy this"}, make_image())
+    )
+
+    assert response.status_code == 200, response.text
+    sent = seen[-1][-1].parts[-1]
+    assert isinstance(sent, UserPromptPart)
+    assert sent.content == ["copy this", OMITTED_IMAGE_TEXT]
 
 
 def test_a_body_that_is_not_json_is_rejected(api: TestClient) -> None:

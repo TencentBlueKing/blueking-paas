@@ -28,7 +28,12 @@ from uuid import uuid4
 
 from asgiref.sync import sync_to_async
 
-from app_spark_api.agent.conversations.exceptions import ConversationClosedError
+from app_spark_api.agent.conversations.attachments import (
+    acheck_run_attachments,
+    ahas_sent_attachments,
+    build_attachment_uri,
+)
+from app_spark_api.agent.conversations.exceptions import ConversationClosedError, ModelImageInputUnsupportedError
 from app_spark_api.agent.conversations.lifecycle.utils import (
     CLOSED_MESSAGE,
     reject_if_closed_meanwhile,
@@ -36,10 +41,14 @@ from app_spark_api.agent.conversations.lifecycle.utils import (
 )
 from app_spark_api.agent.conversations.models import ConversationUserMessage
 from app_spark_api.agent.conversations.services import open_client
-from app_spark_api.agent.model_catalog.services import resolve_run_model_id
+from app_spark_api.agent.model_catalog.services import list_models, resolve_run_model_id
 from app_spark_api.agent.runtime import AgentWorkspaceSavePendingError
+from app_spark_api.agent.runtime.entities import ImageInput
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from uuid import UUID
+
     from app_spark_api.agent.conversations.models import Conversation
     from app_spark_api.agent.runtime import AgentRun, AgentRuntimeClient, PreviewStartOutcome, RuntimeHealth
     from app_spark_api.infras.bk_access_token import UserCredential
@@ -53,6 +62,7 @@ async def start_run(
     content: str,
     credential: UserCredential | None = None,
     model_id: str | None = None,
+    attachment_ids: Sequence[UUID] = (),
 ) -> AgentRun:
     """Submit one turn and return its open event stream.
 
@@ -61,12 +71,16 @@ async def start_run(
     carried over from the previous turn is not merely stale, it is wrong often enough to matter.
 
     :param conversation: Conversation the turn belongs to.
-    :param content: The user's message.
+    :param content: The user's message; may be empty when the turn carries attachments.
     :param credential: The caller's BlueKing login, passed to :func:`~app_spark_api.agent.conversations.services.open_client`.
     :param model_id: The model this turn asked for; None runs it on the Runtime's default.
+    :param attachment_ids: Images sent with this turn, in the order the user attached them.
     :return: The accepted run, whose bytes are still to come.
     :raises ConversationClosedError: If the conversation has been closed.
     :raises ModelNotAvailableError: If the model list does not offer model_id.
+    :raises AttachmentNotFoundError: If an attachment is not the conversation's.
+    :raises AttachmentAlreadyUsedError: If an attachment was already sent with another turn.
+    :raises ModelImageInputUnsupportedError: If the turn carries images its model cannot read.
     :raises AgentBusyError: If a run is already occupying the Runtime.
     :raises AgentProvisionError: If no Runtime could be brought up.
     :raises ModelAccessConfigurationError: If the model source or its settings are invalid, or
@@ -86,6 +100,10 @@ async def start_run(
     # 也不该在历史里留一条没有回答的输入。
     forwarded_model_id = await resolve_run_model_id(model_id, credential)
 
+    # 附件归属和模型能力同理，在拉起沙箱之前查。绑定时还会在锁下复查一次归属。
+    run_attachments = await acheck_run_attachments(conversation, attachment_ids)
+    image_input = await _check_image_input(conversation, model_id, credential, sends_images=bool(run_attachments))
+
     client, health = await _open_resumed_client(conversation, credential)
     logger.info(
         "Conversation %s runtime health at %s: model_ready=%s model=%s context_version=%s "
@@ -104,7 +122,7 @@ async def start_run(
     # 落库在前，也就不会因为浏览器断开或任务取消而丢掉用户输入与 run 的关联。
     run_id = str(uuid4())
     message = await sync_to_async(ConversationUserMessage.objects.create_for_conversation)(
-        conversation, content=content, run_id=run_id
+        conversation, content=content, run_id=run_id, attachment_ids=attachment_ids
     )
     try:
         run = await client.start_run(
@@ -112,6 +130,12 @@ async def start_run(
             context_version=health.context_version,
             run_id=run_id,
             model_id=forwarded_model_id,
+            # 只传引用不传字节，Agent 每次调模型前再经内部接口取图。
+            images=[
+                ImageInput(url=build_attachment_uri(attachment.id), mime_type=attachment.mime_type)
+                for attachment in run_attachments
+            ],
+            image_input=image_input,
         )
     except AgentWorkspaceSavePendingError as exc:
         # 409 不会进 API 的异常日志，而页面上的文案是固定的，沙箱地址和 Runtime 的说明只在这里。
@@ -176,6 +200,45 @@ async def start_preview(
     outcome = await client.start_preview()
     logger.info("Conversation %s asked its Agent Runtime to start the preview: %s", conversation.id, outcome)
     return outcome
+
+
+async def _check_image_input(
+    conversation: Conversation,
+    model_id: str | None,
+    credential: UserCredential | None,
+    *,
+    sends_images: bool,
+) -> bool:
+    """Return whether this turn's model may be handed the conversation's images.
+
+    :param conversation: Conversation the turn belongs to.
+    :param model_id: The model the turn asked for; None means the catalog's default model.
+    :param credential: The caller's BlueKing login, needed to read the bkaidev model list.
+    :param sends_images: Whether this turn itself carries images.
+    :return: False when the model cannot read images, so the Runtime sends none of them.
+    :raises ModelImageInputUnsupportedError: If this turn carries images its model cannot read.
+    """
+    # 会话里从没发过图，就没有图会被发给模型，纯文字对话不必为此多查一次模型列表。
+    if not sends_images and not await ahas_sent_attachments(conversation):
+        return True
+
+    # Runtime 会把最近几轮的历史图片也发给模型，所以本轮没带图也要看模型能不能读图：
+    # 上一轮在多模态模型上发了图、这一轮换成纯文本模型时，图片不能跟着发过去。
+    catalog = await list_models(credential)
+
+    # 不选模型时按列表的默认模型判断：沙箱的 MODEL_ID 由 resolve_model_access 取同一个默认模型，
+    # 改了一边就要同步改另一边。
+    effective_model_id = model_id or catalog.default_model_id
+
+    # 列表里找不到也按不支持处理：说不清能不能看图的模型，宁可不发图，也不让模型调用因此失败。
+    option = next((model for model in catalog.models if model.id == effective_model_id), None)
+    supports_vision = option is not None and option.supports_vision
+
+    # 本轮自己带的图被拒绝而不是换成占位：用户会拿到一个无视了图片的回答，却不知道为什么。
+    if sends_images and not supports_vision:
+        raise ModelImageInputUnsupportedError(f"Model {effective_model_id!r} does not support image input")
+
+    return supports_vision
 
 
 async def _open_resumed_client(

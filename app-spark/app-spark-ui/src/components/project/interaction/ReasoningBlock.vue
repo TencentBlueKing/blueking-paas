@@ -29,7 +29,7 @@ import type { ChatReasoning } from './types';
 
 const props = defineProps<{
   reasoning: ChatReasoning;
-  /** 这一轮对话还在进行中，含义同 `ToolCallBlock` 的 `live`。 */
+  /** 它属于正在进行的那一轮对话，含义同 `ToolCallBlock` 的 `live`。 */
   live?: boolean;
 }>();
 

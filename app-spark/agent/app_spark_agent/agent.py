@@ -219,9 +219,11 @@ def create_agent(
 ) -> Agent[None, str]:
     """Create the coding agent scoped to workspace.
 
-    The harness file tools enforce a workspace root and protect common secrets. Shell commands
-    are useful for development but are not an operating-system sandbox, so this runtime must only
-    be used with trusted users and workspaces. The application log tool reads one path outside
+    The harness file tools bound paths to workspace and mark .git and common secret files
+    read-only as guardrails, while Shell runs unrestricted commands with Runtime and provider
+    credentials stripped from env. Neither capability is an operating-system sandbox: isolation
+    comes from running this process inside a per-session sandbox container (direct host execution
+    is for local development and tests only). The application log tool reads one path outside
     both workspace and state_dir.
 
     :param workspace: Existing directory the agent may inspect and modify.
@@ -260,8 +262,9 @@ def create_agent(
             # 以保持一致性。env 放在 Shell 而不是 LocalWorkspace 上：denied_env_patterns
             # 只过滤 Shell.env。
             env=uv_environ(os.environ),
-            # harness 默认拦 rm、rmdir、dd 等命令，模型删文件都会被拒。这层只看首个词，
-            # `/bin/rm` 就能绕过，本来也不是边界，隔离靠沙箱。
+            # harness 默认按命令首词拦 rm、rmdir、dd、shutdown 等，模型正常删文件都会被拒；
+            # 而首词黑名单 `/bin/rm` 或 `python -c` 就能绕过，本来也不构成安全边界。真正的隔离
+            # 由容器沙箱负责（本机直跑仅限本地开发与测试），这里直接关掉整份默认黑名单。
             denied_commands=(),
             denied_env_patterns=(
                 *LLM_API_KEY_ENV_PATTERNS,

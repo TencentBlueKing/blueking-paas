@@ -55,4 +55,6 @@ export interface ChatMessage {
   blocks: ChatBlock[];
   progress?: string;
   tone?: 'error';
+  /** 这一轮是被用户停下的，见 RUN_FINISHED 的 `outcome` */
+  stopped?: boolean;
 }

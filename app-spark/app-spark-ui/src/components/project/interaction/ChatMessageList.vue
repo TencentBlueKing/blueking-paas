@@ -30,12 +30,12 @@
         <ToolCallBlock
           v-else-if="block.type === 'tool' && block.tool"
           :tool="block.tool"
-          :live="status !== 'idle'"
+          :live="message.id === liveMessageId"
         />
         <ReasoningBlock
           v-else-if="block.type === 'reasoning' && block.reasoning"
           :reasoning="block.reasoning"
-          :live="status !== 'idle'"
+          :live="message.id === liveMessageId"
         />
         <img
           v-else-if="block.type === 'image' && block.src"
@@ -57,6 +57,15 @@
         <LiveDot live />
         <span v-if="message.progress">{{ message.progress }}</span>
       </p>
+      <p v-if="message.stopped" class="chat-message__stopped">已停止</p>
+    </article>
+    <article
+      v-if="awaitingFirstReply"
+      class="chat-message chat-message--assistant"
+    >
+      <p class="chat-message__pending">
+        <LiveDot live />
+      </p>
     </article>
   </div>
 </template>
@@ -64,43 +73,59 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Done } from 'bkui-vue/lib/icon';
+import { currentTurnAssistant, messageHasContent } from '@/services/agent/ag-ui';
 import type { ProjectStatus } from '@/store/project';
 import LiveDot from './LiveDot.vue';
 import ReasoningBlock from './ReasoningBlock.vue';
 import ToolCallBlock from './ToolCallBlock.vue';
 import { renderMarkdown } from './render-markdown';
-import type { ChatBlock, ChatMessage } from './types';
+import type { ChatMessage } from './types';
 
 const props = defineProps<{
   messages: ChatMessage[];
   status?: ProjectStatus;
 }>();
 
-// 思考块一建出来就算内容：它自己挂着那颗蓝点，下面不必再挂一颗。
-const hasContent = (block: ChatBlock) => Boolean(
-  block.text || block.src || block.items?.length || block.tool || block.reasoning,
-);
-
 const visibleMessages = computed(() => (
   props.messages.filter(message => message.id !== 'welcome')
 ));
 
 const isFresh = computed(() => (
-  !visibleMessages.value.some(message => (
-    message.role === 'user' || message.blocks.some(hasContent)
-  ))
+  !visibleMessages.value.some(message => message.role === 'user' || messageHasContent(message))
 ));
+
+/**
+ * 正在进行的那一轮的助手消息，空闲或这一轮还没有助手消息时为 null。
+ *
+ * 只有它里面的工具调用、思考才算「还在动」。更早的消息里停在 running 上的块是被打断的历史，
+ * 永远等不到收尾事件，新开一轮时不能跟着又转起来。
+ */
+const liveMessageId = computed(() => (
+  props.status === 'idle' ? null : currentTurnAssistant(props.messages)?.id ?? null
+));
+
+/**
+ * 这一轮在跑，却还没有自己的助手消息。
+ *
+ * 本页发出的一轮会先摆好一条空的助手消息，不会走到这里；刷新页面或从别处切进来时，模型还没开口
+ * 的那一轮在历史里只有用户那句话，得替它摆一颗蓝点，否则只剩输入框上的「正在回复」。
+ */
+const awaitingFirstReply = computed(() => {
+  const last = visibleMessages.value[visibleMessages.value.length - 1];
+  return props.status !== 'idle' && last?.role === 'user';
+});
 
 /**
  * 助手消息末尾要不要挂那颗表示「还在进行」的蓝点（有进度时后面跟着进度文字）。
  *
  * 一条空的助手消息是「已经发出去、还没等到第一个字」的样子，这时候必须有点动静，否则界面看着
- * 像没反应；已经有内容之后就只在有 STEP_STARTED 之类带来的进度时才挂。
+ * 像没反应；已经有内容之后就只在有 STEP_STARTED 之类带来的进度时才挂。思考块算内容：它自己挂着
+ * 一颗蓝点，下面不必再挂一颗。
  */
-const isPending = (message: ChatMessage) => {
-  if (message.role !== 'assistant' || props.status === 'idle') return false;
-  return Boolean(message.progress) || !message.blocks.some(hasContent);
-};
+const isPending = (message: ChatMessage) => (
+  message.id === liveMessageId.value
+  && (Boolean(message.progress) || !messageHasContent(message))
+);
 </script>
 
 <style lang="postcss" scoped>
@@ -254,6 +279,17 @@ const isPending = (message: ChatMessage) => {
 
 .chat-message__pending:not(:first-child) {
   margin-top: 8px;
+}
+
+.chat-message__stopped {
+  margin: 0;
+  color: #8b93a0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.chat-message__stopped:not(:first-child) {
+  margin-top: 6px;
 }
 
 .chat-message__thumb {

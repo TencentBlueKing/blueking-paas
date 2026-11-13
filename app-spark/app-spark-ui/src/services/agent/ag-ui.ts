@@ -33,6 +33,8 @@ export interface AgUiApplyResult {
   progress?: string;
   errorText?: string;
   done?: boolean;
+  /** 这一轮是被停下的，不是自己跑完的 */
+  stopped?: boolean;
 }
 
 export const createApplyContext = (messages: ChatMessage[]): AgUiApplyContext => ({
@@ -236,8 +238,11 @@ export const applyAgUiEvent = (
       return {};
     case 'RUN_STARTED':
       return { status: 'thinking' };
-    case 'RUN_FINISHED':
-      return { status: 'idle', done: true };
+    case 'RUN_FINISHED': {
+      // 被停下的一轮同样以 RUN_FINISHED 收尾，只有 outcome 说得出区别。
+      const outcome = event.outcome as { type?: unknown } | null | undefined;
+      return { status: 'idle', done: true, stopped: outcome?.type === 'cancelled' };
+    }
     case 'RUN_ERROR':
       return {
         status: 'idle',
@@ -324,17 +329,74 @@ export const createWelcomeMessage = (): ChatMessage => ({
   }],
 });
 
-export const hasConversationContent = (messages: ChatMessage[]) => (
-  messages.some(message => (
-    message.id !== 'welcome'
-    && message.blocks.some(block => (
-      (block.type === 'text' && Boolean(block.text))
-      || (block.type === 'image' && Boolean(block.src))
-      || block.type === 'tool'
-      || (block.type === 'reasoning' && Boolean(block.reasoning?.text))
-    ))
+/**
+ * 这条消息在界面上有没有看得见的东西。
+ *
+ * 思考块一建出来就算，哪怕正文一个字都还没有：它的标题「思考中」「已思考」本身就看得见。
+ */
+export const messageHasContent = (message: ChatMessage) => (
+  Boolean(message.stopped)
+  || message.blocks.some(block => (
+    (block.type === 'text' && Boolean(block.text))
+    || (block.type === 'image' && Boolean(block.src))
+    || (block.type === 'summary' && Boolean(block.items?.length))
+    || (block.type === 'tool' && Boolean(block.tool))
+    || (block.type === 'reasoning' && Boolean(block.reasoning))
   ))
 );
+
+export const hasConversationContent = (messages: ChatMessage[]) => (
+  messages.some(message => message.id !== 'welcome' && messageHasContent(message))
+);
+
+/**
+ * 这一轮的助手消息：最后一条用户消息之后的那条，没有就是 undefined。
+ *
+ * 不能越过用户消息往前找：一轮在模型开口之前就失败了，历史里只有 RUN_STARTED / RUN_ERROR，
+ * 没有任何助手文本事件，回放时这一轮根本没有自己的助手消息。往前找会找到上一轮的回复，把这一
+ * 轮的报错接到它末尾。
+ */
+export const currentTurnAssistant = (messages: ChatMessage[]) => {
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const item = messages[index];
+    if (item.role === 'user') return undefined;
+    if (item.role === 'assistant') return item;
+  }
+  return undefined;
+};
+
+/** 同 `currentTurnAssistant`，这一轮还没有助手消息时新起一条。 */
+const ensureCurrentTurnAssistant = (ctx: AgUiApplyContext): ChatMessage => {
+  const existing = currentTurnAssistant(ctx.messages);
+  if (existing) return existing;
+  ctx.messages.push({ id: createLocalId(), role: 'assistant', blocks: [] });
+  // 改接进列表之后的那一份，见 `appendBlock`。
+  return ctx.messages[ctx.messages.length - 1];
+};
+
+/**
+ * 把一轮的报错接到这一轮的助手消息上，没有就新起一条。
+ *
+ * 只有这条消息里除了报错什么都没有时才整条标红：模型已经说过的话、调过的工具都是真实发生过
+ * 的，标红会让它们看起来也出了错。
+ */
+export const appendRunError = (ctx: AgUiApplyContext, errorText: string) => {
+  const assistant = ensureCurrentTurnAssistant(ctx);
+  if (!messageHasContent(assistant)) {
+    assistant.tone = 'error';
+    assistant.blocks = [{ type: 'text', text: errorText }];
+  } else if (!assistant.blocks.some(block => block.type === 'text' && block.text === errorText)) {
+    assistant.blocks.push({ type: 'text', text: errorText });
+  }
+  assistant.progress = '';
+};
+
+/** 这一轮被停下了：记在它的助手消息上，模型还没开口就被停下的话新起一条。 */
+export const markRunStopped = (ctx: AgUiApplyContext) => {
+  const assistant = ensureCurrentTurnAssistant(ctx);
+  assistant.stopped = true;
+  assistant.progress = '';
+};
 
 export async function* readSseEvents(response: Response): AsyncGenerator<AgUiEvent> {
   if (!response.body) return;

@@ -15,6 +15,7 @@ import type {
   PageQuery,
   PreviewResponse,
   PreviewStartResponse,
+  PublicationAppNameValidationRet,
   PublicationDeploymentRequest,
   PublicationResponse,
   ProjectFromPromptRequest,
@@ -52,6 +53,7 @@ export type {
   PageQuery,
   PreviewResponse,
   PreviewStartResponse,
+  PublicationAppNameValidationRet,
   PublicationDeploymentRequest,
   PublicationDevCenterLinks,
   PublicationFailure,
@@ -134,6 +136,19 @@ export const createPublicationDeployment = (
     `${apiPrefix}/projects/${projectId}/publication/deployments/`,
     payload,
     { globalError: false },
+  )
+);
+
+/** 首次发布前检查蓝鲸应用名能否使用；只是提示，发布时后端会再校验一次。 */
+export const validatePublicationAppName = (
+  projectId: string,
+  name: string,
+  signal?: AbortSignal,
+): Promise<PublicationAppNameValidationRet> => (
+  http.get(
+    `${apiPrefix}/projects/${projectId}/publication/app-name-validate/`,
+    { name },
+    { globalError: false, signal },
   )
 );
 

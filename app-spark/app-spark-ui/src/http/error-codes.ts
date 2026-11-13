@@ -22,6 +22,8 @@ export const ApiErrorCode = {
   PUBLICATION_NO_VERSION: 'PUBLICATION_NO_VERSION',
   /** 首次发布时填写的应用名称过滤后为空。 */
   PUBLICATION_APP_NAME_INVALID: 'PUBLICATION_APP_NAME_INVALID',
+  /** 首次发布时的应用名称已被开发者中心的其他应用使用，换一个名称再发布。 */
+  PUBLICATION_APP_NAME_CONFLICT: 'PUBLICATION_APP_NAME_CONFLICT',
   /** 开发者中心拒绝创建应用或提交部署。 */
   PUBLICATION_SUBMIT_FAILED: 'PUBLICATION_SUBMIT_FAILED',
   /** 当前项目已经有发布任务进行中，需要重新查询任务状态。 */

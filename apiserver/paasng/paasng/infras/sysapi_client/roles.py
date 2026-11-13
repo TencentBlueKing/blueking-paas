@@ -80,6 +80,8 @@ class ClientPermChecker:
             ClientAction.CREATE_APP_SPARK_APP: False,
             # 云 API 管理（查询网关 / MCP Server 与接口、申请权限）只给 AIDEV 和 APP_SPARK。
             ClientAction.MANAGE_CLOUD_API: False,
+            # 校验应用 ID 和名称给会创建应用的角色：基础管理（含 AIDEV、LessCode）和 APP_SPARK。
+            ClientAction.VALIDATE_APP_BASIC_INFO: False,
         }
         basic_reader_perms = nobody_perms | {
             ClientAction.READ_APPLICATIONS: True,
@@ -88,6 +90,7 @@ class ClientPermChecker:
         basic_maintainer_perms = basic_reader_perms | {
             ClientAction.MANAGE_APPLICATIONS: True,
             ClientAction.MANAGE_ACCESS_CONTROL: True,
+            ClientAction.VALIDATE_APP_BASIC_INFO: True,
         }
         light_app_maintainer_perms = basic_reader_perms | {
             ClientAction.MANAGE_LIGHT_APPLICATIONS: True,
@@ -113,6 +116,7 @@ class ClientPermChecker:
             ClientAction.CREATE_APP_SPARK_APP: True,
             # AppSpark 打包应用时需要知道可调用的网关接口，并为其申请权限。
             ClientAction.MANAGE_CLOUD_API: True,
+            ClientAction.VALIDATE_APP_BASIC_INFO: True,
         }
 
         return {

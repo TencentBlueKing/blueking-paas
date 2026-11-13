@@ -351,6 +351,31 @@ class SysAppSparkAppCreateInputSLZ(SysOperatorAsAdminMixin, AppTenantMixin):
         return self.resolve_operator_as_admin(attrs)
 
 
+class SysAppTenantInputSLZ(AppTenantMixin):
+    """应用态接口中，待创建应用的租户参数。"""
+
+
+@i18n
+class SysAppBasicInfoValidationInputSLZ(serializers.Serializer):
+    """应用态校验应用 ID 和名称，规则与应用态创建接口一致。
+
+    名称唯一性按租户判断，调用方须在 context 中传入 app_tenant_id。
+    """
+
+    code = AppIDField(required=False)
+    name = I18NExtend(AppNameField())
+
+
+class SysAppBasicInfoValidationOutputSLZ(serializers.Serializer):
+    """应用态校验应用 ID 和名称的结果"""
+
+    is_valid = serializers.BooleanField(help_text="所有字段都能用于创建应用")
+    fields_detail = serializers.DictField(
+        child=serializers.ListField(child=serializers.DictField()),
+        help_text="不能用的字段及原因，如 {'name': [{'code': 'unique', 'message': '...'}]}",
+    )
+
+
 class ThirdPartyAppCreateInputSLZ(AppBasicInfoMixin):
     """创建第三方（外链）应用"""
 

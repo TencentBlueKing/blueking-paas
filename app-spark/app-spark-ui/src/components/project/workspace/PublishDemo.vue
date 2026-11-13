@@ -80,16 +80,13 @@
               :failure="publication.last_failure"
               @view="manualPage = 'failure'"
             />
-            <label v-if="isFirstPublication" class="publish-panel__field">
-              <span class="publish-panel__field-label">应用名称</span>
-              <input
-                v-model="appName"
-                maxlength="20"
-                placeholder="请输入应用名称"
-                @input="handleAppNameInput"
-              >
-              <small>用于首次创建蓝鲸开发者中心应用</small>
-            </label>
+            <PublicationAppNameField
+              v-if="isFirstPublication"
+              :model-value="appName"
+              :pending="appNamePending"
+              :result="appNameResult"
+              @update:model-value="handleAppNameInput"
+            />
             <div class="publish-panel__field">
               <span class="publish-panel__field-label">版本</span>
               <div
@@ -237,9 +234,11 @@ import { storeToRefs } from 'pinia';
 import Message from '@/common/message';
 import { getPublicationLinks } from '@/common/publication';
 import AppIcon from '@/components/AppIcon.vue';
+import { useAppNameValidate } from '@/composables/use-app-name-validate';
 import { usePopoverVisible } from '@/composables/use-popover-visible';
 import { usePublication } from '@/composables/use-publication';
 import { useProjectStore } from '@/store/project';
+import PublicationAppNameField from './PublicationAppNameField.vue';
 import FailureBar from './PublicationFailureBar.vue';
 import ManagedLinks from './PublicationManagedLinks.vue';
 import OnlineDetails from './PublicationOnlineDetails.vue';
@@ -264,6 +263,7 @@ const {
   submitting,
   loadError,
   actionError,
+  conflictedAppName,
   isFirstPublication,
   hasNewVersion,
   pull,
@@ -271,6 +271,7 @@ const {
   acknowledgeResult,
   clearActionError,
 } = usePublication(projectId);
+const appNameValidation = useAppNameValidate(projectId);
 const {
   popoverRef,
   visible,
@@ -287,6 +288,8 @@ let resultWasDisplayed = false;
 let copyResetTimer = 0;
 
 const publicationLinks = computed(() => getPublicationLinks(publication.value));
+const appNamePending = computed(() => appNameValidation.isPending(appName.value));
+const appNameResult = computed(() => appNameValidation.resultFor(appName.value));
 
 const view = computed<PublicationView>(() => {
   const state = publication.value;
@@ -309,7 +312,11 @@ const triggerLabel = computed(() => {
 const canSubmit = computed(() => {
   const state = publication.value;
   if (!state?.latest_version_id || state.task || submitting.value) return false;
-  return !isFirstPublication.value || Boolean(appName.value.trim());
+  if (!isFirstPublication.value) return true;
+
+  // 首次发布要等名称检查完；检查接口失败时没有结论，不拦发布，由发布时的校验兜底。
+  if (!appName.value.trim() || appNamePending.value) return false;
+  return appNameResult.value?.is_available !== false;
 });
 
 const progressText = computed(() => {
@@ -319,7 +326,8 @@ const progressText = computed(() => {
   return '正在发布当前工作区最新版本，预计耗时 2 分钟，请耐心等待';
 });
 
-const handleAppNameInput = () => {
+const handleAppNameInput = (name: string) => {
+  appName.value = name;
   appNameTouched = true;
   clearActionError();
 };
@@ -383,6 +391,20 @@ watch(projectId, () => {
 watch(() => publication.value?.default_app_name, (name) => {
   if (!appNameTouched) appName.value = name || '';
 }, { immediate: true });
+
+// 名称只在首次发布、面板开着时才需要检查：打开时立即问一次，改名时等用户停下来再问。
+watch([visible, isFirstPublication], ([isVisible, isFirst]) => {
+  if (isVisible && isFirst) appNameValidation.validate(appName.value, true);
+});
+
+watch(appName, (name) => {
+  if (visible.value && isFirstPublication.value) appNameValidation.validate(name);
+});
+
+// 发布时开发者中心报了重名：直接按重名展示，名称输入框会随之进入编辑。
+watch(conflictedAppName, (name) => {
+  if (name) appNameValidation.markTaken(name);
+});
 
 watch(
   [visible, () => publication.value?.unseen_result],
@@ -550,43 +572,19 @@ onScopeDispose(() => window.clearTimeout(copyResetTimer));
   font-weight: 600;
 }
 
-.publish-panel__field input,
 .publish-panel__version {
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
   height: 34px;
   padding: 0 12px;
-  color: var(--ink);
+  color: var(--muted);
   font-size: 13px;
   background: #f7f8fa;
   border: 1px solid var(--line);
   border-radius: 8px;
-}
-
-.publish-panel__field input {
-  background: #fff;
-  outline: none;
-}
-
-.publish-panel__field input:hover {
-  border-color: #cfd6e2;
-}
-
-.publish-panel__field input:focus {
-  border-color: var(--accent-focus);
-  box-shadow: 0 0 0 2px rgba(61, 109, 255, 0.12);
-}
-
-.publish-panel__field small {
-  color: var(--faint);
-  font-size: 12px;
-}
-
-.publish-panel__version {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--muted);
   cursor: not-allowed;
 }
 

@@ -12,9 +12,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.13
-  title: "Add an API for registering users who have never visited the Developer Center."
-  comment: "Add register_user_profile, so AppSpark can register a user with the user's own credentials before creating apps for them."
+  version: 1.4.14
+  title: "Add a system API to validate application ID and name before creation, and grant AppSpark its resources."
+  comment: "Add sys_validate_app_basic_info for AppSpark and AIDEV; grant bk-app-spark the resources used for publishing AppSpark apps."
 
 stages:
   - name: "prod"
@@ -135,6 +135,7 @@ grant_permissions:
       - "sys_get_app_info"
       - "uni_apps_query_by_id"
       - "create_sys_ai_agent_app"
+      - "sys_validate_app_basic_info"
       - "sys_deploy_with_module"
       - "sys_get_deployment_result"
       - "sys_streams_history_events"
@@ -155,6 +156,14 @@ grant_permissions:
       - "build_sandbox_image"
       - "get_sandbox_image_by_build_id"
       - "grant_agent_sandbox_api_permissions"
+  - bk_app_code: bk-app-spark
+    grant_dimension: "resource"
+    resource_names:
+      - "sys_validate_app_basic_info"
+      - "create_sys_app_spark_app"
+      - "upload_ai_agent_source_package_via_link"
+      - "sys_deploy_with_module"
+      - "sys_get_deployment_result"
   - bk_app_code: bk_dbm
     grant_dimension: "resource"
     resource_names:

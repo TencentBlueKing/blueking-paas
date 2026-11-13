@@ -114,6 +114,16 @@ export interface PublicationDeploymentRequest {
   app_name?: string;
 }
 
+/** 首次发布时某个蓝鲸应用名能否使用。 */
+export interface PublicationAppNameValidationRet {
+  /** 按开发者中心规则过滤、截断后实际会用的名称；什么也不剩时为空字符串。 */
+  name: string;
+  is_available: boolean;
+  /** 开发者中心的错误码。`unique` 表示已被占用；其余原样传来。能用时为 null。 */
+  problem: string | null;
+  message: string | null;
+}
+
 /** Agent 提交代码时用的机器身份，不是终端用户。 */
 export interface GitCommitIdentity {
   author_name: string;

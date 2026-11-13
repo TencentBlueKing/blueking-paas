@@ -221,6 +221,12 @@ urlpatterns += [
         views.SysAppViewSet.as_view({"post": "create_sys_third_app"}),
         name="sys.applications.create_third_app.sys",
     ),
+    # 必须排在应用详情之前：validations 本身也是合法的应用 ID，否则会被当成查询该应用。
+    re_path(
+        r"^sys/api/bkapps/applications/validations/$",
+        views.SysAppViewSet.as_view({"post": "validate_basic_info"}),
+        name="sys.applications.validate_basic_info",
+    ),
     re_path(
         r"^sys/api/bkapps/applications/(?P<code>[^/]+)/$",
         views.SysApplicationViewSet.as_view({"get": "retrieve"}),

@@ -22,14 +22,19 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
-from ninja import Path, Router, Status
+from ninja import Path, Query, Router, Status
 
 from app_spark_api.core.shortcuts import aget_project_or_404
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
-from app_spark_api.publication import services
-from app_spark_api.publication.entities import DeploymentCreateRequest, PublicationResponse
+from app_spark_api.publication import app_name, services
+from app_spark_api.publication.entities import (
+    AppNameValidationRetResponse,
+    DeploymentCreateRequest,
+    PublicationResponse,
+)
 from app_spark_api.publication.exceptions import (
+    PublicationAppNameConflictError,
     PublicationAppNameInvalidError,
     PublicationNoVersionError,
     PublicationProjectGoneError,
@@ -37,7 +42,7 @@ from app_spark_api.publication.exceptions import (
     PublicationTaskInProgressError,
     PublicationVersionNotFoundError,
 )
-from app_spark_api.publication.steps import FailureCause
+from app_spark_api.publication.steps import FailureCause, PublicationStepError
 from app_spark_api.utils.api_errors.error_codes import error_codes
 
 if TYPE_CHECKING:
@@ -47,7 +52,7 @@ router = Router(tags=["publication"], auth=login_required)
 
 PROJECT_ID = Path(..., description="项目 ID")
 
-# 创建应用失败时按该由谁处理给出不同的状态码，前端和监控据此区分用户能处理的拒绝与依赖故障。
+# 创建应用（或检查应用名称）失败时按该由谁处理给出不同的状态码，前端和监控据此区分用户能处理的拒绝与依赖故障。
 _SUBMIT_ERRORS = {
     FailureCause.REJECTED: error_codes.PUBLICATION_SUBMIT_FAILED,
     FailureCause.UNAVAILABLE: error_codes.PUBLICATION_BKPAAS_UNAVAILABLE,
@@ -91,6 +96,8 @@ async def create_deployment(request: HttpRequest, payload: DeploymentCreateReque
         raise error_codes.PUBLICATION_VERSION_NOT_FOUND.f(version_id=payload.version_id) from exc
     except PublicationAppNameInvalidError as exc:
         raise error_codes.PUBLICATION_APP_NAME_INVALID from exc
+    except PublicationAppNameConflictError as exc:
+        raise error_codes.PUBLICATION_APP_NAME_CONFLICT.f(name=exc.name) from exc
     except PublicationSubmitError as exc:
         raise _SUBMIT_ERRORS[exc.cause].f(reason=exc.message) from exc
     except PublicationTaskInProgressError as exc:
@@ -100,6 +107,32 @@ async def create_deployment(request: HttpRequest, payload: DeploymentCreateReque
         raise error_codes.RESOURCE_NOT_FOUND from exc
 
     return Status(HTTPStatus.ACCEPTED, PublicationResponse.from_state(await services.get_publication_state(project)))
+
+
+@router.get(
+    "app-name-validate/",
+    response={**ERROR_RESPONSES, HTTPStatus.OK: AppNameValidationRetResponse},
+    url_name="publication-app-name-validate",
+    summary="检查首次发布时能否用某个名称创建开发者中心应用",
+)
+async def validate_app_name(
+    request: HttpRequest,
+    project_id: str = PROJECT_ID,
+    name: str = Query(..., min_length=1, max_length=64, description="想用的应用名称，会按开发者中心的规则过滤"),
+):
+    """名称在开发者中心租户内唯一，发布面板在打开时和改名时调用，重名时提示用户换一个。
+
+    返回过滤后实际会用的名称。已创建应用的项目发布时不再用到名称，不必调用。名称能否使用以发布时的校验为准，
+    这里能用的名称在发布前仍可能被别人抢先使用。
+    """
+    project = await aget_project_or_404(request, project_id)
+
+    try:
+        validation = await app_name.validate_app_name(project, name)
+    except PublicationStepError as exc:
+        raise _SUBMIT_ERRORS[exc.cause].f(reason=exc.message) from exc
+
+    return AppNameValidationRetResponse.from_validation(validation)
 
 
 @router.delete(

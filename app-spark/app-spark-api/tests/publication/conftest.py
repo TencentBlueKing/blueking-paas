@@ -18,6 +18,7 @@
 
 import pytest
 
+from app_spark_api.infras.bk_paas import BkPaaSClient
 from app_spark_api.publication.packaging import PackagedSource
 from tests.publication.fake import FakeBkPaaSClient
 
@@ -25,9 +26,14 @@ CONSOLE_URL = "https://bkpaas.example.com"
 
 
 @pytest.fixture()
-def bkpaas() -> FakeBkPaaSClient:
-    """A developer center client that succeeds unless told otherwise."""
-    return FakeBkPaaSClient()
+def bkpaas(monkeypatch) -> FakeBkPaaSClient:
+    """A developer center client that succeeds unless told otherwise.
+
+    替换 from_settings，这样不接收客户端参数的调用（如校验应用名称）也打到它。
+    """
+    fake = FakeBkPaaSClient()
+    monkeypatch.setattr(BkPaaSClient, "from_settings", lambda: fake)
+    return fake
 
 
 @pytest.fixture(autouse=True)

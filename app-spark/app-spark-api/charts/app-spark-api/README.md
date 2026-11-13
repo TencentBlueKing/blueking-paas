@@ -69,8 +69,9 @@ Ingress 依赖 **ingress-nginx**，使用正则路径 `/api-svc(/|$)(.*)` 和重
 
 ## 发布到开发者中心
 
-发布任务在上面的 Celery worker 上推进，不需要额外的 Deployment。还需要 `appCode`、`appSecret`、`bkApiUrlTmpl`，
+发布任务在上面的 Celery worker 上推进，不需要额外的 Deployment。还需要 `appSecret`、`bkApiUrlTmpl`，
 以及 `bkpaasApigwName`（开发者中心网关名，默认 bkpaas3）、`bkpaasUrl`（开发者中心站点地址，用于拼页面链接）。
+`appCode` 默认 `bk-app-spark`，开发者中心网关已按它预授权发布要用的资源，一般不用改。
 在开发者中心开通权限的步骤见[发布到开发者中心](../../docs/publish.md#在开发者中心开通权限)。
 
 ## 数据持久化

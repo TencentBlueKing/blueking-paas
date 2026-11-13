@@ -13,7 +13,7 @@ cp conf.yaml.tpl settings_local.yaml
 - 必填：
   - `DATABASE_NAME`、`DATABASE_USER`、`DATABASE_PASSWORD`、`DATABASE_HOST`、`DATABASE_PORT`（MySQL 8.0 以上）
   - `BKKRILL_ENCRYPT_SECRET_KEY`
-  - `LOGIN_FULL`、`APP_CODE` / `APP_SECRET`，以及 `BKAUTH_USER_INFO_APIGW_URL` 或 `BKAUTH_USER_COOKIE_VERIFY_URL`
+  - `LOGIN_FULL`、`APP_SECRET`（`APP_CODE` 默认 `bk-app-spark`），以及 `BKAUTH_USER_INFO_APIGW_URL` 或 `BKAUTH_USER_COOKIE_VERIFY_URL`
     其中一项，具体值参考当前开发环境
   - `REPO_SERVER`，本地 Forgejo 见 [repo-server/forgejo](../../repo-server/forgejo/README.md)
   - `AGENT_RUNTIME_PROVIDER_CONFIG` 的 `agent_project_dir`、`workspace_root`、`state_root`（local_process）

@@ -17,17 +17,19 @@
 """第一步，在发布请求里：首次发布时创建开发者中心应用并记下绑定。"""
 
 import logging
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 import httpx2
 from asgiref.sync import sync_to_async
 from django.conf import settings
 
-from app_spark_api.infras.bk_paas import BkPaaSClient, BkPaaSError, CreatedApp
+from app_spark_api.infras.bk_paas import BkPaaSApiError, BkPaaSClient, BkPaaSError, CreatedApp
 from app_spark_api.publication.constants import PublicationStage
 from app_spark_api.publication.models import BkPaaSAppBinding, PublicationTask
 from app_spark_api.publication.steps.errors import (
     MSG_APP_NOT_RECORDED,
+    AppNameTakenError,
     FailureCause,
     PublicationStepError,
     to_step_error,
@@ -50,8 +52,15 @@ async def bind_app(
     if not await BkPaaSAppBinding.objects.filter(project=project).aexists():
         try:
             app = await client.create_app(
-                code=app_code, name=app_name, operator=task.operator, **_build_tenant_kwargs(project)
+                code=app_code, name=app_name, operator=task.operator, **build_app_tenant_kwargs(project)
             )
+        except BkPaaSApiError as exc:
+            # 发起前已校验过名称；这时名称再被拒，多半是有人刚刚用了它，要让用户改名而不是只看到失败。
+            # 中英文名称的错误都记在不带语言后缀的 name 下。
+            if exc.status_code == HTTPStatus.BAD_REQUEST and "name" in exc.fields_detail:
+                raise AppNameTakenError(app_name) from exc
+
+            raise to_step_error(exc) from exc
         except (BkPaaSError, httpx2.HTTPError) as exc:
             raise to_step_error(exc) from exc
 
@@ -72,7 +81,8 @@ def _record_app(project: Project, app: CreatedApp) -> None:
     )
 
 
-def _build_tenant_kwargs(project: Project) -> dict[str, str]:
+def build_app_tenant_kwargs(project: Project) -> dict[str, str]:
+    """Return the tenant arguments to create, or validate, the Project's application with."""
     # 非多租户时开发者中心自己固定租户信息，传了也会被忽略，所以不传。
     if not settings.ENABLE_MULTI_TENANT_MODE:
         return {}

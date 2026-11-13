@@ -34,6 +34,8 @@ export const usePublication = (projectId: Ref<string>) => {
   const submitting = ref(false);
   const loadError = ref('');
   const actionError = ref('');
+  // 首次发布时被开发者中心判为重名的名称；面板据此回到改名状态，不当成一般的发布失败展示。
+  const conflictedAppName = ref<string | null>(null);
 
   let timer = 0;
   let generation = 0;
@@ -115,6 +117,7 @@ export const usePublication = (projectId: Ref<string>) => {
     appliedSequence = barrierSequence;
     const name = appName?.trim();
     actionError.value = '';
+    conflictedAppName.value = null;
     submitting.value = true;
     stopPolling();
 
@@ -149,6 +152,9 @@ export const usePublication = (projectId: Ref<string>) => {
       }
       if (isApiError(error, ApiErrorCode.PUBLICATION_NO_VERSION) && publication.value) {
         publication.value = { ...publication.value, latest_version_id: null };
+      } else if (isApiError(error, ApiErrorCode.PUBLICATION_APP_NAME_CONFLICT) && name) {
+        // 重名时后端没有建任务，用户改个名字再发即可，提示交给名称输入框。
+        conflictedAppName.value = name;
       } else {
         actionError.value = errorMessage(error, '发布失败，请稍后重试');
       }
@@ -188,6 +194,7 @@ export const usePublication = (projectId: Ref<string>) => {
     publication.value = null;
     loadError.value = '';
     actionError.value = '';
+    conflictedAppName.value = null;
     loading.value = Boolean(id);
     refreshing.value = false;
     submitting.value = false;
@@ -219,6 +226,7 @@ export const usePublication = (projectId: Ref<string>) => {
     submitting,
     loadError,
     actionError,
+    conflictedAppName,
     isFirstPublication,
     hasNewVersion,
     pull,

@@ -107,7 +107,7 @@ class UnseenResult:
 
 
 @attrs.frozen
-class AppNameValidation:
+class AppNameValidationRet:
     """Whether the first deployment could create the application under a name.
 
     :param name: 按开发者中心的规则过滤、截断后实际会用的名称，什么也不剩时为空字符串。
@@ -200,7 +200,7 @@ async def start_deployment(
     return task
 
 
-async def validate_app_name(project: Project, name: str) -> AppNameValidation:
+async def validate_app_name(project: Project, name: str) -> AppNameValidationRet:
     """Tell whether the first deployment could create the Project's application under this name.
 
     已绑定应用的项目发布时不再用到名称，前端不必为它调用。
@@ -211,7 +211,7 @@ async def validate_app_name(project: Project, name: str) -> AppNameValidation:
 
     # 过滤后什么也不剩，不必问开发者中心，所以没有它的错误码。invalid 表示格式过不去。
     if not normalized:
-        return AppNameValidation(name="", problem="invalid", message=MSG_APP_NAME_UNUSABLE)
+        return AppNameValidationRet(name="", problem="invalid", message=MSG_APP_NAME_UNUSABLE)
 
     try:
         async with BkPaaSClient.from_settings() as client:
@@ -221,9 +221,9 @@ async def validate_app_name(project: Project, name: str) -> AppNameValidation:
 
     error = result.name_error
     if error is None:
-        return AppNameValidation(name=normalized, problem=None, message=None)
+        return AppNameValidationRet(name=normalized, problem=None, message=None)
 
-    return AppNameValidation(name=normalized, problem=error.problem, message=error.message)
+    return AppNameValidationRet(name=normalized, problem=error.problem, message=error.message)
 
 
 async def _ensure_app_creatable(project: Project, client_factory: Callable[[], BkPaaSClient], name: str) -> None:

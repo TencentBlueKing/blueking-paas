@@ -15,7 +15,7 @@ import type {
   PageQuery,
   PreviewResponse,
   PreviewStartResponse,
-  PublicationAppNameValidateResponse,
+  PublicationAppNameValidationRet,
   PublicationDeploymentRequest,
   PublicationResponse,
   ProjectFromPromptRequest,
@@ -52,7 +52,7 @@ export type {
   PageQuery,
   PreviewResponse,
   PreviewStartResponse,
-  PublicationAppNameValidateResponse,
+  PublicationAppNameValidationRet,
   PublicationDeploymentRequest,
   PublicationDevCenterLinks,
   PublicationFailure,
@@ -142,7 +142,7 @@ export const validatePublicationAppName = (
   projectId: string,
   name: string,
   signal?: AbortSignal,
-): Promise<PublicationAppNameValidateResponse> => (
+): Promise<PublicationAppNameValidationRet> => (
   http.get(
     `${apiPrefix}/projects/${projectId}/publication/app-name-validate/`,
     { name },

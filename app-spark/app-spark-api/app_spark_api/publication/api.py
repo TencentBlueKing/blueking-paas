@@ -28,7 +28,11 @@ from app_spark_api.core.shortcuts import aget_project_or_404
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
 from app_spark_api.publication import services
-from app_spark_api.publication.entities import AppNameValidateResponse, DeploymentCreateRequest, PublicationResponse
+from app_spark_api.publication.entities import (
+    AppNameValidationRetResponse,
+    DeploymentCreateRequest,
+    PublicationResponse,
+)
 from app_spark_api.publication.exceptions import (
     PublicationAppNameConflictError,
     PublicationAppNameInvalidError,
@@ -107,7 +111,7 @@ async def create_deployment(request: HttpRequest, payload: DeploymentCreateReque
 
 @router.get(
     "app-name-validate/",
-    response={**ERROR_RESPONSES, HTTPStatus.OK: AppNameValidateResponse},
+    response={**ERROR_RESPONSES, HTTPStatus.OK: AppNameValidationRetResponse},
     url_name="publication-app-name-validate",
     summary="检查首次发布时能否用某个名称创建开发者中心应用",
 )
@@ -128,7 +132,7 @@ async def validate_app_name(
     except PublicationStepError as exc:
         raise _SUBMIT_ERRORS[exc.cause].f(reason=exc.message) from exc
 
-    return AppNameValidateResponse.from_validation(validation)
+    return AppNameValidationRetResponse.from_validation(validation)
 
 
 @router.delete(

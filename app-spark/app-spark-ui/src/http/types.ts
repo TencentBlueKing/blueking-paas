@@ -115,7 +115,7 @@ export interface PublicationDeploymentRequest {
 }
 
 /** 首次发布时某个蓝鲸应用名能否使用。 */
-export interface PublicationAppNameValidateResponse {
+export interface PublicationAppNameValidationRet {
   /** 按开发者中心规则过滤、截断后实际会用的名称；什么也不剩时为空字符串。 */
   name: string;
   is_available: boolean;

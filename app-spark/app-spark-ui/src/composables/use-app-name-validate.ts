@@ -1,7 +1,7 @@
 import { onScopeDispose, ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import { validatePublicationAppName } from '@/http/api';
-import type { PublicationAppNameValidateResponse } from '@/http/types';
+import type { PublicationAppNameValidationRet } from '@/http/types';
 
 const CHECK_DEBOUNCE_MS = 1000;
 
@@ -13,7 +13,7 @@ const CHECK_DEBOUNCE_MS = 1000;
  */
 export const useAppNameValidate = (projectId: Ref<string>) => {
   // 结果只对它检查过的那个输入有效，输入一变就作废，以免旧结果放行新名字。
-  const result = ref<PublicationAppNameValidateResponse | null>(null);
+  const result = ref<PublicationAppNameValidationRet | null>(null);
   const checkedInput = ref('');
   const pendingInput = ref<string | null>(null);
 

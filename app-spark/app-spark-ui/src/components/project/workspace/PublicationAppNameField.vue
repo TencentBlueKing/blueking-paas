@@ -46,7 +46,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import AppIcon from '@/components/AppIcon.vue';
-import type { PublicationAppNameValidateResponse } from '@/http/types';
+import type { PublicationAppNameValidationRet } from '@/http/types';
 
 const APP_NAME_HELP = '开发者中心内应用名不允许重名，冲突时需要以其他名字发布（默认取当前项目名）。';
 const MSG_INVALID = '名称只能包含中文、英文字母、数字、连接符和下划线';
@@ -57,7 +57,7 @@ const props = defineProps<{
   /** 当前名称还在等检查结果。 */
   pending: boolean;
   /** 当前名称的检查结果；还没检查或检查失败时为 null。 */
-  result: PublicationAppNameValidateResponse | null;
+  result: PublicationAppNameValidationRet | null;
 }>();
 const emit = defineEmits<{ (e: 'update:modelValue', value: string): void }>();
 

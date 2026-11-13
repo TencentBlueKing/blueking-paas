@@ -23,7 +23,7 @@ import attrs
 from ninja import Field, Schema
 
 if TYPE_CHECKING:
-    from app_spark_api.publication.services import AppNameValidation, PublicationState
+    from app_spark_api.publication.services import AppNameValidationRet, PublicationState
 
 
 class DeploymentCreateRequest(Schema):
@@ -152,7 +152,7 @@ class PublicationResponse(Schema):
         )
 
 
-class AppNameValidateResponse(Schema):
+class AppNameValidationRetResponse(Schema):
     """首次发布时某个应用名称能否用来创建开发者中心应用。"""
 
     name: str = Field(description="按开发者中心的规则过滤、截断后实际会用的名称；什么也不剩时为空字符串")
@@ -163,7 +163,7 @@ class AppNameValidateResponse(Schema):
     message: str | None = Field(description="给用户看的说明，能用时为空")
 
     @classmethod
-    def from_validation(cls, validation: AppNameValidation) -> AppNameValidateResponse:
+    def from_validation(cls, validation: AppNameValidationRet) -> AppNameValidationRetResponse:
         """Build the response from a name validation."""
         return cls(
             name=validation.name,

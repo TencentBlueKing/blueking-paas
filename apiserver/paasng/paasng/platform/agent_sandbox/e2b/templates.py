@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""e2b 沙箱模板的维护：命名与增删改。
+"""e2b 沙箱模板的维护：命名、增删改，以及触发向集群的下发。
 
 用户只接触模板标识（SDK 传入的 templateID），集群里的资源名由平台生成：
 内置模板的资源名与模板标识相同，自定义模板的资源名带上应用前缀。所有集群共用一个命名空间，
@@ -43,6 +43,9 @@ from .exceptions import (
     E2BTemplateInUse,
     E2BTemplateQuotaExceeded,
 )
+from .tasks import sync_e2b_template_task
+from .template_sync.manifests import MANIFEST_FIELDS
+from .template_sync.sync import mark_pending
 
 # 创建后可修改的字段，模板标识决定了资源名，不能改
 COMMON_MUTABLE_FIELDS = (
@@ -130,7 +133,7 @@ def create_custom_template(application: Application, template_id: str, **spec: A
 
 
 def update_template(template: E2BSandboxTemplate, **changes: Any) -> list[str]:
-    """修改模板
+    """修改模板，改到 CR 里的字段时重新下发。底层 E2B 网关的池子不跟随模板变化，已预热的实例保持旧配置，直到被消耗完。
 
     :returns: 实际发生变化的字段
     """
@@ -141,12 +144,15 @@ def update_template(template: E2BSandboxTemplate, **changes: Any) -> list[str]:
 
     for f in changed:
         setattr(template, f, changes[f])
-    template.save(update_fields=[*changed, "updated"])
+    with transaction.atomic():
+        template.save(update_fields=[*changed, "updated"])
+        if set(changed) & set(MANIFEST_FIELDS):
+            _schedule_sync(template)
     return changed
 
 
 def delete_template(template: E2BSandboxTemplate, force: bool = False) -> None:
-    """删除模板
+    """删除模板，并从集群中删除它的 CR。
 
     :param force: 不检查是否还有未终止的沙箱，应用删除时使用
     :raises E2BTemplateInUse: 模板下还有未终止的沙箱。删除池子会连带销毁它们
@@ -154,7 +160,9 @@ def delete_template(template: E2BSandboxTemplate, force: bool = False) -> None:
     if not force and has_active_sandboxes(template):
         raise E2BTemplateInUse(f"template {template.resource_name} still has active sandboxes")
 
-    template.delete()
+    with transaction.atomic():
+        template.delete()
+        _schedule_cleanup(template.resource_name)
 
 
 def delete_custom_templates_of(application: Application) -> None:
@@ -173,7 +181,20 @@ def _create(**fields: Any) -> E2BSandboxTemplate:
     try:
         with transaction.atomic():
             template = E2BSandboxTemplate.objects.create(**fields)
+            _schedule_sync(template)
     except IntegrityError as exc:
         # 并发创建同类型的同名模板时，资源名的唯一约束兜底。内置与自定义模板的资源名不同，拦不住两者重名
         raise E2BTemplateAlreadyExists(f"template {fields['resource_name']} already exists") from exc
     return template
+
+
+def _schedule_sync(template: E2BSandboxTemplate) -> None:
+    """目标集群先记为待同步，事务提交后再下发，任务读到的才是已落库的状态"""
+    mark_pending(template)
+    resource_name = template.resource_name
+    transaction.on_commit(lambda: sync_e2b_template_task.delay(resource_name))
+
+
+def _schedule_cleanup(resource_name: str) -> None:
+    """模板删除后，从集群中删除它的 CR。下发记录随模板一起删除"""
+    transaction.on_commit(lambda: sync_e2b_template_task.delay(resource_name))

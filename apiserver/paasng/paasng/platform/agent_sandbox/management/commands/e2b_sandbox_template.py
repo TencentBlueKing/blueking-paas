@@ -28,8 +28,10 @@ from paasng.platform.agent_sandbox.e2b import templates
 from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BTemplateAlreadyExists,
     E2BTemplateInUse,
+    E2BTemplateSyncInProgress,
 )
 from paasng.platform.agent_sandbox.e2b.serializers import E2BBuiltinTemplateCreateInputSLZ
+from paasng.platform.agent_sandbox.e2b.template_sync.sync import sync_all
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate
 
 
@@ -51,10 +53,13 @@ def _format_errors(errors: dict | list) -> str:
 
 
 class Command(BaseCommand):
-    """Apply, enable, disable, delete or list the e2b builtin sandbox templates.
+    """Apply, enable, disable, delete, list or sync the e2b builtin sandbox templates.
 
-    Builtin templates are usable by every application. Only the public templates are shown on
-    the developer center, a non-public one is still usable by whoever knows its ID.
+    Builtin templates are usable by every application. Creating a template, or changing its spec,
+    pushes it, as a SandboxTemplate and a SandboxPool of the same name, to every cluster with e2b
+    enabled, asynchronously. Same-named CRs already in the cluster are overwritten. Only the public
+    templates are shown on the developer center, a non-public one is still usable by whoever
+    knows its ID.
 
     The templates are declared in a YAML file, a list of items with these keys:
     ``template_id``, ``name`` and ``image`` (required), ``description``, ``cpu_count``,
@@ -75,6 +80,7 @@ class Command(BaseCommand):
         python manage.py e2b_sandbox_template disable --template-id e2b-envd
         python manage.py e2b_sandbox_template delete --template-id e2b-envd --yes
         python manage.py e2b_sandbox_template list
+        python manage.py e2b_sandbox_template sync
     """
 
     help = "Manage the e2b builtin sandbox templates"
@@ -92,11 +98,17 @@ class Command(BaseCommand):
             sub = subparsers.add_parser(action, help=f"{action.capitalize()} a template")
             sub.add_argument("--template-id", dest="template_id", required=True)
 
-        delete = subparsers.add_parser("delete", help="Delete a template, refused while it still has active sandboxes")
+        delete = subparsers.add_parser(
+            "delete", help="Delete a template and its CRs, refused while it still has active sandboxes"
+        )
         delete.add_argument("--template-id", dest="template_id", required=True)
         delete.add_argument("--yes", action="store_true", help="Confirm the deletion")
 
         subparsers.add_parser("list", help="List all builtin templates")
+        subparsers.add_parser(
+            "sync",
+            help="Push all templates (custom ones included) to every e2b cluster and prune the CRs of deleted ones",
+        )
 
     def handle(self, *args, **options):
         action = options["action"]
@@ -106,12 +118,14 @@ class Command(BaseCommand):
             self._set_enabled(options["template_id"], enabled=action == "enable")
         elif action == "delete":
             self._delete(options["template_id"], options["yes"])
+        elif action == "sync":
+            self._sync()
         else:
             self._list()
 
     def _apply(self, file: str, prune: bool):
         specs = self._load_specs(file)
-        # 整份文件一起生效：任一项失败全部回滚，结果等提交后再输出
+        # 整份文件一起生效：任一项失败全部回滚，下发任务在提交后才投递，结果也等提交后再输出
         messages: list[str] = []
         with transaction.atomic():
             existing = {t.template_id: t for t in E2BSandboxTemplate.objects.builtins()}
@@ -197,6 +211,22 @@ class Command(BaseCommand):
                 f"memory_mb={t.memory_mb}\tdisk_size_mb={t.disk_size_mb}\tprewarm_count={t.prewarm_count}\t"
                 f"enabled={t.enabled}\tis_public={t.is_public}"
             )
+
+    def _sync(self):
+        try:
+            results = sync_all()
+        except E2BTemplateSyncInProgress:
+            raise CommandError("Another template sync is running, try again later")
+        for result in results:
+            if result.error:
+                self.stdout.write(self.style.ERROR(f"[{result.cluster_name}] failed: {result.error}"))
+                continue
+            self.stdout.write(
+                f"[{result.cluster_name}] synced={len(result.synced)} failed={len(result.failed)} "
+                f"pruned={', '.join(result.pruned) or '-'}"
+            )
+            for resource_name, message in result.failed.items():
+                self.stdout.write(self.style.ERROR(f"  {resource_name}: {message}"))
 
     @staticmethod
     def _get_template(template_id: str) -> E2BSandboxTemplate:

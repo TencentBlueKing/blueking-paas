@@ -17,6 +17,7 @@
 
 from io import StringIO
 from pathlib import Path
+from unittest import mock
 
 import pytest
 from django.conf import settings
@@ -28,6 +29,7 @@ from paasng.platform.agent_sandbox.e2b.constants import (
     DEFAULT_TEMPLATE_MEMORY_MB,
     E2BSandboxStatus,
 )
+from paasng.platform.agent_sandbox.e2b.template_sync.sync import ClusterSyncResult
 from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate
 from tests.paasng.platform.agent_sandbox.e2b.helpers import IMAGE, make_builtin_template, make_custom_template
 
@@ -35,12 +37,20 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 TEMPLATE_ID = "e2b-envd"
 EXAMPLE_FILE = Path(settings.BASE_DIR) / "support-files" / "agent_sandbox" / "e2b_templates.yaml"
+COMMAND_MODULE = "paasng.platform.agent_sandbox.management.commands.e2b_sandbox_template"
 
 
 def _run(*args: str) -> str:
     out = StringIO()
     call_command("e2b_sandbox_template", *args, stdout=out)
     return out.getvalue()
+
+
+@pytest.fixture(autouse=True)
+def sync_task():
+    """每次保存都会异步下发，这里只关心排了哪些任务"""
+    with mock.patch("paasng.platform.agent_sandbox.e2b.templates.sync_e2b_template_task") as task:
+        yield task
 
 
 @pytest.fixture()
@@ -59,7 +69,7 @@ def write_file(tmp_path):
 
 
 class TestApply:
-    def test_creates_builtin_templates(self, write_file):
+    def test_creates_builtin_templates(self, write_file, django_capture_on_commit_callbacks, sync_task):
         path = write_file(
             f"""
 - template_id: e2b-envd
@@ -77,7 +87,8 @@ class TestApply:
 """
         )
 
-        out = _run("apply", "-f", path)
+        with django_capture_on_commit_callbacks(execute=True):
+            out = _run("apply", "-f", path)
 
         assert "Created template 'e2b-envd'" in out
         assert "Created template 'e2b-browser'" in out
@@ -99,6 +110,7 @@ class TestApply:
             None,
         )
         assert (browser.enabled, browser.is_public) == (True, False)
+        assert sorted(c.args[0] for c in sync_task.delay.call_args_list) == ["e2b-browser", "e2b-envd"]
 
     def test_bundled_example_file(self):
         """support-files 里的示例要能直接 apply"""
@@ -119,13 +131,15 @@ class TestApply:
         assert template.description == ""
         assert "Updated template 'e2b-envd'" in out
 
-    def test_reapply_is_unchanged(self, write_file):
+    def test_reapply_is_unchanged(self, write_file, django_capture_on_commit_callbacks, sync_task):
         path = write_file(f"- {{template_id: e2b-envd, name: Base, image: {IMAGE}}}")
         _run("apply", "-f", path)
 
-        out = _run("apply", "-f", path)
+        with django_capture_on_commit_callbacks(execute=True):
+            out = _run("apply", "-f", path)
 
         assert "Template 'e2b-envd' unchanged" in out
+        sync_task.delay.assert_not_called()
 
     def test_flags_follow_file(self, write_file, template):
         _run("apply", "-f", write_file(f"- {{template_id: e2b-envd, name: B, image: {IMAGE}, enabled: false}}"))
@@ -164,8 +178,10 @@ class TestApply:
 
         assert not E2BSandboxTemplate.objects.builtins().exists()
 
-    def test_failure_rolls_back_whole_file(self, write_file, template, bk_app):
-        """入库时才发现的冲突也要整份回滚，已处理的项不能留下"""
+    def test_failure_rolls_back_whole_file(
+        self, write_file, template, bk_app, django_capture_on_commit_callbacks, sync_task
+    ):
+        """入库时才发现的冲突也要整份回滚，已处理的项不能留下，也不能投递下发任务"""
         make_custom_template(bk_app, "e2b-browser")
         path = write_file(
             f"- {{template_id: e2b-envd, name: Renamed, image: {IMAGE}, cpu_count: 4}}\n"
@@ -174,12 +190,13 @@ class TestApply:
         )
         out = StringIO()
 
-        with pytest.raises(CommandError, match="e2b-browser"):
+        with django_capture_on_commit_callbacks(execute=True), pytest.raises(CommandError, match="e2b-browser"):
             call_command("e2b_sandbox_template", "apply", "-f", path, stdout=out)
 
         template.refresh_from_db()
         assert (template.name, template.cpu_count) == ("Base", 2)
         assert not E2BSandboxTemplate.objects.filter(template_id="e2b-new").exists()
+        sync_task.delay.assert_not_called()
         assert out.getvalue() == ""
 
     @pytest.mark.parametrize(
@@ -255,11 +272,13 @@ class TestDelete:
 
         assert E2BSandboxTemplate.objects.filter(template_id=TEMPLATE_ID).exists()
 
-    def test_deletes(self, template):
-        out = _run("delete", "--template-id", TEMPLATE_ID, "--yes")
+    def test_deletes_and_schedules_cleanup(self, template, django_capture_on_commit_callbacks, sync_task):
+        with django_capture_on_commit_callbacks(execute=True):
+            out = _run("delete", "--template-id", TEMPLATE_ID, "--yes")
 
         assert "Deleted template 'e2b-envd'" in out
         assert not E2BSandboxTemplate.objects.filter(template_id=TEMPLATE_ID).exists()
+        sync_task.delay.assert_called_once_with(TEMPLATE_ID)
 
     def test_refuses_while_sandboxes_are_active(self, template, bk_app):
         """删除 SandboxPool 会连带销毁它名下正在运行的沙箱"""
@@ -308,3 +327,18 @@ class TestList:
 
     def test_empty(self):
         assert "No templates registered" in _run("list")
+
+
+class TestSync:
+    def test_prints_per_cluster_results(self):
+        results = [
+            ClusterSyncResult(cluster_name="c1", synced=["a", "b"], failed={"c": "boom"}, pruned=["old"]),
+            ClusterSyncResult(cluster_name="c2", error="unreachable"),
+        ]
+
+        with mock.patch(f"{COMMAND_MODULE}.sync_all", return_value=results):
+            out = _run("sync")
+
+        assert "[c1] synced=2 failed=1 pruned=old" in out
+        assert "  c: boom" in out
+        assert "[c2] failed: unreachable" in out

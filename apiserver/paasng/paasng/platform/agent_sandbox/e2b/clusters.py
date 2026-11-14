@@ -18,11 +18,13 @@
 
 import logging
 
+from django.db.models import QuerySet
+
 from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster, ClusterE2BConfig
-from paasng.platform.agent_sandbox.models import E2BSandbox
+from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate
 
 from .constants import E2BSandboxStatus
 from .exceptions import E2BClusterNotConfigured, E2BClusterUnavailable
@@ -40,6 +42,18 @@ def select_e2b_cluster(tenant_id: str, region: str | None = None) -> Cluster:
     :param region: 归属应用的 region，缺省时由分配上下文取平台默认值
     :raises E2BClusterUnavailable: 没有既被策略选中、又启用了 e2b 配置的集群
     """
+    cluster = list_e2b_clusters(tenant_id, region).first()
+    if cluster is None:
+        raise E2BClusterUnavailable(f"none of the allocated clusters has e2b enabled for tenant {tenant_id}")
+
+    return cluster
+
+
+def list_e2b_clusters(tenant_id: str, region: str | None = None) -> QuerySet[Cluster]:
+    """列出可分配给该租户、且启用了 e2b 配置的集群，按分配器的优先级排列。
+
+    :raises E2BClusterUnavailable: 租户没配分配策略，或策略选不出集群
+    """
     # e2b 沙箱用独立的用途，与平台自有的 SandboxInstance 沙箱分开调度
     ctx = AllocationContext.create_for_agent_sandbox(tenant_id, region, usage=ClusterUsage.AGENT_SANDBOX_E2B)
 
@@ -49,11 +63,7 @@ def select_e2b_cluster(tenant_id: str, region: str | None = None) -> Cluster:
         # 分配器在租户没配策略、或策略选不出集群时抛 ValueError
         raise E2BClusterUnavailable(f"no cluster allocated for tenant {tenant_id}: {exc}") from exc
 
-    cluster = candidates.filter(e2b_config__enabled=True).first()
-    if cluster is None:
-        raise E2BClusterUnavailable(f"none of the allocated clusters has e2b enabled for tenant {tenant_id}")
-
-    return cluster
+    return candidates.filter(e2b_config__enabled=True)
 
 
 def get_e2b_cluster_config(cluster_name: str) -> ClusterE2BConfig:
@@ -70,6 +80,43 @@ def get_e2b_cluster_config(cluster_name: str) -> ClusterE2BConfig:
         raise E2BClusterNotConfigured(f"cluster {cluster_name} missing")
 
     return config
+
+
+def list_enabled_e2b_configs() -> list[ClusterE2BConfig]:
+    return list(ClusterE2BConfig.objects.select_related("cluster").filter(enabled=True))
+
+
+def list_enabled_e2b_cluster_names() -> set[str]:
+    return set(ClusterE2BConfig.objects.filter(enabled=True).values_list("cluster__name", flat=True))
+
+
+class TemplateTargetResolver:
+    """求模板应当下发到的集群：内置模板是全部启用 e2b 的集群，自定义模板只到应用租户可分配的那些。
+
+    自定义模板的目标集群要走一遍集群分配，同一（租户, region）下的结果相同，实例内按此缓存，
+    批量处理模板时复用同一个实例即可。
+
+    :param enabled_e2b_clusters: 启用 e2b 的集群名
+    """
+
+    def __init__(self, enabled_e2b_clusters: set[str]):
+        self._enabled_e2b_clusters = enabled_e2b_clusters
+        self._allocated: dict[tuple[str, str], set[str]] = {}
+
+    def resolve(self, template: E2BSandboxTemplate) -> set[str]:
+        if template.is_builtin:
+            return self._enabled_e2b_clusters
+
+        app = template.application
+        key = (app.tenant_id, app.region)
+        if key not in self._allocated:
+            try:
+                names = set(list_e2b_clusters(app.tenant_id, app.region).values_list("name", flat=True))
+            except E2BClusterUnavailable:
+                logger.warning("no e2b cluster allocated for tenant %s, skip its custom templates", app.tenant_id)
+                names = set()
+            self._allocated[key] = names
+        return self._allocated[key] & self._enabled_e2b_clusters
 
 
 def count_live_sandboxes(cluster_name: str) -> int:

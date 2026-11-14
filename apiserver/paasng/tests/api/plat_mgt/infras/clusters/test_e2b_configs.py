@@ -21,8 +21,10 @@ from rest_framework import status
 
 from paas_wl.infras.cluster.models import Cluster, ClusterE2BConfig
 from paasng.platform.agent_sandbox.e2b.constants import E2BSandboxStatus
+from paasng.platform.agent_sandbox.e2b.template_sync.status import is_applied
 from paasng.platform.agent_sandbox.models import E2BSandbox
 from paasng.platform.applications.models import Application
+from tests.paasng.platform.agent_sandbox.e2b.helpers import make_builtin_template, mark_applied
 from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -63,6 +65,7 @@ class TestRetrieveE2BConfig:
         assert resp.json() == {
             "control_plane_url": "http://e2b-gateway.bcs-system:8080",
             "data_plane_address": "e2b.example.com",
+            "namespace": "default",
             "enabled": True,
         }
 
@@ -91,8 +94,36 @@ class TestUpsertE2BConfig:
         assert config.control_plane_url == "http://e2b-gateway.bcs-system:8080"
         assert config.data_plane_address == "e2b.example.com"
         assert config.api_key == "real-gateway-key"
+        assert config.namespace == "default"
         assert config.enabled is True
         assert config.tenant_id == init_default_cluster.tenant_id
+
+    def test_create_with_namespace(self, plat_mgt_api_client, init_default_cluster):
+        resp = plat_mgt_api_client.put(
+            _url(init_default_cluster.name),
+            data={
+                "control_plane_url": "http://e2b-gateway.bcs-system:8080",
+                "data_plane_address": "e2b.example.com",
+                "api_key": "real-gateway-key",
+                "namespace": "e2b-system",
+            },
+        )
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        assert ClusterE2BConfig.objects.get(cluster=init_default_cluster).namespace == "e2b-system"
+
+    @pytest.mark.parametrize("namespace", ["E2B", "-e2b", "e2b_system", "a" * 64])
+    def test_create_with_invalid_namespace(self, plat_mgt_api_client, init_default_cluster, namespace):
+        resp = plat_mgt_api_client.put(
+            _url(init_default_cluster.name),
+            data={
+                "control_plane_url": "http://e2b-gateway.bcs-system:8080",
+                "data_plane_address": "e2b.example.com",
+                "api_key": "real-gateway-key",
+                "namespace": namespace,
+            },
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not ClusterE2BConfig.objects.filter(cluster=init_default_cluster).exists()
 
     def test_create_without_api_key(self, plat_mgt_api_client, init_default_cluster):
         resp = plat_mgt_api_client.put(
@@ -134,6 +165,34 @@ class TestUpsertE2BConfig:
         e2b_config.refresh_from_db()
         assert e2b_config.api_key == "rotated-gateway-key"
 
+    def test_update_keeps_namespace(self, plat_mgt_api_client, init_default_cluster, e2b_config):
+        # 前端提交整张表单时会带上原值
+        resp = plat_mgt_api_client.put(
+            _url(init_default_cluster.name),
+            data={
+                "control_plane_url": e2b_config.control_plane_url,
+                "data_plane_address": e2b_config.data_plane_address,
+                "namespace": "default",
+            },
+        )
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_update_cannot_change_namespace(self, plat_mgt_api_client, init_default_cluster, e2b_config):
+        resp = plat_mgt_api_client.put(
+            _url(init_default_cluster.name),
+            data={
+                "control_plane_url": e2b_config.control_plane_url,
+                "data_plane_address": e2b_config.data_plane_address,
+                "api_key": "rotated-gateway-key",
+                "namespace": "e2b-system",
+            },
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+        e2b_config.refresh_from_db()
+        assert e2b_config.namespace == "default"
+        assert e2b_config.api_key == "real-gateway-key"
+
     @pytest.mark.parametrize(
         ("control_plane_url", "data_plane_address"),
         [
@@ -165,6 +224,18 @@ class TestDestroyE2BConfig:
 
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         assert not ClusterE2BConfig.objects.filter(cluster=init_default_cluster).exists()
+
+    def test_destroy_forgets_sync_records(self, plat_mgt_api_client, init_default_cluster, e2b_config):
+        template = make_builtin_template()
+        mark_applied(template, init_default_cluster.name)
+        mark_applied(template, "other-cluster")
+
+        resp = plat_mgt_api_client.delete(_url(init_default_cluster.name))
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        # 换命名空间重建配置后，模板不能凭旧记录显示为可用
+        assert not is_applied(template, init_default_cluster.name)
+        assert is_applied(template, "other-cluster")
 
     @pytest.mark.parametrize("sandbox_status", E2BSandboxStatus.active_values())
     def test_destroy_with_live_sandboxes(

@@ -40,6 +40,25 @@ class E2BTemplateNotFound(E2BError):
     """
 
 
+class E2BTemplateAlreadyExists(E2BError):
+    """模板标识已被占用：同一应用下重名，或与内置模板重名"""
+
+
+class E2BTemplateQuotaExceeded(E2BError):
+    """应用的自定义模板数量已达上限"""
+
+
+class E2BTemplateIDTooLong(E2BError):
+    """模板标识加上应用前缀后，资源名超出长度上限"""
+
+
+class E2BTemplateInUse(E2BError):
+    """模板下还有未终止的沙箱
+
+    删除池子会连带销毁它名下的全部实例，包括用户正在用的沙箱，所以这种情况下拒绝删除。
+    """
+
+
 class E2BClusterUnavailable(E2BError):
     """没有可用于 e2b 沙箱的集群"""
 

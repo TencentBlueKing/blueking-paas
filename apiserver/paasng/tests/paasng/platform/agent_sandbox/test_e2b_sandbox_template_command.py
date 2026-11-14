@@ -21,7 +21,13 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
+from paasng.platform.agent_sandbox.e2b.constants import (
+    DEFAULT_TEMPLATE_CPU_COUNT,
+    DEFAULT_TEMPLATE_MEMORY_MB,
+    E2BSandboxStatus,
+)
 from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate
+from tests.paasng.platform.agent_sandbox.e2b.helpers import IMAGE, make_builtin_template, make_custom_template
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -36,9 +42,7 @@ def _run(*args: str) -> str:
 
 @pytest.fixture()
 def template() -> E2BSandboxTemplate:
-    return E2BSandboxTemplate.objects.create(
-        template_id=TEMPLATE_ID, name="Base", description="old", cpu_count=2, memory_mb=4096
-    )
+    return make_builtin_template(TEMPLATE_ID, name="Base", description="old")
 
 
 @pytest.fixture()
@@ -52,18 +56,21 @@ def write_file(tmp_path):
 
 
 class TestApply:
-    def test_creates_with_defaults(self, write_file):
+    def test_creates_builtin_templates(self, write_file):
         path = write_file(
-            """
+            f"""
 - template_id: e2b-envd
   name: Base
-  cpu_count: 2
-  memory_mb: 4096
-  disk_size_mb: 20480
-  timeout: 600
-  prewarm_count: 0
+  image: {IMAGE}
+  cpu_count: 4
+  memory_mb: 2048
+  env_vars: {{FOO: bar}}
+  workdir: /home/user
+  prewarm_count: 2
+  is_public: true
 - template_id: e2b-browser
   name: Browser
+  image: {IMAGE}
 """
         )
 
@@ -72,80 +79,114 @@ class TestApply:
         assert "Created template 'e2b-envd'" in out
         assert "Created template 'e2b-browser'" in out
         t = E2BSandboxTemplate.objects.get(template_id=TEMPLATE_ID)
-        assert (t.name, t.cpu_count, t.memory_mb, t.disk_size_mb, t.timeout, t.prewarm_count) == (
-            "Base",
+        assert t.is_builtin
+        assert t.resource_name == TEMPLATE_ID
+        assert (t.cpu_count, t.memory_mb, t.env_vars, t.workdir, t.prewarm_count, t.is_public) == (
+            4,
+            2048,
+            {"FOO": "bar"},
+            "/home/user",
             2,
-            4096,
-            20480,
-            600,
-            0,
+            True,
         )
-        assert t.enabled is True
-        assert t.is_public is False
-        assert t.image == ""
+        browser = E2BSandboxTemplate.objects.get(template_id="e2b-browser")
+        assert (browser.cpu_count, browser.memory_mb, browser.disk_size_mb) == (
+            DEFAULT_TEMPLATE_CPU_COUNT,
+            DEFAULT_TEMPLATE_MEMORY_MB,
+            None,
+        )
+        assert (browser.enabled, browser.is_public) == (True, False)
 
     def test_file_overwrites_existing(self, write_file, template):
         """文件即完整定义：文件里没写的字段要回到默认值，而不是沿用库里的旧值。"""
-        path = write_file("- {template_id: e2b-envd, name: Renamed, memory_mb: 8192}")
+        template.cpu_count = 8
+        template.save()
 
-        out = _run("apply", "-f", path)
+        out = _run("apply", "-f", write_file(f"- {{template_id: e2b-envd, name: Renamed, image: {IMAGE}}}"))
 
         template.refresh_from_db()
         assert template.name == "Renamed"
-        assert template.memory_mb == 8192
-        assert template.cpu_count is None
+        assert template.cpu_count == DEFAULT_TEMPLATE_CPU_COUNT
         assert template.description == ""
         assert "Updated template 'e2b-envd'" in out
 
     def test_reapply_is_unchanged(self, write_file):
-        path = write_file("- {template_id: e2b-envd, name: Base, cpu_count: 2}")
+        path = write_file(f"- {{template_id: e2b-envd, name: Base, image: {IMAGE}}}")
         _run("apply", "-f", path)
 
         out = _run("apply", "-f", path)
 
         assert "Template 'e2b-envd' unchanged" in out
 
-    def test_enabled_follows_file(self, write_file, template):
-        path = write_file("- {template_id: e2b-envd, name: Base, enabled: false}")
-        _run("apply", "-f", path)
+    def test_flags_follow_file(self, write_file, template):
+        _run("apply", "-f", write_file(f"- {{template_id: e2b-envd, name: B, image: {IMAGE}, enabled: false}}"))
         template.refresh_from_db()
-        assert template.enabled is False
+        assert (template.enabled, template.is_public) == (False, False)
 
-        _run("apply", "-f", write_file("- {template_id: e2b-envd, name: Base}"))
+        _run("apply", "-f", write_file(f"- {{template_id: e2b-envd, name: B, image: {IMAGE}, is_public: true}}"))
         template.refresh_from_db()
-        assert template.enabled is True
-
-    def test_is_public_follows_file(self, write_file, template):
-        _run("apply", "-f", write_file("- {template_id: e2b-envd, name: Base, is_public: true}"))
-        template.refresh_from_db()
-        assert template.is_public is True
-
-        _run("apply", "-f", write_file("- {template_id: e2b-envd, name: Base}"))
-        template.refresh_from_db()
-        assert template.is_public is False
+        assert (template.enabled, template.is_public) == (True, True)
 
     def test_leaves_undeclared_templates_alone(self, write_file, template):
-        _run("apply", "-f", write_file("- {template_id: e2b-browser, name: Browser}"))
+        _run("apply", "-f", write_file(f"- {{template_id: e2b-browser, name: Browser, image: {IMAGE}}}"))
 
         template.refresh_from_db()
         assert template.enabled is True
 
-    def test_prune_disables_undeclared_templates(self, write_file, template):
-        out = _run("apply", "-f", write_file("- {template_id: e2b-browser, name: Browser}"), "--prune")
+    def test_prune_disables_undeclared_builtin_templates(self, write_file, template, bk_app):
+        custom = make_custom_template(bk_app, "mine")
+
+        out = _run(
+            "apply", "-f", write_file(f"- {{template_id: e2b-browser, name: Browser, image: {IMAGE}}}"), "--prune"
+        )
 
         template.refresh_from_db()
+        custom.refresh_from_db()
         assert template.enabled is False
+        assert custom.enabled is True
         assert "Disabled template 'e2b-envd' (not in file)" in out
+
+    def test_rejects_id_taken_by_custom_template(self, write_file, bk_app):
+        """资源名虽不冲突，但该应用按标识创建沙箱时就分不清用哪个了"""
+        make_custom_template(bk_app, TEMPLATE_ID)
+
+        with pytest.raises(CommandError, match="already used by a custom template"):
+            _run("apply", "-f", write_file(f"- {{template_id: e2b-envd, name: Base, image: {IMAGE}}}"))
+
+        assert not E2BSandboxTemplate.objects.builtins().exists()
+
+    def test_failure_rolls_back_whole_file(self, write_file, template, bk_app):
+        """入库时才发现的冲突也要整份回滚，已处理的项不能留下"""
+        make_custom_template(bk_app, "e2b-browser")
+        path = write_file(
+            f"- {{template_id: e2b-envd, name: Renamed, image: {IMAGE}, cpu_count: 4}}\n"
+            f"- {{template_id: e2b-new, name: New, image: {IMAGE}}}\n"
+            f"- {{template_id: e2b-browser, name: Browser, image: {IMAGE}}}"
+        )
+        out = StringIO()
+
+        with pytest.raises(CommandError, match="e2b-browser"):
+            call_command("e2b_sandbox_template", "apply", "-f", path, stdout=out)
+
+        template.refresh_from_db()
+        assert (template.name, template.cpu_count) == ("Base", 2)
+        assert not E2BSandboxTemplate.objects.filter(template_id="e2b-new").exists()
+        assert out.getvalue() == ""
 
     @pytest.mark.parametrize(
         ("content", "message"),
         [
-            ("- {template_id: e2b-envd, cpu_count: 2}", "name"),
-            ("- {template_id: e2b-envd, name: Base, cpu_count: 0}", "cpu_count"),
-            ("- {template_id: e2b-envd, name: Base, memory_mb: abc}", "memory_mb"),
-            ("- {template_id: e2b-envd, name: Base, prewarm_count: -1}", "prewarm_count"),
-            ("- {template_id: e2b-envd, name: Base, memory: 4096}", "unknown fields: memory"),
-            ("- {template_id: a, name: A}\n- {template_id: a, name: B}", "duplicated template_id"),
+            (f"- {{template_id: e2b-envd, image: {IMAGE}}}", "name"),
+            ("- {template_id: e2b-envd, name: Base}", "image"),
+            (f"- {{template_id: e2b-envd, name: Base, image: {IMAGE}, cpu_count: 0}}", "cpu_count"),
+            (f"- {{template_id: e2b-envd, name: Base, image: {IMAGE}, memory_mb: abc}}", "memory_mb"),
+            (f"- {{template_id: e2b-envd, name: Base, image: {IMAGE}, prewarm_count: -1}}", "prewarm_count"),
+            (f"- {{template_id: e2b--envd, name: Base, image: {IMAGE}}}", "template_id"),
+            (f"- {{template_id: e2b-envd, name: Base, image: {IMAGE}, timeout: 60}}", "unknown fields: timeout"),
+            (
+                f"- {{template_id: ab, name: A, image: {IMAGE}}}\n- {{template_id: ab, name: B, image: x}}",
+                "duplicated",
+            ),
             ("[]", "non-empty list"),
             ("template_id: e2b-envd", "non-empty list"),
             ("- [unclosed", "invalid YAML"),
@@ -159,7 +200,10 @@ class TestApply:
 
     def test_invalid_item_aborts_whole_file(self, write_file, template):
         """一项不合法则整份文件都不生效，不能只应用一半。"""
-        path = write_file("- {template_id: e2b-envd, name: Renamed}\n- {template_id: e2b-browser, cpu_count: 0}")
+        path = write_file(
+            f"- {{template_id: e2b-envd, name: Renamed, image: {IMAGE}}}\n"
+            f"- {{template_id: e2b-browser, name: B, image: {IMAGE}, cpu_count: 0}}"
+        )
 
         with pytest.raises(CommandError, match="item #1"):
             _run("apply", "-f", path)
@@ -188,6 +232,12 @@ class TestEnableDisable:
         with pytest.raises(CommandError, match="does not exist"):
             _run(action, "--template-id", TEMPLATE_ID)
 
+    def test_custom_template_is_out_of_reach(self, bk_app):
+        make_custom_template(bk_app, TEMPLATE_ID)
+
+        with pytest.raises(CommandError, match="does not exist"):
+            _run("disable", "--template-id", TEMPLATE_ID)
+
 
 class TestDelete:
     def test_requires_confirmation(self, template):
@@ -196,20 +246,35 @@ class TestDelete:
 
         assert E2BSandboxTemplate.objects.filter(template_id=TEMPLATE_ID).exists()
 
-    def test_delete_keeps_running_sandboxes(self, template, bk_app):
-        sandbox = E2BSandbox.objects.create(
+    def test_deletes(self, template):
+        out = _run("delete", "--template-id", TEMPLATE_ID, "--yes")
+
+        assert "Deleted template 'e2b-envd'" in out
+        assert not E2BSandboxTemplate.objects.filter(template_id=TEMPLATE_ID).exists()
+
+    def test_refuses_while_sandboxes_are_active(self, template, bk_app):
+        """删除 SandboxPool 会连带销毁它名下正在运行的沙箱"""
+        E2BSandbox.objects.create(
+            sandbox_id="e2b-envd-20", application=bk_app, cluster_name="e2b-cluster", template_id=TEMPLATE_ID
+        )
+
+        with pytest.raises(CommandError, match="active sandboxes"):
+            _run("delete", "--template-id", TEMPLATE_ID, "--yes")
+
+        assert E2BSandboxTemplate.objects.filter(template_id=TEMPLATE_ID).exists()
+
+    def test_terminated_sandboxes_do_not_block(self, template, bk_app):
+        E2BSandbox.objects.create(
             sandbox_id="e2b-envd-20",
             application=bk_app,
             cluster_name="e2b-cluster",
             template_id=TEMPLATE_ID,
-            tenant_id=bk_app.tenant_id,
+            status=E2BSandboxStatus.TERMINATED.value,
         )
 
         _run("delete", "--template-id", TEMPLATE_ID, "--yes")
 
         assert not E2BSandboxTemplate.objects.filter(template_id=TEMPLATE_ID).exists()
-        sandbox.refresh_from_db()
-        assert sandbox.template_id == TEMPLATE_ID
 
     def test_missing_template(self):
         with pytest.raises(CommandError, match="does not exist"):
@@ -217,14 +282,15 @@ class TestDelete:
 
 
 class TestList:
-    def test_lists_all_with_state(self, template):
-        E2BSandboxTemplate.objects.create(template_id="e2b-legacy", name="Legacy", enabled=False, is_public=True)
+    def test_lists_builtin_templates_with_state(self, template, bk_app):
+        make_builtin_template("e2b-legacy", enabled=False, is_public=True)
+        make_custom_template(bk_app, "mine")
 
         lines = _run("list").splitlines()
 
         assert len(lines) == 2
         assert lines[0].startswith("e2b-envd\t")
-        assert "cpu_count=2" in lines[0]
+        assert f"image={IMAGE}" in lines[0]
         assert "enabled=True" in lines[0]
         assert "is_public=False" in lines[0]
         assert lines[1].startswith("e2b-legacy\t")

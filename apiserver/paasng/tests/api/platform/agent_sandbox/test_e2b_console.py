@@ -28,8 +28,9 @@ from rest_framework.test import APIClient
 from paasng.platform.agent_sandbox.e2b import sandboxes
 from paasng.platform.agent_sandbox.e2b.constants import MAX_ACTIVE_KEYS_PER_APP, E2BSandboxStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BClusterNotConfigured, E2BGatewayTimeout
-from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandbox, E2BSandboxTemplate
+from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandbox
 from paasng.platform.applications.models import Application
+from tests.paasng.platform.agent_sandbox.e2b.helpers import IMAGE, make_builtin_template
 from tests.utils.auth import create_user
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -221,22 +222,9 @@ class TestSandboxDestroy:
 class TestTemplates:
     @pytest.fixture()
     def templates(self):
-        E2BSandboxTemplate.objects.create(
-            template_id="e2b-envd",
-            name="Base",
-            description="基础镜像",
-            image="mirrors.example.com/e2b/envd:v1",
-            cpu_count=2,
-            memory_mb=4096,
-            disk_size_mb=20480,
-            timeout=600,
-            network="内网",
-            region="ieod",
-            prewarm_count=3,
-            is_public=True,
-        )
-        E2BSandboxTemplate.objects.create(template_id="e2b-legacy", name="Legacy", enabled=False, is_public=True)
-        E2BSandboxTemplate.objects.create(template_id="e2b-internal", name="Internal")
+        make_builtin_template("e2b-envd", name="Base", description="基础镜像", prewarm_count=3, is_public=True)
+        make_builtin_template("e2b-legacy", enabled=False, is_public=True)
+        make_builtin_template("e2b-internal")
 
     def test_list_only_enabled_and_public(self, api_client, bk_app, templates):
         resp = api_client.get(_template_list_url(bk_app))
@@ -250,7 +238,6 @@ class TestTemplates:
                 "cpu_count": 2,
                 "memory_mb": 4096,
                 "disk_size_mb": 20480,
-                "timeout": 600,
             }
         ]
 
@@ -266,9 +253,7 @@ class TestTemplates:
         assert resp.status_code == status.HTTP_200_OK
         body = resp.json()
         assert body["template_id"] == "e2b-envd"
-        assert body["image"] == "mirrors.example.com/e2b/envd:v1"
-        assert body["network"] == "内网"
-        assert body["region"] == "ieod"
+        assert body["image"] == IMAGE
         assert body["prewarm_count"] == 3
 
     @pytest.mark.parametrize("template_id", ["e2b-legacy", "e2b-internal", "not-registered"])

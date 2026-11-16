@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Command to manage the e2b sandbox templates registered on the platform."""
+"""Command to manage the e2b builtin sandbox templates."""
 
 from pathlib import Path
 
@@ -24,25 +24,17 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from rest_framework import serializers
 
+from paasng.platform.agent_sandbox.e2b import templates
+from paasng.platform.agent_sandbox.e2b.exceptions import (
+    E2BTemplateAlreadyExists,
+    E2BTemplateInUse,
+)
+from paasng.platform.agent_sandbox.e2b.serializers import E2BBuiltinTemplateCreateInputSLZ
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate
 
 
-class _TemplateSpecSLZ(serializers.Serializer):
+class _TemplateSpecSLZ(E2BBuiltinTemplateCreateInputSLZ):
     """模板声明文件中的一项。未声明的字段取默认值，即文件就是该模板的完整定义。"""
-
-    template_id = serializers.CharField(max_length=128)
-    name = serializers.CharField(max_length=64)
-    description = serializers.CharField(allow_blank=True, default="")
-    image = serializers.CharField(max_length=256, allow_blank=True, default="")
-    cpu_count = serializers.IntegerField(min_value=1, allow_null=True, default=None)
-    memory_mb = serializers.IntegerField(min_value=1, allow_null=True, default=None)
-    disk_size_mb = serializers.IntegerField(min_value=1, allow_null=True, default=None)
-    timeout = serializers.IntegerField(min_value=1, allow_null=True, default=None)
-    network = serializers.CharField(max_length=128, allow_blank=True, default="")
-    region = serializers.CharField(max_length=64, allow_blank=True, default="")
-    prewarm_count = serializers.IntegerField(min_value=0, allow_null=True, default=None)
-    enabled = serializers.BooleanField(default=True)
-    is_public = serializers.BooleanField(default=False)
 
     def to_internal_value(self, data):
         # 拼错的字段名会被静默丢弃并回落到默认值，比报错更难发现
@@ -59,24 +51,23 @@ def _format_errors(errors: dict | list) -> str:
 
 
 class Command(BaseCommand):
-    """Apply, enable, disable, delete or list the e2b sandbox templates.
+    """Apply, enable, disable, delete or list the e2b builtin sandbox templates.
 
-    Only enabled templates can be used by the e2b SDK to create sandboxes. Among them,
-    only the public ones are shown on the developer center, a non-public template is
-    still usable by whoever knows its ID. The template itself lives on the e2b
-    gateway, the ``template_id`` must match the gateway's.
+    Builtin templates are usable by every application. Only the public templates are shown on
+    the developer center, a non-public one is still usable by whoever knows its ID.
 
     The templates are declared in a YAML file, a list of items with these keys:
-    ``template_id`` and ``name`` (required), ``description``, ``image``, ``cpu_count``,
-    ``memory_mb``, ``disk_size_mb``, ``timeout``, ``network``, ``region``,
-    ``prewarm_count``, ``enabled`` (default true) and ``is_public`` (default false).
-    For example:
+    ``template_id``, ``name`` and ``image`` (required), ``description``, ``cpu_count``,
+    ``memory_mb``, ``disk_size_mb``, ``env_vars``, ``workdir``, ``prewarm_count``,
+    ``enabled`` (default true) and ``is_public`` (default false). For example:
 
         - template_id: e2b-envd
           name: Base
+          image: mirrors.tencent.com/bcs/cube-base-envd:2026.16
           is_public: true
           cpu_count: 2
           memory_mb: 4096
+          prewarm_count: 1
 
     Example:
         python manage.py e2b_sandbox_template apply -f e2b_templates.yaml
@@ -86,7 +77,7 @@ class Command(BaseCommand):
         python manage.py e2b_sandbox_template list
     """
 
-    help = "Manage the e2b sandbox templates registered on the platform"
+    help = "Manage the e2b builtin sandbox templates"
 
     def add_arguments(self, parser):
         subparsers = parser.add_subparsers(dest="action", required=True)
@@ -101,11 +92,11 @@ class Command(BaseCommand):
             sub = subparsers.add_parser(action, help=f"{action.capitalize()} a template")
             sub.add_argument("--template-id", dest="template_id", required=True)
 
-        delete = subparsers.add_parser("delete", help="Delete a template, running sandboxes are not affected")
+        delete = subparsers.add_parser("delete", help="Delete a template, refused while it still has active sandboxes")
         delete.add_argument("--template-id", dest="template_id", required=True)
         delete.add_argument("--yes", action="store_true", help="Confirm the deletion")
 
-        subparsers.add_parser("list", help="List all templates")
+        subparsers.add_parser("list", help="List all builtin templates")
 
     def handle(self, *args, **options):
         action = options["action"]
@@ -120,33 +111,36 @@ class Command(BaseCommand):
 
     def _apply(self, file: str, prune: bool):
         specs = self._load_specs(file)
-        existing = {t.template_id: t for t in E2BSandboxTemplate.objects.all()}
-
-        # 先校验整份文件再落库，并放在同一事务里，避免只生效一半
+        # 整份文件一起生效：任一项失败全部回滚，结果等提交后再输出
+        messages: list[str] = []
         with transaction.atomic():
+            existing = {t.template_id: t for t in E2BSandboxTemplate.objects.builtins()}
+
             for template_id, spec in specs.items():
                 template = existing.get(template_id)
                 if template is None:
-                    E2BSandboxTemplate.objects.create(template_id=template_id, **spec)
-                    self.stdout.write(self.style.SUCCESS(f"Created template '{template_id}'"))
+                    try:
+                        templates.create_builtin_template(template_id, **spec)
+                    except E2BTemplateAlreadyExists:
+                        raise CommandError(f"template_id '{template_id}' is already used by a custom template")
+                    messages.append(self.style.SUCCESS(f"Created template '{template_id}'"))
                     continue
 
-                changed = [f for f, v in spec.items() if getattr(template, f) != v]
+                changed = templates.update_template(template, **spec)
                 if not changed:
-                    self.stdout.write(f"Template '{template_id}' unchanged")
+                    messages.append(f"Template '{template_id}' unchanged")
                     continue
-                for field in changed:
-                    setattr(template, field, spec[field])
-                template.save(update_fields=[*changed, "updated"])
-                self.stdout.write(self.style.SUCCESS(f"Updated template '{template_id}': {', '.join(changed)}"))
+                messages.append(self.style.SUCCESS(f"Updated template '{template_id}': {', '.join(changed)}"))
 
             if prune:
                 for template_id, template in existing.items():
                     if template_id in specs or not template.enabled:
                         continue
-                    template.enabled = False
-                    template.save(update_fields=["enabled", "updated"])
-                    self.stdout.write(self.style.WARNING(f"Disabled template '{template_id}' (not in file)"))
+                    templates.update_template(template, enabled=False)
+                    messages.append(self.style.WARNING(f"Disabled template '{template_id}' (not in file)"))
+
+        for message in messages:
+            self.stdout.write(message)
 
     @staticmethod
     def _load_specs(file: str) -> dict[str, dict]:
@@ -177,8 +171,7 @@ class Command(BaseCommand):
 
     def _set_enabled(self, template_id: str, enabled: bool):
         template = self._get_template(template_id)
-        template.enabled = enabled
-        template.save(update_fields=["enabled", "updated"])
+        templates.update_template(template, enabled=enabled)
         state = "enabled" if enabled else "disabled"
         self.stdout.write(self.style.SUCCESS(f"Template '{template_id}' is {state}"))
 
@@ -186,24 +179,28 @@ class Command(BaseCommand):
         template = self._get_template(template_id)
         if not confirmed:
             raise CommandError(f"deleting template '{template_id}' needs --yes to confirm")
-        template.delete()
+        try:
+            templates.delete_template(template)
+        except E2BTemplateInUse:
+            raise CommandError(f"template '{template_id}' still has active sandboxes, destroy them first")
         self.stdout.write(self.style.SUCCESS(f"Deleted template '{template_id}'"))
 
     def _list(self):
-        templates = E2BSandboxTemplate.objects.all()
-        if not templates:
+        items = E2BSandboxTemplate.objects.builtins()
+        if not items:
             self.stdout.write("No templates registered")
             return
 
-        for t in templates:
+        for t in items:
             self.stdout.write(
-                f"{t.template_id}\tname={t.name}\tcpu_count={t.cpu_count}\tmemory_mb={t.memory_mb}\t"
-                f"disk_size_mb={t.disk_size_mb}\ttimeout={t.timeout}\tenabled={t.enabled}\tis_public={t.is_public}"
+                f"{t.template_id}\tname={t.name}\timage={t.image}\tcpu_count={t.cpu_count}\t"
+                f"memory_mb={t.memory_mb}\tdisk_size_mb={t.disk_size_mb}\tprewarm_count={t.prewarm_count}\t"
+                f"enabled={t.enabled}\tis_public={t.is_public}"
             )
 
     @staticmethod
     def _get_template(template_id: str) -> E2BSandboxTemplate:
-        try:
-            return E2BSandboxTemplate.objects.get(template_id=template_id)
-        except E2BSandboxTemplate.DoesNotExist:
+        template = E2BSandboxTemplate.objects.builtins().filter(template_id=template_id).first()
+        if template is None:
             raise CommandError(f"Template '{template_id}' does not exist")
+        return template

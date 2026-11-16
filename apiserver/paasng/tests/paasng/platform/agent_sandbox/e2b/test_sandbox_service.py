@@ -165,6 +165,15 @@ class TestCreate:
         assert record.status == E2BSandboxStatus.RUNNING.value
         assert record.expired_at is not None
 
+    @pytest.mark.parametrize("backfilled", ["", "other-tpl"])
+    def test_records_sent_template_id_regardless_of_backfill(self, gateway, bk_app, backfilled):
+        """响应里的 templateID 是网关按实例标签回填的，回填不上或不一致时都以平台发出的为准"""
+        gateway.create_response = _create_response(templateID=backfilled)
+
+        sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd"})
+
+        assert E2BSandbox.objects.get(sandbox_id=SANDBOX_ID).template_id == "e2b-envd"
+
     def test_rewrites_data_plane_address(self, gateway, bk_app):
         """集群内域名换成对外地址，SDK 拿它拼数据面 URL。"""
         resp = sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd"})

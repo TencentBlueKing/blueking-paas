@@ -39,6 +39,14 @@ class Group(OperationGroup):
         path="/api/v2/inner/gateways/{gateway_name}/",
     )
 
+    # 按用户名批量删除网关维护人
+    delete_gateway_maintainers = bind_property(
+        Operation,
+        name="delete_gateway_maintainers",
+        method="DELETE",
+        path="/api/v2/inner/gateways/{gateway_name}/maintainers/",
+    )
+
     # 获取网关资源列表（权限申请用）
     list_gateway_permission_resources = bind_property(
         Operation,

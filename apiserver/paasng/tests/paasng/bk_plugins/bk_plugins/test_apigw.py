@@ -23,12 +23,15 @@ from django_dynamic_fixture import G
 
 from paasng.bk_plugins.bk_plugins.apigw import (
     PluginDefaultAPIGateway,
+    safe_remove_apigw_maintainers,
     safe_sync_apigw,
     safe_sync_apigw_maintainers,
     set_distributors,
 )
 from paasng.bk_plugins.bk_plugins.exceptions import PluginApiGatewayServiceError
 from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor
+from paasng.infras.iam.helpers import add_role_members
+from paasng.platform.applications.constants import ApplicationRole
 
 pytestmark = pytest.mark.django_db
 
@@ -156,6 +159,81 @@ class TestSafeSyncApigwMaintainers:
             return_value=fake_bad_client,
         ):
             safe_sync_apigw_maintainers(bk_plugin_app)
+
+
+class TestSafeRemoveApigwMaintainers:
+    """成员减少后, 从网关维护人名单中移除这些人
+
+    网关的 sync 更新分支只做并集, 无法完成移除, 因此必须显式调用删除接口。
+    """
+
+    @pytest.fixture()
+    def synced_app(self, bk_plugin_app):
+        """网关已创建（已首次部署）的插件应用"""
+        bk_plugin_app.bk_plugin_profile.api_gw_id = 1
+        bk_plugin_app.bk_plugin_profile.api_gw_name = "bp-foo"
+        bk_plugin_app.bk_plugin_profile.save()
+        return bk_plugin_app
+
+    @pytest.fixture()
+    def delete(self, mocker):
+        """替换网关删除调用, 关注最终提交给网关的名单"""
+        return mocker.patch(
+            "paasng.bk_plugins.bk_plugins.apigw.ApiGatewayClient.delete_gateway_maintainers",
+            return_value=[],
+        )
+
+    def test_skip_when_not_synced(self, bk_plugin_app, delete):
+        """网关尚未创建时无需删除"""
+        safe_remove_apigw_maintainers(bk_plugin_app, ["leaver"])
+
+        delete.assert_not_called()
+
+    def test_remove_when_no_maintainer_role_remains(self, synced_app, delete):
+        """退出后不再具备管理员/开发者角色时, 应移除网关维护人"""
+        safe_remove_apigw_maintainers(synced_app, ["leaver"])
+
+        delete.assert_called_once_with(gateway_name="bp-foo", maintainers=["leaver"])
+
+    def test_keep_when_still_developer(self, synced_app, delete):
+        """仍保留开发者角色时, 用户还在网关维护人名单内, 不应移除"""
+        add_role_members(synced_app.code, ApplicationRole.DEVELOPER, "leaver")
+
+        safe_remove_apigw_maintainers(synced_app, ["leaver"])
+
+        delete.assert_not_called()
+
+    def test_keep_when_still_administrator(self, synced_app, delete):
+        """仍保留管理员角色时, 不应移除"""
+        add_role_members(synced_app.code, ApplicationRole.ADMINISTRATOR, "leaver")
+
+        safe_remove_apigw_maintainers(synced_app, ["leaver"])
+
+        delete.assert_not_called()
+
+    def test_remove_when_only_operator_remains(self, synced_app, delete):
+        """只残留运营者角色时, 该用户不在网关维护人名单内, 仍应移除"""
+        add_role_members(synced_app.code, ApplicationRole.OPERATOR, "leaver")
+
+        safe_remove_apigw_maintainers(synced_app, ["leaver"])
+
+        delete.assert_called_once_with(gateway_name="bp-foo", maintainers=["leaver"])
+
+    def test_only_remove_users_without_maintainer_role(self, synced_app, delete):
+        """批量移除时只提交仍不具备维护人角色的用户, 且合并为一次请求"""
+        add_role_members(synced_app.code, ApplicationRole.DEVELOPER, "still-dev")
+
+        safe_remove_apigw_maintainers(synced_app, ["leaver", "still-dev"])
+
+        delete.assert_called_once_with(gateway_name="bp-foo", maintainers=["leaver"])
+
+    def test_skip_when_everyone_kept(self, synced_app, delete):
+        """所有人仍具备维护人角色时, 不应调用删除接口"""
+        add_role_members(synced_app.code, ApplicationRole.DEVELOPER, "leaver")
+
+        safe_remove_apigw_maintainers(synced_app, ["leaver"])
+
+        delete.assert_not_called()
 
 
 class TestSetDistributors:

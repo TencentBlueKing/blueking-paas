@@ -80,6 +80,23 @@ class ApiGatewayClient:
 
         return res.get("data", {})
 
+    def delete_gateway_maintainers(self, gateway_name: str, maintainers: list[str]) -> list[str]:
+        """按用户名批量删除网关维护人
+
+        :param gateway_name: 网关名称
+        :param maintainers: 待删除的用户名列表, 网关侧去重后最多支持 50 个
+        :return: 实际被删除的用户名列表
+        """
+        try:
+            res = self.client.delete_gateway_maintainers(
+                params={"maintainers": ",".join(maintainers)},
+                path_params={"gateway_name": gateway_name},
+            )
+        except (APIGatewayResponseError, ResponseError) as e:
+            raise ApiGatewayServiceError(f"delete gateway maintainers error: {e}")
+
+        return res.get("data", {}).get("deleted", [])
+
     def list_gateway_permission_resources(
         self,
         app_code: str,

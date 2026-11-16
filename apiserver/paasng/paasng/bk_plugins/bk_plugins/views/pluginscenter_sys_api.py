@@ -398,9 +398,11 @@ class SysPluginMembersViewSet(viewsets.ViewSet):
             need_to_add[role].append(username)
             current_members.add(username)
 
+        removed_users: set[str] = set()
         # 删除用户
         if redundant_users := existed_members.keys() - current_members:
             remove_user_all_roles(app_code=application.code, usernames=list(redundant_users))
+            removed_users |= set(redundant_users)
         # 添加用户权限
         for role, usernames in need_to_add.items():
             add_role_members(app_code=application.code, role=role, usernames=usernames)
@@ -408,7 +410,10 @@ class SysPluginMembersViewSet(viewsets.ViewSet):
         for username, roles in need_to_clean.items():
             for role in roles:
                 delete_role_members(app_code=application.code, role=role, usernames=[username])
-        application_member_updated.send(sender=application, application=application)
+            removed_users.add(username)
+        application_member_updated.send(
+            sender=application, application=application, removed_usernames=list(removed_users)
+        )
         sync_developers_to_sentry.delay(application.id)
         return Response(data={})
 
@@ -446,7 +451,7 @@ class SysPluginMembersViewSet(viewsets.ViewSet):
 
         delete_role_members(app_code=application.code, role=role_enum, usernames=usernames)
 
-        application_member_updated.send(sender=application, application=application)
+        application_member_updated.send(sender=application, application=application, removed_usernames=usernames)
         sync_developers_to_sentry.delay(application.id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 

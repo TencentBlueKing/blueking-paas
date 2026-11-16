@@ -26,7 +26,7 @@ from paasng.platform.engine.deploy.archive import start_archive_step
 from paasng.platform.engine.exceptions import OfflineOperationExistError
 from paasng.platform.engine.models import Deployment
 
-from .apigw import safe_sync_apigw_maintainers
+from .apigw import safe_remove_apigw_maintainers, safe_sync_apigw_maintainers
 from .models import is_bk_plugin
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,23 @@ def sync_plugin_apigw_maintainers(app_code: str):
         return
 
     safe_sync_apigw_maintainers(application)
+
+
+@shared_task
+def remove_plugin_apigw_maintainers(app_code: str, usernames: list[str]):
+    """插件应用成员减少后, 从 API 网关的维护者名单中移除这些人
+
+    网关的 sync 只对 maintainers 做并集, 无法完成 "移除", 因此需要单独调用删除接口.
+
+    :param str app_code: 发生成员变更的应用 ID
+    :param usernames: 本次被移除了部分角色的用户
+    """
+    application = Application.objects.get(code=app_code)
+    if not is_bk_plugin(application):
+        logger.debug('Removing apigw maintainers: "%s" is not plugin type, will not proceed.', app_code)
+        return
+
+    safe_remove_apigw_maintainers(application, usernames)
 
 
 @shared_task

@@ -110,7 +110,7 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
                 raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
             sync_developers_to_sentry.delay(application.id)
-            application_member_updated.send(sender=application, application=application)
+            application_member_updated.send(sender=application, application=application, removed_usernames=[username])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -127,7 +127,9 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         JustLeaveAppManager(request.user.username).add(application.code)
 
         sync_developers_to_sentry.delay(application.id)
-        application_member_updated.send(sender=application, application=application)
+        application_member_updated.send(
+            sender=application, application=application, removed_usernames=[request.user.username]
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, *args, **kwargs):
@@ -144,7 +146,7 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         JustLeaveAppManager(username).add(application.code)
 
         sync_developers_to_sentry.delay(application.id)
-        application_member_updated.send(sender=application, application=application)
+        application_member_updated.send(sender=application, application=application, removed_usernames=[username])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def check_admin_count(self, app_code: str, username: str):

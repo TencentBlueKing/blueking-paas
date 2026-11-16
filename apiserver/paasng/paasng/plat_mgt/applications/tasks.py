@@ -37,5 +37,5 @@ def remove_temp_admin(app_code: str, username: str):
     # 将该应用 Code 标记为刚退出，避免出现退出用户组，权限中心权限未同步的情况
     JustLeaveAppManager(username).add(app_code)
     sync_developers_to_sentry.delay(application.id)
-    application_member_updated.send(sender=application, application=application)
+    application_member_updated.send(sender=application, application=application, removed_usernames=[username])
     logger.info(f"Successfully removed temporary admin permission for user {username} from app {app_code}")

@@ -216,6 +216,55 @@ class TestMembershipViewset:
         if code is not ...:
             assert response.json()["code"] == code
 
+    def test_delete_syncs_apigw_maintainers(self, api_client, bk_app, bk_user, another_user):
+        """删除成员后, 应触发网关维护人的清理 (网关 sync 只做并集, 无法移除)"""
+        from paasng.infras.iam.helpers import add_role_members
+        from paasng.utils.basic import get_username_by_bkpaas_user_id
+
+        add_role_members(bk_app.code, ApplicationRole.DEVELOPER, get_username_by_bkpaas_user_id(another_user.pk))
+        url = reverse("api.applications.members.detail", kwargs=dict(code=bk_app.code, user_id=another_user.pk))
+
+        with mock.patch("paasng.platform.applications.views.member.application_member_updated") as signal:
+            api_client.force_authenticate(bk_user)
+            response = api_client.delete(url)
+
+        assert response.status_code == 204
+        signal.send.assert_called_once_with(
+            sender=bk_app, application=bk_app, removed_usernames=[get_username_by_bkpaas_user_id(another_user.pk)]
+        )
+
+    def test_leave_syncs_apigw_maintainers(self, api_client, bk_app, bk_user, another_user):
+        """用户主动退出应用后, 应触发网关维护人的清理"""
+        from paasng.infras.iam.helpers import add_role_members
+        from paasng.utils.basic import get_username_by_bkpaas_user_id
+
+        # 保证退出后仍有管理员, 否则会被 check_admin_count 拦截
+        add_role_members(bk_app.code, ApplicationRole.ADMINISTRATOR, get_username_by_bkpaas_user_id(another_user.pk))
+        url = reverse("api.applications.members.leave", kwargs=dict(code=bk_app.code))
+
+        with mock.patch("paasng.platform.applications.views.member.application_member_updated") as signal:
+            api_client.force_authenticate(bk_user)
+            response = api_client.post(url)
+
+        assert response.status_code == 204
+        signal.send.assert_called_once_with(sender=bk_app, application=bk_app, removed_usernames=[bk_user.username])
+
+    def test_update_role_syncs_apigw_maintainers(self, api_client, bk_app, bk_user, another_user):
+        """更换角色后, 该用户的维护人身份可能改变, 应触发清理"""
+        from paasng.infras.iam.helpers import add_role_members
+        from paasng.utils.basic import get_username_by_bkpaas_user_id
+
+        username = get_username_by_bkpaas_user_id(another_user.pk)
+        add_role_members(bk_app.code, ApplicationRole.ADMINISTRATOR, username)
+        url = reverse("api.applications.members.detail", kwargs=dict(code=bk_app.code, user_id=another_user.pk))
+
+        with mock.patch("paasng.platform.applications.views.member.application_member_updated") as signal:
+            api_client.force_authenticate(bk_user)
+            response = api_client.put(url, data={"role": {"id": ApplicationRole.OPERATOR.value}})
+
+        assert response.status_code == 204
+        signal.send.assert_called_once_with(sender=bk_app, application=bk_app, removed_usernames=[username])
+
     def test_level_last_admin(self, api_client, bk_app, bk_user, another_user):
         from paasng.infras.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
 
@@ -1056,7 +1105,7 @@ class TestListEvaluation:
         results = response_data["results"]
         assert len(results["applications"]) == 1
 
-        collected_at = datetime.fromisoformat(results["collected_at"].replace("Z", "+00:00"))
+        collected_at = datetime.fromisoformat(results["collected_at"])
         assert collected_at == latest_collection_task.start_at
 
         app_data = results["applications"][0]

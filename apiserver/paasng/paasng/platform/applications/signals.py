@@ -35,7 +35,9 @@ prepare_change_application_name = Signal()
 # providing_args: [offline_instance: OfflineOperation, environment: str]
 module_environment_offline_success = Signal()
 
-# providing_args: [application: Application]
+# providing_args: [application: Application, removed_usernames: Optional[Collection[str]]]
+#
+# removed_usernames: 本次被移除 (部分或全部角色) 的用户名, 仅 "成员减少" 的调用方传入
 application_member_updated = Signal()
 
 # providing_args: [application: Application, new_module: Module, old_module: Module]

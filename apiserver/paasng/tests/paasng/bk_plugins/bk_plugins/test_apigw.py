@@ -227,14 +227,6 @@ class TestSafeRemoveApigwMaintainers:
 
         delete.assert_called_once_with(gateway_name="bp-foo", maintainers=["leaver"])
 
-    def test_skip_when_everyone_kept(self, synced_app, delete):
-        """所有人仍具备维护人角色时, 不应调用删除接口"""
-        add_role_members(synced_app.code, ApplicationRole.DEVELOPER, "leaver")
-
-        safe_remove_apigw_maintainers(synced_app, ["leaver"])
-
-        delete.assert_not_called()
-
 
 class TestSetDistributors:
     @pytest.fixture

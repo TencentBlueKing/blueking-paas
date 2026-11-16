@@ -501,18 +501,18 @@ class E2BSandboxTemplateManager(models.Manager):
         """取出应用可以用来创建沙箱的模板。
 
         内置模板不看 is_public：不公开只影响页面展示，服务自用的模板要能通过 SDK 使用。
-        自定义模板标识不会与内置模板重名，两个条件至多命中一个。
 
         :raises E2BTemplateNotFound: 模板不存在、已停用，或是其他应用的自定义模板
+        :raises MultipleObjectsReturned: 自定义模板与内置模板同名
         """
-        template = (
-            self.filter(enabled=True, template_id=template_id)
-            .filter(models.Q(application__isnull=True) | models.Q(application=application))
-            .first()
-        )
-        if template is None:
+        try:
+            return (
+                self.filter(enabled=True, template_id=template_id)
+                .filter(models.Q(application__isnull=True) | models.Q(application=application))
+                .get()
+            )
+        except self.model.DoesNotExist:
             raise E2BTemplateNotFound(f"template {template_id} is not available")
-        return template
 
 
 class E2BSandboxTemplate(UuidAuditedModel):
@@ -528,7 +528,8 @@ class E2BSandboxTemplate(UuidAuditedModel):
     [multi-tenancy] 内置模板全平台共享，不区分租户；自定义模板的 tenant_id 取所属应用的租户。
     """
 
-    # 为空即内置模板。应用删除是软删除，自定义模板随之由清理流程删掉，不会因此变成内置模板
+    # 为空即内置模板。应用删除是软删除，自定义模板要由清理流程删掉，不会因此变成内置模板
+    # TODO 接入自定义模板时，在 ApplicationCleaner 中调用 templates.delete_custom_templates_of
     application = models.ForeignKey(
         Application,
         on_delete=models.CASCADE,
@@ -536,6 +537,8 @@ class E2BSandboxTemplate(UuidAuditedModel):
         null=True,
         related_name="e2b_sandbox_templates",
     )
+    # 用户登记的原始 template_id，不同的应用可能有相同的 template_id。
+    # 便于用户使用登记的原始值在 SDK 中创建沙箱实例。
     template_id = models.CharField(verbose_name="模板标识", max_length=64, help_text="SDK 创建沙箱时传入的 templateID")
     # 内置模板与 template_id 相同，自定义模板为 {应用}--{template_id}。自定义模板的唯一性也由它保证
     resource_name = models.CharField(

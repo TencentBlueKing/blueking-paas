@@ -19,8 +19,14 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.platform.agent_sandbox.e2b import templates
-from paasng.platform.agent_sandbox.e2b.constants import RESOURCE_NAME_MAX_LENGTH
-from paasng.platform.agent_sandbox.e2b.exceptions import E2BTemplateAlreadyExists, E2BTemplateIDTooLong
+from paasng.platform.agent_sandbox.e2b.constants import RESOURCE_NAME_MAX_LENGTH, E2BSandboxStatus
+from paasng.platform.agent_sandbox.e2b.exceptions import (
+    E2BAppCodeTooLong,
+    E2BTemplateAlreadyExists,
+    E2BTemplateIDTooLong,
+    E2BTemplateInUse,
+    E2BTemplateNotFound,
+)
 from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate
 from paasng.platform.applications.models import Application
 
@@ -64,6 +70,22 @@ class TestCreate:
         template = templates.create_custom_template(app, "a" * 23, **SPEC)
         assert len(template.resource_name) == RESOURCE_NAME_MAX_LENGTH
 
+    def test_custom_allows_min_length_id_with_longest_usable_prefix(self):
+        """前缀 61 个字符，余下的长度恰好放得下最短的标识"""
+        app = G(Application, code="a" * 7 + "_" * 13)
+        assert len(templates.get_custom_resource_prefix(app)) == 61
+
+        with pytest.raises(E2BTemplateIDTooLong, match="at most 2 characters"):
+            templates.create_custom_template(app, "abc", **SPEC)
+        assert templates.create_custom_template(app, "ab", **SPEC).resource_name.endswith("--ab")
+
+    @pytest.mark.parametrize("code", ["a" * 4 + "_" * 14, "a" + "_" * 19])
+    def test_custom_rejects_app_whose_prefix_leaves_no_room(self, code):
+        app = G(Application, code=code)
+
+        with pytest.raises(E2BAppCodeTooLong):
+            templates.create_custom_template(app, "ab", **SPEC)
+
     def test_custom_ignores_prewarm_count(self, bk_app):
         template = templates.create_custom_template(bk_app, "mine", prewarm_count=3, **SPEC)
 
@@ -89,6 +111,62 @@ class TestUpdate:
         assert changed == []
         template.refresh_from_db()
         assert (template.prewarm_count, template.is_public, template.enabled) == (0, False, True)
+
+
+class TestGetUsable:
+    def test_rejects_custom_and_builtin_with_same_id(self, bk_app, bk_app_full):
+        """创建时的重名检查是先查后写，并发下可能留下同名的内置与自定义模板"""
+        builtin = make_builtin_template("a")
+        make_custom_template(bk_app, "a")
+
+        with pytest.raises(E2BSandboxTemplate.MultipleObjectsReturned):
+            E2BSandboxTemplate.objects.get_usable(bk_app, "a")
+        assert E2BSandboxTemplate.objects.get_usable(bk_app_full, "a") == builtin
+
+    def test_custom_template_of_other_app_is_not_usable(self, bk_app, bk_app_full):
+        make_custom_template(bk_app, "a")
+
+        with pytest.raises(E2BTemplateNotFound):
+            E2BSandboxTemplate.objects.get_usable(bk_app_full, "a")
+
+
+class TestDelete:
+    def test_custom_template_in_use_is_rejected(self, bk_app):
+        """沙箱登记的是资源名，自定义模板的资源名与标识不同"""
+        template = make_custom_template(bk_app, "a")
+        assert template.resource_name != template.template_id
+        E2BSandbox.objects.create(
+            sandbox_id="sb-1", application=bk_app, cluster_name="c", template_id=template.resource_name
+        )
+
+        with pytest.raises(E2BTemplateInUse):
+            templates.delete_template(template)
+        assert E2BSandboxTemplate.objects.filter(pk=template.pk).exists()
+
+    def test_same_template_id_of_other_app_does_not_block(self, bk_app, bk_app_full):
+        mine = make_custom_template(bk_app, "a")
+        theirs = make_custom_template(bk_app_full, "a")
+        E2BSandbox.objects.create(
+            sandbox_id="sb-1", application=bk_app_full, cluster_name="c", template_id=theirs.resource_name
+        )
+
+        templates.delete_template(mine)
+
+        assert not E2BSandboxTemplate.objects.filter(pk=mine.pk).exists()
+
+    def test_terminated_sandboxes_do_not_block(self, bk_app):
+        template = make_custom_template(bk_app, "a")
+        E2BSandbox.objects.create(
+            sandbox_id="sb-1",
+            application=bk_app,
+            cluster_name="c",
+            template_id=template.resource_name,
+            status=E2BSandboxStatus.TERMINATED.value,
+        )
+
+        templates.delete_template(template)
+
+        assert not E2BSandboxTemplate.objects.filter(pk=template.pk).exists()
 
 
 class TestDeleteCustomTemplatesOf:

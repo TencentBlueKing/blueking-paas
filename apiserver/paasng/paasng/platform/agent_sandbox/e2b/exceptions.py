@@ -52,6 +52,10 @@ class E2BTemplateIDTooLong(E2BError):
     """模板标识加上应用前缀后，资源名超出长度上限"""
 
 
+class E2BAppCodeTooLong(E2BError):
+    """应用前缀本身过长，任何合法的模板标识拼上去都会超出资源名长度上限，该应用无法创建自定义模板"""
+
+
 class E2BTemplateInUse(E2BError):
     """模板下还有未终止的沙箱
 

@@ -78,7 +78,7 @@ def create_sandbox(application: Application, payload: dict[str, Any]) -> dict[st
         # 从这里开始沙箱已在网关侧存在。后面任何一步失败都必须销毁它，
         # 否则会留下一个本地无记录、用户看不到、也没人回收的孤儿实例
         try:
-            _record_ownership(application, cluster.name, resp)
+            _record_ownership(application, cluster.name, payload[TEMPLATE_ID_FIELD], resp)
         except Exception:
             _rollback_created_sandbox(client, resp.get(SANDBOX_ID_FIELD))
             raise
@@ -234,12 +234,17 @@ def _live_sandboxes(application: Application) -> list[E2BSandbox]:
     )
 
 
-def _record_ownership(application: Application, cluster_name: str, resp: dict[str, Any]) -> None:
+def _record_ownership(application: Application, cluster_name: str, resource_name: str, resp: dict[str, Any]) -> None:
+    """登记沙箱归属
+
+    :param resource_name: 平台发给网关的 templateID。不取响应里的值：网关按实例标签回填，
+        回填不上时删除模板的检查会漏掉这个沙箱
+    """
     E2BSandbox.objects.create(
         sandbox_id=resp[SANDBOX_ID_FIELD],
         application=application,
         cluster_name=cluster_name,
-        template_id=resp.get(TEMPLATE_ID_FIELD, ""),
+        template_id=resource_name,
         expired_at=parse_datetime(resp["endAt"]) if resp.get("endAt") else None,
         tenant_id=application.tenant_id,
     )

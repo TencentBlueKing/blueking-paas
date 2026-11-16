@@ -1,18 +1,25 @@
-# e2b 沙箱模板声明文件示例。复制本文件并按实际环境修改后执行：
+# e2b 内置沙箱模板声明文件示例。复制本文件并按实际环境修改后执行：
 #   python manage.py e2b_sandbox_template apply -f <your_templates.yaml>
 #
+# 平台据此为每个模板在启用了 e2b 的集群中生成同名的 SandboxTemplate 与 SandboxPool，
+# 不需要再到集群里手工维护底层模板。
+#
 # 字段说明：
-#   template_id    必填，与底层 e2b 网关的模板标识一致（即 SDK 创建沙箱时传入的 templateID）
+#   template_id    必填，模板标识，即 SDK 创建沙箱时传入的 templateID，创建后不可修改；
+#                  小写字母、数字和连接符，以字母开头、字母或数字结尾，长度 2-31，不能含 "--"
 #   name           必填，页面展示名称
+#   image          必填，沙箱镜像，须内置 envd
 #   description    模板说明，页面展示
-#   image          镜像，仅供展示
-#   cpu_count      CPU 核数，仅供展示，正整数
-#   memory_mb      内存（MB），仅供展示，正整数
-#   disk_size_mb   磁盘（MB），仅供展示，正整数
+#   cpu_count      CPU 核数，默认 2，范围 1-4
+#   memory_mb      内存（MB），默认 4096，范围 128-4096
+#   disk_size_mb   系统盘（MB），范围 1024-102400；不填则不挂载独立系统盘，使用运行时默认的根文件系统
+#   env_vars       沙箱的默认环境变量，变量名须由字母、数字和下划线组成且不以数字开头
+#   workdir        工作目录，须为绝对路径
+#   prewarm_count  每个集群预热的实例数，默认 0，最大 50
 #   enabled        是否启用，默认 true；未启用的模板不能用于创建沙箱
 #   is_public      是否公开，默认 false；不公开的模板不在开发者中心展示，但知道 template_id 仍可通过 SDK 使用
 #
-# 文件即所列模板的完整定义：未写的字段会回到默认值。资源字段以底层模板的实际规格为准，修改底层模板后需同步更新。
+# 文件即所列模板的完整定义：未写的字段会回到默认值。
 
 # 完整字段示例
 - template_id: example-base
@@ -22,6 +29,10 @@
   cpu_count: 2
   memory_mb: 4096
   disk_size_mb: 20480
+  env_vars:
+    LANG: C.UTF-8
+  workdir: /home/user
+  prewarm_count: 1
   enabled: true
   is_public: true
 
@@ -29,13 +40,11 @@
 - template_id: example-python
   name: Python 代码执行
   description: 预置 Python 运行环境，适合运行 Agent 生成的代码片段
-  cpu_count: 2
-  memory_mb: 4096
+  image: registry.example.com/sandbox/python:latest
   is_public: true
 
 # 不公开示例：仅供特定服务通过 SDK 使用，不在开发者中心展示
 - template_id: example-internal
   name: 内部服务专用
   description: 某服务自用的模板，不对外公开
-  cpu_count: 2
-  memory_mb: 4096
+  image: registry.example.com/sandbox/internal:latest

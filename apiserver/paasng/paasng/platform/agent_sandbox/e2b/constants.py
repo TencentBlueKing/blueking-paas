@@ -69,6 +69,8 @@ ARCHIVE_BATCH_SIZE = 500
 # 模板标识（SDK 创建沙箱时传入的 templateID）的格式。首尾必须是字母数字：
 # 它要拼进 k8s 资源名，底层 E2B 网关还会把资源名写进标签值，两者都不接受首尾为连接符
 TEMPLATE_ID_PATTERN = r"^[a-z][a-z0-9-]{0,29}[a-z0-9]$"
+# 模板标识的最短长度
+TEMPLATE_ID_MIN_LENGTH = 2
 
 # 自定义模板在集群内的资源名为 ``{应用}--{模板标识}``。应用 code 与内置模板名都不能含 ``--``，
 # 因此按它切分既能还原出模板标识，也不会与内置模板撞名
@@ -82,9 +84,12 @@ RESOURCE_NAME_MAX_LENGTH = 63
 DEFAULT_TEMPLATE_CPU_COUNT = 2
 DEFAULT_TEMPLATE_MEMORY_MB = 4096
 MAX_TEMPLATE_CPU_COUNT = 4
+MIN_TEMPLATE_MEMORY_MB = 128
 MAX_TEMPLATE_MEMORY_MB = 4096
 MIN_TEMPLATE_DISK_SIZE_MB = 1024
 MAX_TEMPLATE_DISK_SIZE_MB = 102400
+# 最大预热实例数
+MAX_TEMPLATE_PREWARM_COUNT = 50
 
 # 系统盘是放在 PVC 里的磁盘镜像文件，PVC 要比盘本身大，取值参照底层 E2B 网关的示例（20Gi 盘配 30Gi PVC）
 TEMPLATE_PVC_SIZE_RATIO = 1.5

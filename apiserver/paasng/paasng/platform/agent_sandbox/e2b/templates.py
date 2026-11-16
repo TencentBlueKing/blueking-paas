@@ -30,8 +30,14 @@ from django.db import IntegrityError, transaction
 from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate
 from paasng.platform.applications.models import Application
 
-from .constants import CUSTOM_RESOURCE_NAME_SEPARATOR, RESOURCE_NAME_MAX_LENGTH, E2BSandboxStatus
+from .constants import (
+    CUSTOM_RESOURCE_NAME_SEPARATOR,
+    RESOURCE_NAME_MAX_LENGTH,
+    TEMPLATE_ID_MIN_LENGTH,
+    E2BSandboxStatus,
+)
 from .exceptions import (
+    E2BAppCodeTooLong,
     E2BTemplateAlreadyExists,
     E2BTemplateIDTooLong,
     E2BTemplateInUse,
@@ -88,14 +94,18 @@ def create_builtin_template(template_id: str, **spec: Any) -> E2BSandboxTemplate
 def create_custom_template(application: Application, template_id: str, **spec: Any) -> E2BSandboxTemplate:
     """为应用创建自定义模板
 
+    :raises E2BAppCodeTooLong: 应用前缀本身过长，最短的模板标识也放不下
     :raises E2BTemplateIDTooLong: 加上应用前缀后资源名超长，应用 code 较长时可用的模板标识会更短
     :raises E2BTemplateQuotaExceeded: 应用的自定义模板数量已达上限
     :raises E2BTemplateAlreadyExists: 应用下已有同名模板，或与内置模板重名
     """
-    resource_name = make_custom_resource_name(application, template_id)
-    if len(resource_name) > RESOURCE_NAME_MAX_LENGTH:
-        max_length = RESOURCE_NAME_MAX_LENGTH - len(get_custom_resource_prefix(application))
+    # S-mart 应用 code 里的下划线转义后变长，前缀可能长到放不下任何标识
+    max_length = RESOURCE_NAME_MAX_LENGTH - len(get_custom_resource_prefix(application))
+    if max_length < TEMPLATE_ID_MIN_LENGTH:
+        raise E2BAppCodeTooLong(f"app code {application.code} is too long to create custom templates")
+    if len(template_id) > max_length:
         raise E2BTemplateIDTooLong(f"template id of app {application.code} must be at most {max_length} characters")
+    resource_name = make_custom_resource_name(application, template_id)
 
     # 校验应用下的自定义模板数量是否已达上限
     custom = E2BSandboxTemplate.objects.filter(application=application)
@@ -164,6 +174,6 @@ def _create(**fields: Any) -> E2BSandboxTemplate:
         with transaction.atomic():
             template = E2BSandboxTemplate.objects.create(**fields)
     except IntegrityError as exc:
-        # 并发创建同名模板时，资源名的唯一约束兜底
+        # 并发创建同类型的同名模板时，资源名的唯一约束兜底。内置与自定义模板的资源名不同，拦不住两者重名
         raise E2BTemplateAlreadyExists(f"template {fields['resource_name']} already exists") from exc
     return template

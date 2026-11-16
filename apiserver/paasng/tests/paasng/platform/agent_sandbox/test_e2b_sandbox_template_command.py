@@ -16,8 +16,10 @@
 # to the current version of the project delivered to anyone in the future.
 
 from io import StringIO
+from pathlib import Path
 
 import pytest
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
@@ -32,6 +34,7 @@ from tests.paasng.platform.agent_sandbox.e2b.helpers import IMAGE, make_builtin_
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 TEMPLATE_ID = "e2b-envd"
+EXAMPLE_FILE = Path(settings.BASE_DIR) / "support-files" / "agent_sandbox" / "e2b_templates.yaml"
 
 
 def _run(*args: str) -> str:
@@ -96,6 +99,12 @@ class TestApply:
             None,
         )
         assert (browser.enabled, browser.is_public) == (True, False)
+
+    def test_bundled_example_file(self):
+        """support-files 里的示例要能直接 apply"""
+        out = _run("apply", "-f", str(EXAMPLE_FILE))
+
+        assert out.count("Created template") == 3
 
     def test_file_overwrites_existing(self, write_file, template):
         """文件即完整定义：文件里没写的字段要回到默认值，而不是沿用库里的旧值。"""

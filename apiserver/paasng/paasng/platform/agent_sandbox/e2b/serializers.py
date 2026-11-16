@@ -30,11 +30,13 @@ from .constants import (
     MAX_TEMPLATE_CPU_COUNT,
     MAX_TEMPLATE_DISK_SIZE_MB,
     MAX_TEMPLATE_MEMORY_MB,
+    MAX_TEMPLATE_PREWARM_COUNT,
     MIN_TEMPLATE_DISK_SIZE_MB,
+    MIN_TEMPLATE_MEMORY_MB,
     TEMPLATE_ID_PATTERN,
 )
 
-_ENV_VAR_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_ENV_VAR_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 class E2BApiKeyCreateInputSLZ(serializers.Serializer):
@@ -159,7 +161,10 @@ class E2BTemplateSpecInputSLZ(serializers.Serializer):
         min_value=1, max_value=MAX_TEMPLATE_CPU_COUNT, default=DEFAULT_TEMPLATE_CPU_COUNT, help_text="CPU 核数"
     )
     memory_mb = serializers.IntegerField(
-        min_value=1, max_value=MAX_TEMPLATE_MEMORY_MB, default=DEFAULT_TEMPLATE_MEMORY_MB, help_text="内存（MB）"
+        min_value=MIN_TEMPLATE_MEMORY_MB,
+        max_value=MAX_TEMPLATE_MEMORY_MB,
+        default=DEFAULT_TEMPLATE_MEMORY_MB,
+        help_text="内存（MB）",
     )
     disk_size_mb = serializers.IntegerField(
         min_value=MIN_TEMPLATE_DISK_SIZE_MB,
@@ -170,12 +175,14 @@ class E2BTemplateSpecInputSLZ(serializers.Serializer):
         "填写时为每个沙箱创建一块该大小的云盘作为系统盘，随沙箱销毁而删除",
     )
     env_vars = serializers.DictField(
-        child=serializers.CharField(allow_blank=True), default=dict, help_text="沙箱的默认环境变量"
+        child=serializers.CharField(allow_blank=True, trim_whitespace=False),
+        default=dict,
+        help_text="沙箱的默认环境变量",
     )
     workdir = serializers.CharField(max_length=256, allow_blank=True, default="", help_text="工作目录，须为绝对路径")
 
     def validate_env_vars(self, value: dict[str, str]) -> dict[str, str]:
-        if invalid := [k for k in value if not _ENV_VAR_NAME_RE.match(k)]:
+        if invalid := [k for k in value if not _ENV_VAR_NAME_RE.fullmatch(k)]:
             raise serializers.ValidationError(f"invalid environment variable names: {', '.join(sorted(invalid))}")
         return value
 
@@ -207,7 +214,9 @@ class E2BTemplateIDField(serializers.RegexField):
 class E2BBuiltinTemplateUpdateInputSLZ(E2BTemplateSpecInputSLZ):
     """修改内置模板，全量覆盖"""
 
-    prewarm_count = serializers.IntegerField(min_value=0, default=0, help_text="每个集群预热的实例数")
+    prewarm_count = serializers.IntegerField(
+        min_value=0, max_value=MAX_TEMPLATE_PREWARM_COUNT, default=0, help_text="每个集群预热的实例数"
+    )
     enabled = serializers.BooleanField(default=True, help_text="停用后不能再用它创建沙箱，已下发的 CR 保留")
     is_public = serializers.BooleanField(
         default=False, help_text="是否在开发者中心展示。不公开的模板仍可由任意应用按标识通过 SDK 使用"

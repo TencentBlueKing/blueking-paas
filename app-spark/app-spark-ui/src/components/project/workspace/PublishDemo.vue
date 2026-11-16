@@ -85,7 +85,9 @@
               :model-value="appName"
               :pending="appNamePending"
               :result="appNameResult"
+              :suggestion="appNameSuggestion"
               @update:model-value="handleAppNameInput"
+              @pick="acceptSuggestedAppName"
             />
             <div class="publish-panel__field">
               <span class="publish-panel__field-label">版本</span>
@@ -290,6 +292,7 @@ let copyResetTimer = 0;
 const publicationLinks = computed(() => getPublicationLinks(publication.value));
 const appNamePending = computed(() => appNameValidation.isPending(appName.value));
 const appNameResult = computed(() => appNameValidation.resultFor(appName.value));
+const appNameSuggestion = computed(() => appNameValidation.suggestionFor(appName.value));
 
 const view = computed<PublicationView>(() => {
   const state = publication.value;
@@ -330,6 +333,13 @@ const handleAppNameInput = (name: string) => {
   appName.value = name;
   appNameTouched = true;
   clearActionError();
+};
+
+const acceptSuggestedAppName = (name: string) => {
+  appName.value = name;
+  appNameTouched = true;
+  clearActionError();
+  appNameValidation.validate(name, true);
 };
 
 const submitDeployment = async () => {
@@ -398,6 +408,8 @@ watch([visible, isFirstPublication], ([isVisible, isFirst]) => {
 });
 
 watch(appName, (name) => {
+  // 点推荐时已经对这个名字立即发起检查；这里再防抖一次会把那次检查取消掉。
+  if (appNameValidation.isPending(name)) return;
   if (visible.value && isFirstPublication.value) appNameValidation.validate(name);
 });
 

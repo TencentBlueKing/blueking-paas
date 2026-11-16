@@ -40,6 +40,15 @@
     <p v-if="pending" class="publication-app-name__hint">正在检查名称是否可用…</p>
     <p v-else-if="problemText" class="publication-app-name__hint is-error" role="alert">{{ problemText }}</p>
     <p v-else-if="normalizedHint" class="publication-app-name__hint">{{ normalizedHint }}</p>
+    <button
+      v-if="suggestion && !pending"
+      type="button"
+      class="publication-app-name__suggestion"
+      @mousedown.prevent
+      @click="pickSuggestion"
+    >
+      为你推荐：{{ suggestion }}
+    </button>
   </div>
 </template>
 
@@ -58,8 +67,13 @@ const props = defineProps<{
   pending: boolean;
   /** 当前名称的检查结果；还没检查或检查失败时为 null。 */
   result: PublicationAppNameValidationRet | null;
+  /** 当前名称被占用时，已经检查可用的推荐名。 */
+  suggestion: string | null;
 }>();
-const emit = defineEmits<{ (e: 'update:modelValue', value: string): void }>();
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string): void;
+  (e: 'pick', value: string): void;
+}>();
 
 const editing = ref(false);
 const inputRef = ref<HTMLInputElement | null>(null);
@@ -95,6 +109,12 @@ const startEdit = async () => {
 
 const handleInput = (event: Event) => {
   emit('update:modelValue', (event.target as HTMLInputElement).value);
+};
+
+// 按下时如果让输入框先失焦，编辑态会收起，点击可能落空。留住焦点，再把推荐名交出去。
+const pickSuggestion = () => {
+  if (!props.suggestion) return;
+  emit('pick', props.suggestion);
 };
 
 const finishEdit = () => {
@@ -232,5 +252,28 @@ watch(() => props.result?.is_available === false, (unavailable) => {
 
 .publication-app-name__hint.is-error {
   color: var(--danger);
+}
+
+.publication-app-name__suggestion {
+  align-self: flex-start;
+  margin: 0;
+  padding: 0;
+  color: var(--accent-focus);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.publication-app-name__suggestion:hover {
+  text-decoration: underline;
+}
+
+.publication-app-name__suggestion:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 </style>

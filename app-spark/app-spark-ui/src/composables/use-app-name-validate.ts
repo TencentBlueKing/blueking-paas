@@ -1,5 +1,9 @@
 import { onScopeDispose, ref, watch } from 'vue';
 import type { Ref } from 'vue';
+import {
+  classifySuggestionCheck,
+  findAvailableSuggestion,
+} from '@/common/app-name-suggestion';
 import { validatePublicationAppName } from '@/http/api';
 import type { PublicationAppNameValidationRet } from '@/http/types';
 
@@ -16,10 +20,14 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
   const result = ref<PublicationAppNameValidationRet | null>(null);
   const checkedInput = ref('');
   const pendingInput = ref<string | null>(null);
+  // 推荐名单独记，不能写进 result：候选检查如果覆盖了结果，输入框里被占用的原名会看起来变成可用。
+  const suggestion = ref<string | null>(null);
+  const suggestionInput = ref('');
 
   let timer = 0;
   let sequence = 0;
   let inflight: AbortController | null = null;
+  let recommendation: AbortController | null = null;
 
   const clearTimer = () => {
     if (!timer) return;
@@ -27,11 +35,53 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
     timer = 0;
   };
 
+  const cancelRecommendation = () => {
+    recommendation?.abort();
+    recommendation = null;
+    suggestion.value = null;
+    suggestionInput.value = '';
+  };
+
   // 输入还在变时，上一次检查的结果用不上。取消它，避免返回后占掉这次输入的结论。
   const dropInflight = () => {
     sequence += 1;
     inflight?.abort();
     inflight = null;
+    cancelRecommendation();
+  };
+
+  // 原名被占用后才找推荐。候选逐个问现有检查接口，问的过程不改当前输入的占用结论。
+  const recommendTakenName = (normalizedName: string, sourceInput: string) => {
+    cancelRecommendation();
+    if (!normalizedName) return;
+
+    const controller = new AbortController();
+    recommendation = controller;
+    const id = projectId.value;
+    const isCurrent = () => (
+      recommendation === controller
+      && projectId.value === id
+      && checkedInput.value === sourceInput
+      && result.value?.problem === 'unique'
+      && result.value.name === normalizedName
+    );
+
+    void findAvailableSuggestion(normalizedName, async (candidate) => {
+      try {
+        const data = await validatePublicationAppName(id, candidate, controller.signal);
+        if (!isCurrent()) return { status: 'failed' };
+        return classifySuggestionCheck(candidate, data);
+      } catch (error) {
+        if (controller.signal.aborted || !isCurrent()) return { status: 'failed' };
+        // 这一次没问到结论，后面的后缀也不再问，避免把没检查过的名字推荐出去。
+        console.error('[publication] 检查推荐名称失败', error);
+        return { status: 'failed' };
+      }
+    }, { isCurrent }).then((found) => {
+      if (!isCurrent()) return;
+      suggestion.value = found;
+      suggestionInput.value = found ? sourceInput : '';
+    });
   };
 
   const run = async (input: string) => {
@@ -45,6 +95,8 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
       if (current !== sequence || projectId.value !== id) return;
       result.value = data;
       checkedInput.value = input;
+      // 只用过滤后的名字做推荐。用户输入里的空格已经不在这个名字里。
+      if (data.problem === 'unique' && data.name) recommendTakenName(data.name, input);
     } catch (error) {
       if (controller.signal.aborted || current !== sequence || projectId.value !== id) return;
       // 问不到开发者中心时不给结论，发布时后端会再校验一次。
@@ -90,6 +142,7 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
     const trimmed = input.trim();
     result.value = { name: trimmed, is_available: false, problem: 'unique', message: null };
     checkedInput.value = trimmed;
+    recommendTakenName(trimmed, trimmed);
   };
 
   /** 当前输入是否还在等检查结果。 */
@@ -99,6 +152,14 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
   const resultFor = (input: string) => (
     result.value && checkedInput.value === input.trim() ? result.value : null
   );
+
+  /** 当前输入被占用时已经检查通过的推荐名；还在问、问失败或输入已变时为 null。 */
+  const suggestionFor = (input: string) => {
+    const current = resultFor(input);
+    if (!suggestion.value || !current || current.problem !== 'unique') return null;
+    if (suggestionInput.value !== input.trim()) return null;
+    return suggestion.value;
+  };
 
   const reset = () => {
     clearTimer();
@@ -120,5 +181,6 @@ export const useAppNameValidate = (projectId: Ref<string>) => {
     reset,
     isPending,
     resultFor,
+    suggestionFor,
   };
 };

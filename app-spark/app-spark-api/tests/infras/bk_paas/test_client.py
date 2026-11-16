@@ -14,16 +14,78 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""网关根地址和开发者中心页面链接按配置拼出来。"""
+"""网关根地址和开发者中心页面链接按配置拼出来；校验应用 ID 和名称的结果按字段读出来。"""
 
+import json
+
+import httpx2
 import pytest
 
 from app_spark_api.infras.bk_paas import (
+    AppFieldError,
+    BkPaaSClient,
     BkPaaSConfigurationError,
+    BkPaaSUnavailableError,
     build_console_links,
     build_deployment_detail_url,
     build_gateway_base_url,
 )
+
+BASE_URL = "https://bkapi.example.com/api/bkpaas3/prod"
+
+
+def make_client(answer, requests: list[httpx2.Request]) -> BkPaaSClient:
+    def handle(request: httpx2.Request) -> httpx2.Response:
+        requests.append(request)
+        return answer
+
+    return BkPaaSClient(BASE_URL, "bk-app-spark", "secret", transport=httpx2.MockTransport(handle))
+
+
+async def test_validating_sends_the_tenant_and_reads_each_field():
+    requests: list[httpx2.Request] = []
+    answer = httpx2.Response(
+        200,
+        json={
+            "is_valid": False,
+            "fields_detail": {
+                "name": [{"code": "unique", "message": "名称已存在"}],
+                "code": [{"code": "max_length", "message": "太长了"}],
+            },
+        },
+    )
+
+    async with make_client(answer, requests) as client:
+        result = await client.validate_app_basic_info(
+            "Spark", code="spark-demo", app_tenant_mode="single", app_tenant_id="t1"
+        )
+
+    assert requests[0].url.path == "/api/bkpaas3/prod/system/bkapps/applications/validations/"
+    assert json.loads(requests[0].content) == {
+        "name": "Spark",
+        "code": "spark-demo",
+        "app_tenant_mode": "single",
+        "app_tenant_id": "t1",
+    }
+    assert result.name_error == AppFieldError("unique", "名称已存在")
+    assert result.code_error == AppFieldError("max_length", "太长了")
+
+
+async def test_validating_only_the_name_leaves_out_the_code():
+    requests: list[httpx2.Request] = []
+    answer = httpx2.Response(200, json={"is_valid": True, "fields_detail": {}})
+
+    async with make_client(answer, requests) as client:
+        result = await client.validate_app_basic_info("Spark")
+
+    assert json.loads(requests[0].content) == {"name": "Spark"}
+    assert (result.code_error, result.name_error) == (None, None)
+
+
+async def test_an_unreadable_validation_answer_counts_as_unavailable():
+    async with make_client(httpx2.Response(200, json={"is_valid": False}), []) as client:
+        with pytest.raises(BkPaaSUnavailableError):
+            await client.validate_app_basic_info("Spark")
 
 
 @pytest.mark.parametrize(

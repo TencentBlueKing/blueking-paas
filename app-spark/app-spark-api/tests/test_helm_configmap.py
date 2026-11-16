@@ -46,6 +46,14 @@ def test_default_force_script_name_matches_ingress_prefix(monkeypatch):
     assert loaded.get("FORCE_SCRIPT_NAME") == "/api-svc"
 
 
+def test_default_app_code_matches_the_gateway_grant(monkeypatch):
+    """开发者中心网关按 bk-app-spark 预授权，chart 默认值要和它对上。"""
+    data = _render_configmap()
+    monkeypatch.setenv("CHART_TEST_APP_CODE", data["APP_SPARK_API_APP_CODE"])
+    loaded = LazySettings(environments=False, envvar_prefix="CHART_TEST", settings_files=[])
+    assert loaded.get("APP_CODE") == "bk-app-spark"
+
+
 def test_null_groups_and_values_are_omitted():
     data = _render_configmap(
         dict.fromkeys(

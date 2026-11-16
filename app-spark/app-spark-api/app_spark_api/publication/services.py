@@ -22,7 +22,6 @@
 
 import asyncio
 import logging
-import re
 from typing import TYPE_CHECKING, Any
 
 import attrs
@@ -40,8 +39,8 @@ from app_spark_api.infras.bk_paas import (
     build_deployment_detail_url,
 )
 from app_spark_api.publication import packaging, steps, tasks
+from app_spark_api.publication.app_name import ensure_app_creatable, normalize_app_name, resolve_default_app_name
 from app_spark_api.publication.constants import (
-    APP_NAME_MAX_LENGTH,
     DEPLOY_REQUEST_TIMEOUT,
     DEPLOY_TIMEOUT,
     PREPARE_TIMEOUT,
@@ -50,6 +49,7 @@ from app_spark_api.publication.constants import (
     PublicationTaskStatus,
 )
 from app_spark_api.publication.exceptions import (
+    PublicationAppNameConflictError,
     PublicationAppNameInvalidError,
     PublicationNoVersionError,
     PublicationProjectGoneError,
@@ -64,9 +64,6 @@ if TYPE_CHECKING:
     from datetime import datetime
 
 logger = logging.getLogger(__name__)
-
-# 开发者中心的应用名称（NickNameField）去掉首尾空白后只保留这些字符，其余静默丢掉。
-_APP_NAME_CHAR = re.compile(r"[\u4e00-\u9fa5\w\-_]")
 
 
 @attrs.frozen
@@ -142,9 +139,10 @@ async def start_deployment(
     :raises PublicationNoVersionError: 没指定版本，项目也还没有任何版本。
     :raises PublicationVersionNotFoundError: 版本不属于该项目。
     :raises PublicationAppNameInvalidError: 首次发布时应用名称按开发者中心的规则过滤后为空。
+    :raises PublicationAppNameConflictError: 首次发布时应用名称已被开发者中心的其他应用使用。
     :raises PublicationTaskInProgressError: 项目已有发布任务在进行。
     :raises PublicationProjectGoneError: 项目刚被删除。
-    :raises PublicationSubmitError: 创建应用失败，任务已记为失败。
+    :raises PublicationSubmitError: 开发者中心提前拒绝了应用 ID 或名称（不建任务），或创建应用失败（任务已记为失败）。
     """
     # 发布暂不支持选版本，前端不传版本时发最新的；任务里记下实际发的版本，线上版本和失败记录据此展示。
     if version_id is None:
@@ -155,32 +153,24 @@ async def start_deployment(
     elif not await packaging.aversion_exists(project, version_id):
         raise PublicationVersionNotFoundError(f"Project {project.pk} has no publishable version {version_id!r}")
 
-    # 已绑定的项目复用原应用，不需要名称。名称只在开发者中心里要求租户内唯一，本地不存也不查重，
-    # 重名由创建应用的报错说明。
+    factory = client_factory or BkPaaSClient.from_settings
+
+    # 已绑定的项目复用原应用，不需要名称。名称只在开发者中心里要求租户内唯一，本地不存，
+    # 建任务前先问开发者中心，重名时让用户改名，不留下一次失败的发布。
     name = ""
     if not await BkPaaSAppBinding.objects.filter(project=project).aexists():
         name = normalize_app_name(app_name) if app_name is not None else resolve_default_app_name(project)
         if not name:
             raise PublicationAppNameInvalidError(app_name or "")
 
+        await ensure_app_creatable(project, factory, name)
+
     task = await sync_to_async(_create_deployment_task)(project, version_id, operator)
 
     # 浏览器断开时 Django 会取消正在处理的请求。创建应用一旦开始就要做完，否则开发者中心里建好了应用，
     # 这边却没记下绑定。应用 ID 就是项目 ID，规则由开发者中心校验。
-    factory = client_factory or BkPaaSClient.from_settings
     await _complete_even_if_cancelled(_bind_and_queue(task, project, factory, project.id, name))
     return task
-
-
-def resolve_default_app_name(project: Project) -> str:
-    """Return the application name to suggest on the first deployment."""
-    # 项目名称一般比 ID 好读；全是开发者中心不认的字符时退回 ID。
-    return normalize_app_name(project.name) or project.id
-
-
-def normalize_app_name(name: str) -> str:
-    """Return the name the developer center would keep, cut to its length limit."""
-    return "".join(_APP_NAME_CHAR.findall(name.strip()))[:APP_NAME_MAX_LENGTH]
 
 
 async def afail_pending_tasks(project: Project, error: str) -> None:
@@ -218,6 +208,10 @@ async def _bind_and_queue(
     try:
         async with client_factory() as client:
             await steps.bind_app(task, project, client, app_code=app_code, app_name=app_name)
+    except steps.AppNameTakenError as exc:
+        # 发起前校验时名称还空着，创建时被别人抢先用了：任务照样当场结束，但按重名回答，让用户改名。
+        await _fail_submission(task, exc)
+        raise PublicationAppNameConflictError(app_name) from exc
     except steps.PublicationStepError as exc:
         raise await _fail_submission(task, exc) from exc
     except BkPaaSConfigurationError as exc:

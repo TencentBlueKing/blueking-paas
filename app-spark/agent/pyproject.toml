@@ -10,6 +10,9 @@ readme = "README.md"
 authors = [{ name = "blueking", email = "blueking@tencent.com" }]
 requires-python = ">=3.14"
 dependencies = [
+    # Pulled in by pydantic-ai-slim[ag-ui] with a 0.1.x floor; pinned to 1.0 because the
+    # stored event log, api and ui all speak the 1.0 wire format only.
+    "ag-ui-protocol>=1.0.0,<1.1.0",
     "environs>=15.1.0,<16.0.0",
     "fastapi>=0.116.0",
     # Pulled in transitively anyway, but declared because `agent.py`, `bkaidev/`, the app

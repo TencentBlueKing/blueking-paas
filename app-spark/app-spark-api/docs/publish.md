@@ -10,15 +10,17 @@
 
 缺了下面任何一件，发布都会失败并提示「AppSpark 未获得开发者中心授权，请联系管理员」：
 
-1. 把本服务的 app_code 注册为 AppSpark 系统角色（角色值 100）。在开发者中心 apiserver 里执行：
+1. 把本服务的 app_code（`APP_CODE`，默认 `bk-app-spark`）注册为 AppSpark 系统角色（角色值 100）。在开发者中心
+   apiserver 里执行：
 
    ```bash
-   python manage.py create_authed_app_user --bk_app_code app-spark --role 100
+   python manage.py create_authed_app_user --bk_app_code bk-app-spark --role 100
    ```
 
-2. 在 API 网关上为本服务的 app_code 申请 `BKPAAS_APIGW_NAME` 指向的网关的资源权限，至少包括
-   `create_sys_app_spark_app`、`upload_ai_agent_source_package_via_link`、`sys_deploy_with_module`、
-   `sys_get_deployment_result`。
+2. 网关资源权限：开发者中心的 bkpaas3 网关已为 `bk-app-spark` 预授权发布要用的资源，用默认 app_code 时不需要
+   申请。改了 `APP_CODE` 时，要在 API 网关上为它申请 `BKPAAS_APIGW_NAME` 指向的网关的资源权限，至少包括
+   `sys_validate_app_basic_info`、`create_sys_app_spark_app`、`upload_ai_agent_source_package_via_link`、
+   `sys_deploy_with_module`、`sys_get_deployment_result`。
 
 ### 项目源码
 
@@ -29,9 +31,10 @@
 
 开发者中心的系统 API 走蓝鲸 API 网关，以本服务的应用身份调用，不需要用户登录态：
 
-- 必填：`APP_CODE` / `APP_SECRET`、`BK_API_URL_TMPL`、`BLOBSTORE_BKREPO_CONFIG`（源码包存在制品库，见
+- 必填：`APP_SECRET`、`BK_API_URL_TMPL`、`BLOBSTORE_BKREPO_CONFIG`（源码包存在制品库，见
   [发布用的源码包](repo_server.md#发布用的源码包)）、`RABBITMQ_*`（发布在 Celery worker 上执行）
-- 可选：`BKPAAS_APIGW_NAME`（不同版本的开发者中心不一样）、`BKPAAS_APIGW_ENVIRONMENT`、`BKPAAS_URL`
+- 可选：`APP_CODE`（默认 `bk-app-spark`，与网关预授权一致）、`BKPAAS_APIGW_NAME`（不同版本的开发者中心不一样）、
+  `BKPAAS_APIGW_ENVIRONMENT`、`BKPAAS_URL`
 
 说明和默认值见 [conf.yaml.tpl](../conf.yaml.tpl)「发布到开发者中心」「蓝鲸 API 网关」。
 
@@ -61,13 +64,17 @@ flowchart LR
 ## 关键设计决策
 
 - **应用 ID 固定为项目 ID，名称只在首次发布时传一次**。名称默认取项目名称，按开发者中心的规则过滤后为空就用
-  项目 ID。AppSpark 不保存名称，也不在本地查重，同名冲突以开发者中心的报错为准。
+  项目 ID。AppSpark 不保存名称，也不在本地查重，重名以开发者中心为准：发布面板打开和改名时调
+  `publication/app-name-validate/` 问开发者中心；发起首次发布时建任务前再问一次，重名直接返回 409
+  `PUBLICATION_APP_NAME_CONFLICT`，不建任务也不留失败记录。问不到开发者中心时照常发起，由创建应用时的校验兜底；
+  建任务后才撞名同样返回 409，但会留下一条失败记录。
 - **发布状态从任务表推出来，不另存**：线上版本、进行中的任务、最近一次失败都由发布任务记录得出，不会和任务
   本身不一致。
 - **提交部署不重试**：worker 崩溃或部署请求结果不明时，不重做也不重发，以免重复部署，让用户到开发者中心查看
   部署记录。轮询只读不写，停了（投递失败、消息丢失）也不重新投递：查询发布状态时，发起 10 分钟还没提交部署、
   或部署超过 15 分钟仍未结束的任务直接判失败。
-- **失败按该由谁处理区分**：开发者中心按业务规则拒绝（如已有同名应用）返回 400，detail 原样是开发者中心的说明；
+- **失败按该由谁处理区分**：应用名称重名返回 409，用户改名即可；开发者中心按其他业务规则拒绝（如应用 ID 已存在）
+  返回 400，detail 原样是开发者中心的说明；
   开发者中心连不上、5xx 或限流返回 502；本服务没配好对接或没获得授权返回 503；本服务内部错误返回 500。
 - **打包会占住 worker 几分钟**：`celery-worker` 的并发数要留出余量。
 

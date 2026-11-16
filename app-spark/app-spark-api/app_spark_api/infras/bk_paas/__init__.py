@@ -18,7 +18,15 @@
 
 from app_spark_api.infras.bk_paas.client import BKAPI_AUTHORIZATION_HEADER, BkPaaSClient, build_gateway_base_url
 from app_spark_api.infras.bk_paas.console import ConsoleLinks, build_console_links, build_deployment_detail_url
-from app_spark_api.infras.bk_paas.entities import CreatedApp, Deployment, DeploymentResult, DeploymentStatus
+from app_spark_api.infras.bk_paas.entities import (
+    UNIQUE_APP_FIELD_CODE,
+    AppBasicInfoValidation,
+    AppFieldError,
+    CreatedApp,
+    Deployment,
+    DeploymentResult,
+    DeploymentStatus,
+)
 from app_spark_api.infras.bk_paas.exceptions import (
     BkPaaSApiError,
     BkPaaSConfigurationError,
@@ -28,6 +36,9 @@ from app_spark_api.infras.bk_paas.exceptions import (
 
 __all__ = [
     "BKAPI_AUTHORIZATION_HEADER",
+    "UNIQUE_APP_FIELD_CODE",
+    "AppBasicInfoValidation",
+    "AppFieldError",
     "BkPaaSApiError",
     "BkPaaSClient",
     "BkPaaSConfigurationError",

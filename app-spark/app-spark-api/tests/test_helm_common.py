@@ -47,6 +47,30 @@ def read_component(resource: dict[str, Any]) -> str | None:
     return None
 
 
+@pytest.mark.parametrize("kube_version", ["1.18.4", "1.18.4-tke.8"])
+@pytest.mark.parametrize("service_port", [8080, "8080"])
+def test_ingress_on_1_18_uses_beta_api(kube_version, service_port):
+    resources = _render({"service.port": service_port}, kube_version=kube_version)
+    ingress = resources["Ingress"]
+    # networking.k8s.io/v1 从 1.19 才稳定。1.18 只能用 v1beta1，backend 还是扁平字段。
+    assert ingress["apiVersion"] == "networking.k8s.io/v1beta1"
+    assert "ingressClassName" not in ingress["spec"]
+    assert ingress["spec"]["rules"] == [
+        {
+            "host": "app-spark-api.example.com",
+            "http": {
+                "paths": [
+                    {
+                        "path": "/api-svc(/|$)(.*)",
+                        "pathType": "ImplementationSpecific",
+                        "backend": {"serviceName": resources["Service"]["metadata"]["name"], "servicePort": 8080},
+                    }
+                ]
+            },
+        }
+    ]
+
+
 @pytest.mark.parametrize("kube_version", ["1.19.0", "1.35.0"])
 @pytest.mark.parametrize("service_port", [8080, "8080"])
 def test_ingress_backend_uses_stable_api(kube_version, service_port):

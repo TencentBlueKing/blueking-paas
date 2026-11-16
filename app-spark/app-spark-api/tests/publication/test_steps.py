@@ -24,10 +24,16 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from app_spark_api.core.projects.models import Project
-from app_spark_api.infras.bk_paas import BkPaaSApiError, DeploymentResult
-from app_spark_api.publication import packaging, services, steps
+from app_spark_api.infras.bk_paas import (
+    AppBasicInfoValidation,
+    AppFieldError,
+    BkPaaSApiError,
+    DeploymentResult,
+)
+from app_spark_api.publication import app_name, packaging, services, steps
 from app_spark_api.publication.constants import PublicationTaskStatus
 from app_spark_api.publication.exceptions import (
+    PublicationAppNameConflictError,
     PublicationAppNameInvalidError,
     PublicationProjectGoneError,
     PublicationSubmitError,
@@ -73,14 +79,16 @@ async def publish(project, bkpaas, version_id: str = "v2") -> PublicationTask:
 async def test_a_first_deployment_goes_from_the_request_through_celery_to_online(project, bkpaas, queued):
     task = await start(project, bkpaas)
 
-    # 请求里只建应用：应用 ID 就是项目 ID；名称默认取项目名称，按开发者中心的规则去掉空格后发出去。
+    # 请求里先校验再建应用：应用 ID 就是项目 ID；名称默认取项目名称，按开发者中心的规则去掉空格后发出去。
+    (validate,) = bkpaas.called("validate_app_basic_info")
     (create,) = bkpaas.called("create_app")
+    assert (validate["code"], validate["name"]) == ("test-project", "TestProject")
     assert (create["code"], create["name"], create["operator"]) == ("test-project", "TestProject", "alice")
     assert (task.stage, queued) == ("packaging", [("prepare", task.pk)])
 
     assert await steps.prepare_deployment(task.pk, bkpaas)
     await task.arefresh_from_db()
-    assert [name for name, _ in bkpaas.calls][1:] == ["upload_package_via_link", "deploy"]
+    assert [name for name, _ in bkpaas.calls][2:] == ["upload_package_via_link", "deploy"]
     assert (task.stage, task.deployment_id) == ("deploying", "d-1")
 
     await poll_until_done(task, bkpaas)
@@ -178,13 +186,101 @@ async def test_an_app_name_without_usable_characters_is_refused_up_front(project
     assert not await PublicationTask.objects.filter(project=project).aexists()
 
 
+async def test_a_taken_app_name_is_refused_before_any_task(project, bkpaas, queued):
+    bkpaas.queue(
+        "validate_app_basic_info",
+        AppBasicInfoValidation(None, AppFieldError("unique", "名称已存在")),
+    )
+
+    with pytest.raises(PublicationAppNameConflictError):
+        await start(project, bkpaas)
+
+    # 重名时用户改个名字再发就好：不建任务，所以也不留失败记录。
+    assert bkpaas.called("create_app") == []
+    assert not await PublicationTask.objects.filter(project=project).aexists()
+    assert queued == []
+
+
+async def test_a_refused_app_id_is_told_before_any_task(project, bkpaas):
+    # 名称也重名时先说应用 ID：用户改不了它，只让改名会白改一次。
+    bkpaas.queue(
+        "validate_app_basic_info",
+        AppBasicInfoValidation(AppFieldError("unique", "应用 ID 已存在"), AppFieldError("unique", "名称已存在")),
+    )
+
+    with pytest.raises(PublicationSubmitError, match="应用 ID 已存在"):
+        await start(project, bkpaas)
+
+    assert not await PublicationTask.objects.filter(project=project).aexists()
+
+
+async def test_an_unanswered_validation_leaves_the_judgement_to_app_creation(project, bkpaas):
+    bkpaas.queue("validate_app_basic_info", httpx2.ConnectError("refused"))
+
+    task = await start(project, bkpaas)
+
+    assert task.stage == "packaging"
+    assert len(bkpaas.called("create_app")) == 1
+
+
+async def test_a_name_taken_meanwhile_is_answered_as_a_conflict(project, bkpaas, queued):
+    """校验时名称还空着，创建时被别人抢先用了。"""
+    bkpaas.queue("create_app", BkPaaSApiError(400, "名称已存在", fields_detail={"name": ["已存在"]}))
+
+    with pytest.raises(PublicationAppNameConflictError):
+        await start(project, bkpaas)
+
+    # 任务当场结束，不主动弹出失败结果，用户在面板上改名重发。
+    state = await services.get_publication_state(project)
+    assert (state.task, state.unseen_result) == (None, None)
+    assert state.last_failure is not None
+    assert state.last_failure.error == steps.MSG_APP_NAME_TAKEN.format(name="TestProject")
+    assert queued == []
+
+
+@pytest.mark.parametrize(
+    ("name", "answer", "expected"),
+    [
+        ("Spa rk", AppBasicInfoValidation(None, None), ("Spark", None, None)),
+        (
+            "Spark",
+            AppBasicInfoValidation(None, AppFieldError("unique", "名称已存在")),
+            ("Spark", "unique", "名称已存在"),
+        ),
+    ],
+)
+async def test_validating_a_name_reports_what_would_be_used(project, bkpaas, name, answer, expected):
+    bkpaas.queue("validate_app_basic_info", answer)
+
+    validation = await app_name.validate_app_name(project, name)
+
+    assert (validation.name, validation.problem, validation.message) == expected
+    # 只问名称，不带应用 ID。
+    assert bkpaas.called("validate_app_basic_info") == [{"name": expected[0]}]
+
+
+async def test_validating_a_name_without_usable_characters_does_not_ask(project, bkpaas):
+    validation = await app_name.validate_app_name(project, "!!!")
+
+    assert (validation.name, validation.problem, validation.is_available) == ("", "invalid", False)
+    assert bkpaas.calls == []
+
+
+async def test_validating_a_name_when_the_developer_center_is_down_says_so(project, bkpaas):
+    bkpaas.queue("validate_app_basic_info", httpx2.ConnectError("refused"))
+
+    with pytest.raises(steps.PublicationStepError, match=steps.MSG_BKPAAS_UNAVAILABLE):
+        await app_name.validate_app_name(project, "Spark")
+
+
 async def test_a_project_deleted_before_the_task_is_created_is_not_published(project, bkpaas):
     await Project.objects.asoft_delete(project.pk)
 
     with pytest.raises(PublicationProjectGoneError):
         await start(project, bkpaas)
 
-    assert bkpaas.calls == []
+    # 建任务前只读地校验过名称，应用没有建。
+    assert bkpaas.called("create_app") == []
 
 
 async def test_an_app_created_but_not_recorded_is_told_in_the_response(project, bkpaas, monkeypatch):

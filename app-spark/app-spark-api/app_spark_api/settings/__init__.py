@@ -127,7 +127,8 @@ ALLOWED_HOSTS = settings.get("ALLOWED_HOSTS", ["*"])
 
 # 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、开发者中心等）都用这一对。
 # APP_SECRET 只留在本服务里，不会交给 Agent Runtime。
-APP_CODE = settings.get("APP_CODE", "")
+# 开发者中心网关按 bk-app-spark 预授权了发布要用的资源，换成别的 app_code 要自己去网关申请。
+APP_CODE = settings.get("APP_CODE", "bk-app-spark")
 APP_SECRET = settings.get("APP_SECRET", "")
 
 # 用于签发用户态 AccessToken。注意 AccessToken 会进入用户沙箱，因此需要确保该应用权限可控。

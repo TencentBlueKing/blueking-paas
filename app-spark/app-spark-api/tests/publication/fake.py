@@ -19,7 +19,7 @@
 from collections import defaultdict
 from typing import Any, Self
 
-from app_spark_api.infras.bk_paas import CreatedApp, Deployment, DeploymentResult
+from app_spark_api.infras.bk_paas import AppBasicInfoValidation, CreatedApp, Deployment, DeploymentResult
 
 
 class FakeBkPaaSClient:
@@ -45,6 +45,9 @@ class FakeBkPaaSClient:
 
     async def create_app(self, **kwargs: Any) -> CreatedApp:
         return self._answer("create_app", kwargs, CreatedApp(kwargs["code"], kwargs["name"], "default"))
+
+    async def validate_app_basic_info(self, name: str, **kwargs: Any) -> AppBasicInfoValidation:
+        return self._answer("validate_app_basic_info", {"name": name, **kwargs}, AppBasicInfoValidation(None, None))
 
     async def upload_package_via_link(self, **kwargs: Any) -> None:
         return self._answer("upload_package_via_link", kwargs, None)

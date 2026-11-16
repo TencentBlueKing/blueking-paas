@@ -41,6 +41,7 @@ MSG_DEPLOY_UNCERTAIN = "部署请求可能已经提交，请到开发者中心�
 MSG_MODULE_NOT_DEFAULT = "AppSpark 只能发布应用的默认模块，该应用的默认模块已在开发者中心变更，请到开发者中心操作"
 MSG_APP_NOT_RECORDED = "开发者中心已创建应用 {code}，但 AppSpark 没能记下它，请联系管理员"
 MSG_PROJECT_DELETED = "项目已删除，发布随之终止"
+MSG_APP_NAME_TAKEN = "应用名称「{name}」已被开发者中心的其他应用使用，请换一个名称"
 _MSG_DEPLOY_TIMEOUT = "部署超过 {minutes} 分钟仍未结束，请到开发者中心查看部署进度"
 # 开发者中心 403 的错误码与给用户的说法。不在这里的 403（调用方没注册为 AppSpark 角色、网关没授权）要管理员处理。
 _FORBIDDEN_MESSAGES = {
@@ -69,6 +70,14 @@ class PublicationStepError(Exception):
         super().__init__(message)
         self.message = message
         self.cause = cause
+
+
+class AppNameTakenError(PublicationStepError):
+    """Creating the application was refused because another one took the name."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(MSG_APP_NAME_TAKEN.format(name=name), FailureCause.REJECTED)
+        self.name = name
 
 
 def to_step_error(exc: BkPaaSError | httpx2.HTTPError | SourcePackagingError) -> PublicationStepError:

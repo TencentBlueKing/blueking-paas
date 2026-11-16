@@ -111,6 +111,11 @@ class ErrorCodes:
         _("Application name may contain only Chinese characters, letters, digits, hyphens and underscores."),
         status_code=HTTPStatus.BAD_REQUEST,
     )
+    # 应用名称在开发者中心租户内唯一，换一个名称再发布即可；没有建任务，也不留失败记录。
+    PUBLICATION_APP_NAME_CONFLICT = ErrorCode(
+        _("Application name `{name}` is already used by another application in the developer center."),
+        status_code=HTTPStatus.CONFLICT,
+    )
     # 还没有哪轮对话改过代码，没有可发布的版本，先在对话里开发一些功能。
     PUBLICATION_NO_VERSION = ErrorCode(
         _("This project has no version to publish yet."),

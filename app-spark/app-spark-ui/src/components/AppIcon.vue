@@ -40,6 +40,7 @@ type IconName =
   | 'search'
   | 'smartphone'
   | 'sparkles'
+  | 'square'
   | 'square-pen'
   | 'trash'
   | 'x';
@@ -74,6 +75,7 @@ const paths: Record<IconName, string> = {
   search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   smartphone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
   sparkles: '<path d="m12 3-1.7 4.6L6 9.3l4.3 1.7 1.7 4.6 1.7-4.6L18 9.3l-4.3-1.7z"/><path d="m19 16-.8 2.2L16 19l2.2.8L19 22l.8-2.2L22 19l-2.2-.8z"/>',
+  square: '<rect width="18" height="18" x="3" y="3" rx="2"/>',
   'square-pen': '<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>',
   trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
   x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',

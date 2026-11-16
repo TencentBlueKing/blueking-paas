@@ -2441,6 +2441,29 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Register the current user in the Developer Center. A first browser visit creates the profile automatically; callers that only reach the Developer Center through the API gateway use this API to register the user beforehand, which is required before that user can be an application administrator. An existing profile is returned unchanged
+  /system/bkapps/applications/validations/:
+    post:
+      operationId: sys_validate_app_basic_info
+      description: 应用态校验应用 ID 和名称能否用于创建应用
+      tags:
+      - 应用/模块信息查询
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/validations/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Validate whether an application ID and name can be used to create an application with system API credentials
   /bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/aggregate_by_interval:
     get:
       operationId: aggregate_by_interval

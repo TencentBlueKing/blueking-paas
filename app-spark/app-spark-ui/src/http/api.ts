@@ -16,6 +16,7 @@ import type {
   PageQuery,
   PreviewResponse,
   PreviewStartResponse,
+  PublicationAppNameValidationRet,
   PublicationDeploymentRequest,
   PublicationResponse,
   ProjectFromPromptRequest,
@@ -23,6 +24,7 @@ import type {
   ProjectIntRenamingResponse,
   ProjectRenameRequest,
   ProjectResponse,
+  RunStopResponse,
   RuntimeStateResponse,
   StartRunRequest,
   UiEventPageResponse,
@@ -53,6 +55,7 @@ export type {
   PageQuery,
   PreviewResponse,
   PreviewStartResponse,
+  PublicationAppNameValidationRet,
   PublicationDeploymentRequest,
   PublicationDevCenterLinks,
   PublicationFailure,
@@ -66,6 +69,7 @@ export type {
   ProjectIntRenamingResponse,
   ProjectRenameRequest,
   ProjectResponse,
+  RunStopResponse,
   RuntimeStateResponse,
   StartRunRequest,
   UiEventPageResponse,
@@ -146,6 +150,19 @@ export const createPublicationDeployment = (
     `${apiPrefix}/projects/${projectId}/publication/deployments/`,
     payload,
     { globalError: false },
+  )
+);
+
+/** 首次发布前检查蓝鲸应用名能否使用；只是提示，发布时后端会再校验一次。 */
+export const validatePublicationAppName = (
+  projectId: string,
+  name: string,
+  signal?: AbortSignal,
+): Promise<PublicationAppNameValidationRet> => (
+  http.get(
+    `${apiPrefix}/projects/${projectId}/publication/app-name-validate/`,
+    { name },
+    { globalError: false, signal },
   )
 );
 
@@ -275,6 +292,24 @@ export const uploadConversationAttachment = async (
   if (!response.ok) throw await createRequestError(response, '图片上传失败');
   return response.json();
 };
+
+/**
+ * 请求停止正在跑的那一轮，不等它收尾就返回。
+ *
+ * 被停下的一轮照常收尾：SSE 以 `RUN_FINISHED` 结束，会话状态的 `running` 变回 false。这一轮已经
+ * 结束时回 409 `RUN_NOT_RUNNING`，由调用方决定怎么处理，所以关掉全局报错。
+ */
+export const stopConversationRun = (
+  projectId: string,
+  number: number,
+  runId: string,
+): Promise<RunStopResponse> => (
+  http.post(
+    `${apiPrefix}/projects/${projectId}/conversations/${number}/runs/${encodeURIComponent(runId)}/stop/`,
+    {},
+    { globalError: false },
+  )
+);
 
 /** 发起一轮对话，返回 AG-UI SSE Response，调用方自行读流 */
 export const startConversationRun = async (

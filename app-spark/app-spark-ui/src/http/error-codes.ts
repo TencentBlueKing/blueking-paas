@@ -14,6 +14,8 @@ export const ApiErrorCode = {
   AGENT_WORKSPACE_BUSY: 'AGENT_WORKSPACE_BUSY',
   /** 工作区应用的端口被不是 Runtime 拉起的进程占着，预览拉不起来。 */
   PREVIEW_PORT_TAKEN: 'PREVIEW_PORT_TAKEN',
+  /** 要停的那一轮已经结束，或它所在的 Runtime 已经不在了。 */
+  RUN_NOT_RUNNING: 'RUN_NOT_RUNNING',
   /** 用户选择的模型已经不在当前推荐目录中，需要刷新目录并重新选择。 */
   MODEL_NOT_AVAILABLE: 'MODEL_NOT_AVAILABLE',
   /** 当前模型不支持图片输入，本轮不会开始。 */
@@ -34,6 +36,8 @@ export const ApiErrorCode = {
   PUBLICATION_NO_VERSION: 'PUBLICATION_NO_VERSION',
   /** 首次发布时填写的应用名称过滤后为空。 */
   PUBLICATION_APP_NAME_INVALID: 'PUBLICATION_APP_NAME_INVALID',
+  /** 首次发布时的应用名称已被开发者中心的其他应用使用，换一个名称再发布。 */
+  PUBLICATION_APP_NAME_CONFLICT: 'PUBLICATION_APP_NAME_CONFLICT',
   /** 开发者中心拒绝创建应用或提交部署。 */
   PUBLICATION_SUBMIT_FAILED: 'PUBLICATION_SUBMIT_FAILED',
   /** 当前项目已经有发布任务进行中，需要重新查询任务状态。 */

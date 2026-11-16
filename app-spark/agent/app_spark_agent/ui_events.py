@@ -18,8 +18,6 @@ from ag_ui.core import (
     ReasoningMessageEndEvent,
     TextMessageContentEvent,
     TextMessageEndEvent,
-    ThinkingTextMessageContentEvent,
-    ThinkingTextMessageEndEvent,
     ToolCallArgsEvent,
     ToolCallEndEvent,
 )
@@ -33,12 +31,8 @@ class _Family(StrEnum):
 
     TEXT = "text"
     TOOL_ARGS = "toolArgs"
-    THINKING = "thinking"
     REASONING = "reasoning"
 
-
-# The thinking family carries no identifier, so its buffer needs a fixed key.
-_SINGLETON = ""
 
 _Buffers = dict[tuple[_Family, str], list[str]]
 
@@ -93,12 +87,6 @@ def _coalesce(event: BaseEvent, buffers: _Buffers) -> list[BaseEvent]:
         case ToolCallEndEvent():
             return [*_assembled(buffers, _Family.TOOL_ARGS, event.tool_call_id), event]
 
-        case ThinkingTextMessageContentEvent():
-            buffers.setdefault((_Family.THINKING, _SINGLETON), []).append(event.delta)
-            return []
-        case ThinkingTextMessageEndEvent():
-            return [*_assembled(buffers, _Family.THINKING, _SINGLETON), event]
-
         case ReasoningMessageContentEvent():
             buffers.setdefault((_Family.REASONING, event.message_id), []).append(event.delta)
             return []
@@ -132,8 +120,6 @@ def _content_event(family: _Family, key: str, content: str) -> BaseEvent:
             return TextMessageContentEvent(message_id=key, delta=content)
         case _Family.TOOL_ARGS:
             return ToolCallArgsEvent(tool_call_id=key, delta=content)
-        case _Family.THINKING:
-            return ThinkingTextMessageContentEvent(delta=content)
         case _Family.REASONING:
             return ReasoningMessageContentEvent(message_id=key, delta=content)
 
@@ -144,8 +130,6 @@ def _end_event(family: _Family, key: str) -> BaseEvent:
             return TextMessageEndEvent(message_id=key)
         case _Family.TOOL_ARGS:
             return ToolCallEndEvent(tool_call_id=key)
-        case _Family.THINKING:
-            return ThinkingTextMessageEndEvent()
         case _Family.REASONING:
             return ReasoningMessageEndEvent(message_id=key)
 

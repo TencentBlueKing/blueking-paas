@@ -28,8 +28,9 @@
 progress 是各步共用的状态写入（推进阶段、写下结果），errors 是给用户看的失败原因。
 """
 
-from app_spark_api.publication.steps.binding import bind_app
+from app_spark_api.publication.steps.binding import bind_app, build_app_tenant_kwargs
 from app_spark_api.publication.steps.errors import (
+    MSG_APP_NAME_TAKEN,
     MSG_APP_NOT_MANAGED,
     MSG_BKPAAS_UNAVAILABLE,
     MSG_DEPLOY_UNCERTAIN,
@@ -40,6 +41,7 @@ from app_spark_api.publication.steps.errors import (
     MSG_PREPARE_FAILED,
     MSG_PREPARE_INTERRUPTED,
     MSG_PROJECT_DELETED,
+    AppNameTakenError,
     FailureCause,
     PublicationStepError,
     make_deploy_timeout_message,
@@ -50,6 +52,7 @@ from app_spark_api.publication.steps.preparing import prepare_deployment
 from app_spark_api.publication.steps.progress import FinishGuard, afail_task_by_id, afinish_task
 
 __all__ = [
+    "MSG_APP_NAME_TAKEN",
     "MSG_APP_NOT_MANAGED",
     "MSG_BKPAAS_UNAVAILABLE",
     "MSG_DEPLOY_UNCERTAIN",
@@ -60,6 +63,7 @@ __all__ = [
     "MSG_PREPARE_FAILED",
     "MSG_PREPARE_INTERRUPTED",
     "MSG_PROJECT_DELETED",
+    "AppNameTakenError",
     "FailureCause",
     "FinishGuard",
     "PollOutcome",
@@ -67,6 +71,7 @@ __all__ = [
     "afail_task_by_id",
     "afinish_task",
     "bind_app",
+    "build_app_tenant_kwargs",
     "make_deploy_timeout_message",
     "poll_deployment",
     "prepare_deployment",

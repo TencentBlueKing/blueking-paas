@@ -26,6 +26,7 @@ from django.conf import settings
 from django.db import transaction
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
@@ -313,7 +314,33 @@ class SysAppViewSet(viewsets.ViewSet):
         if self.action == "create_app_spark_app":
             return [sysapi_client_perm_class(ClientAction.CREATE_APP_SPARK_APP)()]
 
+        # 校验只给会创建应用的系统；AppSpark 没有 MANAGE_APPLICATIONS，所以单独一个动作。
+        if self.action == "validate_basic_info":
+            return [sysapi_client_perm_class(ClientAction.VALIDATE_APP_BASIC_INFO)()]
+
         return super().get_permissions()
+
+    @swagger_auto_schema(
+        request_body=slzs.SysAppBasicInfoValidationInputSLZ,
+        responses={status.HTTP_200_OK: slzs.SysAppBasicInfoValidationOutputSLZ()},
+        tags=["创建应用"],
+    )
+    def validate_basic_info(self, request):
+        """应用态校验应用 ID 和名称能否用于创建应用，只校验不创建。"""
+        # 租户参数不合法是调用方传错了，直接报 400；名称唯一性要靠它确定租户范围。
+        tenant_slz = slzs.SysAppTenantInputSLZ(data=request.data)
+        tenant_slz.is_valid(raise_exception=True)
+
+        serializer = slzs.SysAppBasicInfoValidationInputSLZ(
+            data=request.data, context={"app_tenant_id": tenant_slz.validated_data["app_tenant_id"]}
+        )
+        # 名称、ID 不能用也是一次成功的校验，用 200 返回；带上错误码，调用方据此区分重名和格式不对。
+        fields_detail = {} if serializer.is_valid() else ValidationError(serializer.errors).get_full_details()
+        return Response(
+            slzs.SysAppBasicInfoValidationOutputSLZ(
+                {"is_valid": not fields_detail, "fields_detail": fields_detail}
+            ).data
+        )
 
     @transaction.atomic
     @swagger_auto_schema(

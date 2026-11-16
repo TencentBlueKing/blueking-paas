@@ -12,7 +12,7 @@
 - 使用 pyenv 安装 Python 3.14：
 
 ```shell
-❯ pyenv install 3.14.6
+❯ pyenv install 3.14.10
 ```
 
 ### 2. 安装项目依赖

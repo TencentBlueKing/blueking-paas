@@ -50,8 +50,16 @@ class PublicationAppNameInvalidError(PublicationError):
         self.name = name
 
 
+class PublicationAppNameConflictError(PublicationError):
+    """Another developer center application already uses the name, so the first deployment needs a different one."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(f"Application name {name!r} is taken in the developer center")
+        self.name = name
+
+
 class PublicationSubmitError(PublicationError):
-    """Creating the developer center application failed; the message says why.
+    """The developer center refused, or failed, to create the application; the message says why.
 
     :param cause: 失败属于哪一类，决定对外的状态码。
     """

@@ -31,7 +31,10 @@
       :disabled="composerDisabled"
       :enable-upload="true"
       :hint="composerHint"
-      @send="sendMessage"
+      :running="status !== 'idle'"
+      :can-stop="canStop"
+      @send="handleSend"
+      @stop="handleStop"
     />
     <div v-else class="interaction-panel__archived" role="status">
       <AppIcon name="archive" />
@@ -73,8 +76,9 @@ const {
   hasEarlierHistory,
   viewingArchive,
   canReturnToLive,
+  canStop,
+  stopping,
 } = storeToRefs(projectStore);
-const { sendMessage } = projectStore;
 const scrollerRef = ref<HTMLElement>();
 const pinnedToBottom = ref(true);
 
@@ -85,6 +89,7 @@ const composerDisabled = computed(() => (
 const composerHint = computed(() => {
   if (!conversationNumber.value) return '正在准备会话…';
   if (!isLive.value) return '归档会话只能查看，不能发送消息';
+  if (stopping.value) return '正在停止…';
   if (busy.value) return '正在回复，完成后可以继续';
   return 'Shift + Enter 换行';
 });
@@ -93,6 +98,16 @@ const handleScroll = () => {
   const el = scrollerRef.value;
   if (!el) return;
   pinnedToBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+};
+
+// 自己刚发的消息总要看得到：哪怕之前翻到了上面，发送也把视口拉回底部，之后照常跟着新内容走。
+const handleSend: typeof projectStore.sendMessage = (...args) => {
+  pinnedToBottom.value = true;
+  return projectStore.sendMessage(...args);
+};
+
+const handleStop = () => {
+  void projectStore.stopRun();
 };
 
 watch(messages, async () => {

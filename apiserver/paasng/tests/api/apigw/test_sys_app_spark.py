@@ -20,6 +20,7 @@ import string
 import pytest
 from bkpaas_auth.models import User
 from django.test.utils import override_settings
+from django.urls import resolve
 from rest_framework import status
 
 from paasng.core.tenant.constants import AppTenantMode
@@ -38,6 +39,7 @@ from tests.utils.basic import generate_random_string
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 SYS_APP_SPARK_URL = "/sys/api/bkapps/app_spark/"
+SYS_VALIDATE_URL = "/sys/api/bkapps/applications/validations/"
 
 
 @pytest.fixture()
@@ -144,6 +146,47 @@ class TestSysCreateAppSparkApp:
         assert resp.status_code == status.HTTP_403_FORBIDDEN
         assert resp.json()["code"] == "SYSAPI_CLIENT_PERM_DENIED"
         assert not Application.objects.filter(code=app_spark_code).exists()
+
+
+class TestSysValidateAppBasicInfo:
+    """应用态校验应用 ID 和名称接口测试"""
+
+    def test_available(self, sys_app_spark_api_client, app_spark_code, app_spark_name):
+        resp = sys_app_spark_api_client.post(SYS_VALIDATE_URL, data={"code": app_spark_code, "name": app_spark_name})
+
+        assert resp.status_code == status.HTTP_200_OK, resp.json()
+        assert resp.json() == {"is_valid": True, "fields_detail": {}}
+
+    @pytest.mark.parametrize("taken_field", ["code", "name"])
+    def test_taken(self, sys_app_spark_api_client, bk_app, app_spark_code, app_spark_name, taken_field):
+        """已被占用也是 200，按字段给出 unique 错误码，调用方据此区分重名和格式不对。"""
+        data = {"code": app_spark_code, "name": app_spark_name, taken_field: getattr(bk_app, taken_field)}
+        resp = sys_app_spark_api_client.post(SYS_VALIDATE_URL, data=data)
+
+        assert resp.status_code == status.HTTP_200_OK
+        body = resp.json()
+        assert body["is_valid"] is False
+        assert list(body["fields_detail"]) == [taken_field]
+        assert body["fields_detail"][taken_field][0]["code"] == "unique"
+
+    def test_invalid_tenant_params(self, sys_app_spark_api_client, app_spark_name):
+        """租户参数是调用方传错了，返回 400 而不是校验结果。"""
+        resp = sys_app_spark_api_client.post(
+            SYS_VALIDATE_URL, data={"name": app_spark_name, "app_tenant_mode": "not-a-mode"}
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "app_tenant_mode" in resp.json()["fields_detail"]
+
+    def test_denied_for_light_app_maintainer(self, sys_light_api_client, app_spark_name):
+        resp = sys_light_api_client.post(SYS_VALIDATE_URL, data={"name": app_spark_name})
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.json()["code"] == "SYSAPI_CLIENT_PERM_DENIED"
+
+    def test_not_routed_as_app_detail(self):
+        """validations 也是合法的应用 ID，路由不能落到应用详情上。"""
+        assert resolve(SYS_VALIDATE_URL).url_name == "sys.applications.validate_basic_info"
 
 
 class TestUserFacingCreationRejectsAppSparkOrigin:

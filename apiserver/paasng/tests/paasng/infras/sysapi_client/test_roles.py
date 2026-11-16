@@ -56,6 +56,7 @@ class TestClientPermChecker:
             (ClientAction.UPLOAD_SOURCE_PACKAGE, True),
             (ClientAction.DEPLOY_APPLICATIONS, True),
             (ClientAction.CREATE_APP_SPARK_APP, True),
+            (ClientAction.VALIDATE_APP_BASIC_INFO, True),
             # 不继承基础管理角色，也拿不到 AIDEV 的专用动作
             (ClientAction.READ_APPLICATIONS, False),
             (ClientAction.CREATE_AI_AGENT_APP, False),
@@ -65,3 +66,18 @@ class TestClientPermChecker:
     )
     def test_app_spark_perms(self, action: ClientAction, expected: bool):
         assert ClientPermChecker().role_can_do(ClientRole.APP_SPARK, action) is expected
+
+    @pytest.mark.parametrize(
+        ("role", "expected"),
+        [
+            (ClientRole.NOBODY, False),
+            (ClientRole.BASIC_READER, False),
+            (ClientRole.LIGHT_APP_MAINTAINER, False),
+            (ClientRole.BASIC_MAINTAINER, True),
+            (ClientRole.LESSCODE, True),
+            (ClientRole.AIDEV, True),
+            (ClientRole.APP_SPARK, True),
+        ],
+    )
+    def test_validate_app_basic_info_perms(self, role: ClientRole, expected: bool):
+        assert ClientPermChecker().role_can_do(role, ClientAction.VALIDATE_APP_BASIC_INFO) is expected

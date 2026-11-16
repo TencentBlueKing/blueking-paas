@@ -12,8 +12,6 @@ from ag_ui.core import (
     TextMessageContentEvent,
     TextMessageEndEvent,
     TextMessageStartEvent,
-    ThinkingTextMessageContentEvent,
-    ThinkingTextMessageEndEvent,
     ToolCallArgsEvent,
     ToolCallEndEvent,
     ToolCallStartEvent,
@@ -101,13 +99,12 @@ async def test_pass_through_events_are_stored_immediately(tmp_path: Path) -> Non
 
 
 async def test_open_families_coalesce_independently(tmp_path: Path) -> None:
-    """Text, tool args, thinking, and reasoning each buffer until their own end event."""
+    """Text, tool args, and reasoning each buffer until their own end event."""
     log = make_log(tmp_path)
     text_start = TextMessageStartEvent(message_id="m1")
     text_end = TextMessageEndEvent(message_id="m1")
     tool_start = ToolCallStartEvent(tool_call_id="t1", tool_call_name="probe")
     tool_end = ToolCallEndEvent(tool_call_id="t1")
-    thinking_end = ThinkingTextMessageEndEvent()
     reasoning_end = ReasoningMessageEndEvent(message_id="r1")
 
     await forward_and_record(
@@ -116,15 +113,12 @@ async def test_open_families_coalesce_independently(tmp_path: Path) -> None:
             TextMessageContentEvent(message_id="m1", delta="hi"),
             tool_start,
             ToolCallArgsEvent(tool_call_id="t1", delta='{"n":'),
-            ThinkingTextMessageContentEvent(delta="hmm"),
             ReasoningMessageContentEvent(message_id="r1", delta="why"),
             ToolCallArgsEvent(tool_call_id="t1", delta="1}"),
             TextMessageContentEvent(message_id="m1", delta="!"),
-            ThinkingTextMessageContentEvent(delta="..."),
             ReasoningMessageContentEvent(message_id="r1", delta=" not"),
             text_end,
             tool_end,
-            thinking_end,
             reasoning_end,
         ],
         log,
@@ -137,8 +131,6 @@ async def test_open_families_coalesce_independently(tmp_path: Path) -> None:
         dump_event(text_end),
         dump_event(ToolCallArgsEvent(tool_call_id="t1", delta='{"n":1}')),
         dump_event(tool_end),
-        dump_event(ThinkingTextMessageContentEvent(delta="hmm...")),
-        dump_event(thinking_end),
         dump_event(ReasoningMessageContentEvent(message_id="r1", delta="why not")),
         dump_event(reasoning_end),
     ]

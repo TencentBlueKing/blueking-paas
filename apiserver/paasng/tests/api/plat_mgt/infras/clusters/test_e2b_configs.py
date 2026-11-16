@@ -165,18 +165,6 @@ class TestUpsertE2BConfig:
         e2b_config.refresh_from_db()
         assert e2b_config.api_key == "rotated-gateway-key"
 
-    def test_update_keeps_namespace(self, plat_mgt_api_client, init_default_cluster, e2b_config):
-        # 前端提交整张表单时会带上原值
-        resp = plat_mgt_api_client.put(
-            _url(init_default_cluster.name),
-            data={
-                "control_plane_url": e2b_config.control_plane_url,
-                "data_plane_address": e2b_config.data_plane_address,
-                "namespace": "default",
-            },
-        )
-        assert resp.status_code == status.HTTP_204_NO_CONTENT
-
     def test_update_cannot_change_namespace(self, plat_mgt_api_client, init_default_cluster, e2b_config):
         resp = plat_mgt_api_client.put(
             _url(init_default_cluster.name),

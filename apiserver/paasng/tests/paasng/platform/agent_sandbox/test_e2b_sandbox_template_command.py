@@ -49,7 +49,7 @@ def _run(*args: str) -> str:
 @pytest.fixture(autouse=True)
 def sync_task():
     """每次保存都会异步下发，这里只关心排了哪些任务"""
-    with mock.patch("paasng.platform.agent_sandbox.e2b.templates.sync_e2b_template_task") as task:
+    with mock.patch("paasng.platform.agent_sandbox.e2b.templates.sync_e2b_templates_task") as task:
         yield task
 
 
@@ -110,7 +110,10 @@ class TestApply:
             None,
         )
         assert (browser.enabled, browser.is_public) == (True, False)
-        assert sorted(c.args[0] for c in sync_task.delay.call_args_list) == ["e2b-browser", "e2b-envd"]
+        assert sorted(c.kwargs["resource_names"][0] for c in sync_task.delay.call_args_list) == [
+            "e2b-browser",
+            "e2b-envd",
+        ]
 
     def test_bundled_example_file(self):
         """support-files 里的示例要能直接 apply"""
@@ -278,7 +281,7 @@ class TestDelete:
 
         assert "Deleted template 'e2b-envd'" in out
         assert not E2BSandboxTemplate.objects.filter(template_id=TEMPLATE_ID).exists()
-        sync_task.delay.assert_called_once_with(TEMPLATE_ID)
+        sync_task.delay.assert_called_once_with(resource_names=[TEMPLATE_ID])
 
     def test_refuses_while_sandboxes_are_active(self, template, bk_app):
         """删除 SandboxPool 会连带销毁它名下正在运行的沙箱"""
@@ -336,7 +339,7 @@ class TestSync:
             ClusterSyncResult(cluster_name="c2", error="unreachable"),
         ]
 
-        with mock.patch(f"{COMMAND_MODULE}.sync_all", return_value=results):
+        with mock.patch(f"{COMMAND_MODULE}.sync_templates", return_value=results):
             out = _run("sync")
 
         assert "[c1] synced=2 failed=1 pruned=old" in out

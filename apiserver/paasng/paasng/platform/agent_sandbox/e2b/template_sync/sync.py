@@ -15,38 +15,32 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""向集群下发模板的 CR，并维护各集群的下发记录。
-
-下发是幂等的 upsert，失败的集群只记录结果、不回滚，由平台管理端的手动同步补齐。
-
-全量同步与单模板同步共用一把全局锁，拿到锁之后才读库，因此最后执行的一方用的总是最新状态。
-锁只串行化向集群的下发，模板的增删改只写库、投递任务，不受影响。代价是下发排队：
-单模板下发只需秒级，撞上时多等一轮重试；全量同步期间保存的模板，要等它结束才下发。
-模板保存频率低，不值得为此按模板拆锁。
-"""
+"""向集群下发模板的 CR，并按结果更新下发记录。"""
 
 import logging
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Iterator
+from typing import Iterator
 
 from paas_wl.bk_app.agent_sandbox.constants import SANDBOX_INSTANCE_API_VERSION
 from paas_wl.infras.cluster.models import ClusterE2BConfig
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
-from paasng.platform.agent_sandbox.e2b.clusters import (
-    TemplateTargetResolver,
-    list_enabled_e2b_cluster_names,
-    list_enabled_e2b_configs,
-)
+from paasng.platform.agent_sandbox.e2b.clusters import TemplateTargetResolver, list_enabled_e2b_configs
 from paasng.platform.agent_sandbox.e2b.constants import TEMPLATE_SYNC_LOCK_TIMEOUT_SECONDS, E2BTemplateSyncStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BTemplateSyncInProgress
-from paasng.platform.agent_sandbox.models import E2BSandboxTemplate, E2BSandboxTemplateSyncRecord
+from paasng.platform.agent_sandbox.models import E2BSandboxTemplate
 from paasng.utils.lock import redis_lock
 
-from .manifests import build_pool_manifest, build_template_manifest, is_managed, managed_labels, spec_digest
-from .status import is_current
+from .manifests import (
+    build_pool_manifest,
+    build_template_manifest,
+    build_template_patch,
+    is_managed,
+    managed_labels,
+)
+from .records import prune_records, record_status, truncate_message
 
 logger = logging.getLogger(__name__)
 
@@ -70,130 +64,93 @@ class ClusterSyncResult:
     error: str = ""
 
 
-# 下发
-
-
-def sync_template(resource_name: str) -> None:
-    """把单个模板的当前状态下发到它的目标集群，模板保存或删除后异步调用。
-
-    模板已从数据库删除时，从所有启用 e2b 的集群里删掉它的 CR。
-
-    :raises E2BTemplateSyncInProgress: 另一次下发还没结束，调用方须稍后重试，否则模板会停在待同步
-    """
-    with _sync_lock():
-        _sync_template(resource_name)
-
-
-def _sync_template(resource_name: str) -> None:
-    template = E2BSandboxTemplate.objects.select_related("application").filter(resource_name=resource_name).first()
-    if template is None:
-        for config in list_enabled_e2b_configs():
-            try:
-                with get_client_by_cluster_name(config.cluster.name) as client:
-                    _delete_managed(client, resource_name, config.namespace)
-            except Exception:
-                logger.exception(
-                    "failed to delete e2b template %s from cluster %s", resource_name, config.cluster.name
-                )
-        return
-
-    configs = list_enabled_e2b_configs()
-    # 目标集群可能在保存之后有变化，以下发时为准
-    target_names = TemplateTargetResolver({c.cluster.name for c in configs}).resolve(template)
-    _delete_non_target_records(template, target_names)
-    for config in configs:
-        if config.cluster.name not in target_names:
-            continue
-        template = _reload(template)
-        if template is None:
-            return
-        try:
-            with get_client_by_cluster_name(config.cluster.name) as client:
-                _apply(client, template, config.namespace)
-        except Exception as exc:
-            logger.exception("failed to sync e2b template %s to cluster %s", resource_name, config.cluster.name)
-            _record(template, config.cluster.name, E2BTemplateSyncStatus.FAILED, str(exc))
-        else:
-            _record(template, config.cluster.name, E2BTemplateSyncStatus.SUCCEEDED)
-
-
-def sync_all(cluster_names: set[str] | None = None, resource_names: set[str] | None = None) -> list[ClusterSyncResult]:
+def sync_templates(
+    cluster_names: set[str] | None = None, resource_names: set[str] | None = None
+) -> list[ClusterSyncResult]:
     """把模板下发到启用 e2b 的集群，并清理数据库中已不存在的模板留下的 CR。
 
     范围内的下发记录按本次结果重写。幂等，可重复调用。某个集群失败不影响其余集群。
 
     :param cluster_names: 只下发到这些集群，为空表示全部启用 e2b 的集群
-    :param resource_names: 只下发这些模板，为空表示全部模板。限定模板时不做清理：
-        只拿到一部分模板，判断不了集群里多出来的 CR 是不是已删除模板的残留
-    :raises E2BTemplateSyncInProgress: 另一次下发还没结束
+    :param resource_names: 只下发这些模板，为空表示全部模板。限定模板时只清理范围内已删除模板的 CR：
+        只拿到一部分模板，判断不了集群里其余多出来的 CR 是不是已删除模板的残留
+    :raises E2BTemplateSyncInProgress: 另一次下发还没结束，调用方须稍后重试，否则模板会停在待同步
     """
     with _sync_lock():
-        return _sync_all(cluster_names, resource_names)
+        return _sync_templates(cluster_names, resource_names)
 
 
-def _sync_all(cluster_names: set[str] | None, resource_names: set[str] | None) -> list[ClusterSyncResult]:
+def _sync_templates(cluster_names: set[str] | None, resource_names: set[str] | None) -> list[ClusterSyncResult]:
     # 这份列表只决定下发哪些模板、各下发到哪些集群，真正下发时以重新读库为准
-    templates_qs = E2BSandboxTemplate.objects.select_related("application")
+    query = E2BSandboxTemplate.objects.select_related("application")
     if resource_names is not None:
-        templates_qs = templates_qs.filter(resource_name__in=resource_names)
-    templates = list(templates_qs)
+        query = query.filter(resource_name__in=resource_names)
+    templates = list(query)
     configs = list_enabled_e2b_configs()
     # 目标集群按全部启用 e2b 的集群求，只限定下发范围，否则范围外集群的记录会被当成不再是目标而删掉
     resolver = TemplateTargetResolver({c.cluster.name for c in configs})
+    # 计算模板需要下发到哪些集群
     targets = {t.resource_name: resolver.resolve(t) for t in templates}
-    # 如果集群下线，则关联的同步记录需要清理
-    for snapshot in templates:
-        _delete_non_target_records(snapshot, targets[snapshot.resource_name])
 
     if cluster_names is not None:
         configs = [c for c in configs if c.cluster.name in cluster_names]
     results = []
     for config in configs:
+        # 计算当前集群相关的模板
         cluster_templates = [t for t in templates if config.cluster.name in targets[t.resource_name]]
-        results.append(_sync_cluster(config, cluster_templates, prune=resource_names is None))
+        results.append(_sync_cluster(config, cluster_templates, prune_scope=resource_names))
 
-    E2BSandboxTemplateSyncRecord.objects.exclude(template_id__in=E2BSandboxTemplate.objects.values("pk")).delete()
+    prune_records(templates, targets)
     return results
 
 
-def _sync_cluster(config: ClusterE2BConfig, templates: list[E2BSandboxTemplate], prune: bool) -> ClusterSyncResult:
+def _sync_cluster(
+    config: ClusterE2BConfig, templates: list[E2BSandboxTemplate], prune_scope: set[str] | None
+) -> ClusterSyncResult:
+    """同步指定集群下的模板
+    :param prune_scope: 只清理这些资源名中已删除模板的 CR，为空表示清理全部
+    """
     cluster_name = config.cluster.name
     result = ClusterSyncResult(cluster_name=cluster_name)
     try:
         with get_client_by_cluster_name(cluster_name) as client:
             for snapshot in templates:
-                # 同步途中被删除的模板跳过，被修改的按最新配置下发
+                # 再读一遍库，避免中途被修改
                 template = _reload(snapshot)
                 if template is None:
                     continue
                 try:
-                    _apply(client, template, config.namespace)
+                    _apply_resources(client, template, config.namespace)
                 except Exception as exc:
                     logger.exception(
                         "failed to sync e2b template %s to cluster %s", template.resource_name, cluster_name
                     )
-                    result.failed[template.resource_name] = _truncate(str(exc))
-                    _record(template, cluster_name, E2BTemplateSyncStatus.FAILED, str(exc))
+                    result.failed[template.resource_name] = truncate_message(str(exc))
+                    record_status(template, cluster_name, E2BTemplateSyncStatus.FAILED, str(exc))
                 else:
                     result.synced.append(template.resource_name)
-                    _record(template, cluster_name, E2BTemplateSyncStatus.SUCCEEDED)
+                    record_status(template, cluster_name, E2BTemplateSyncStatus.SUCCEEDED)
 
             # 回收被删除模板的残留 CR
-            if prune:
-                known_resource_names = set(E2BSandboxTemplate.objects.values_list("resource_name", flat=True))
+            known_resource_names = set(E2BSandboxTemplate.objects.values_list("resource_name", flat=True))
+            if prune_scope is None:
                 result.pruned = _prune(client, config.namespace, known_resource_names)
+            else:
+                deleted = sorted(prune_scope - known_resource_names)
+                result.pruned = [name for name in deleted if _delete_managed(client, name, config.namespace)]
     except Exception as exc:
         logger.exception("failed to sync e2b templates to cluster %s", cluster_name)
-        result.error = _truncate(str(exc))
+        result.error = truncate_message(str(exc))
         # 连不上集群时还没处理到的模板，同样记为失败，否则会残留成功或待同步的旧状态
         for snapshot in templates:
             if snapshot.resource_name not in result.synced and snapshot.resource_name not in result.failed:
-                _record(snapshot, cluster_name, E2BTemplateSyncStatus.FAILED, str(exc))
+                record_status(snapshot, cluster_name, E2BTemplateSyncStatus.FAILED, str(exc))
     return result
 
 
 @contextmanager
 def _sync_lock() -> Iterator[None]:
+    # TODO: 锁没有续期，一次下发超过 TEMPLATE_SYNC_LOCK_TIMEOUT_SECONDS（模板多的全量同步可能做到）时会提前过期：
     with redis_lock(SYNC_LOCK_KEY, timeout=TEMPLATE_SYNC_LOCK_TIMEOUT_SECONDS) as acquired:
         if not acquired:
             raise E2BTemplateSyncInProgress("another e2b template sync is running")
@@ -208,86 +165,34 @@ def _reload(template: E2BSandboxTemplate) -> E2BSandboxTemplate | None:
     return E2BSandboxTemplate.objects.select_related("application").filter(pk=template.pk).first()
 
 
-# 下发记录。除下发本身外，模板保存、投递同步任务、集群下线时也要改记录，入口都在这里
-
-
-def mark_pending(template: E2BSandboxTemplate) -> None:
-    """模板保存后、下发前调用：目标集群全部置为待同步，不再是目标的集群的记录删除"""
-    target_names = TemplateTargetResolver(list_enabled_e2b_cluster_names()).resolve(template)
-    _delete_non_target_records(template, target_names)
-    for cluster_name in target_names:
-        _record(template, cluster_name, E2BTemplateSyncStatus.PENDING)
-
-
-def mark_sync_pending(cluster_names: set[str] | None = None, resource_names: set[str] | None = None) -> None:
-    """投递同步任务前调用：范围内已有的记录置为待同步，概览里没有待同步即同步完成。参数同 ``sync_all``。
-
-    已经成功下发了当前配置的记录不动：重新同步写的还是同一份配置，同步期间模板应当保持可用，
-    真失败了再由同步改成失败。
-
-    没有记录的目标集群在概览里本就算未完成，不再是目标的集群不计入概览、由同步删除，
-    所以只需改已有的记录
-    """
-    records = E2BSandboxTemplateSyncRecord.objects.select_related("template")
-    if cluster_names is not None:
-        records = records.filter(cluster_name__in=cluster_names)
-    if resource_names is not None:
-        records = records.filter(template__resource_name__in=resource_names)
-    stale = [r.pk for r in records if not is_current(r, r.template)]
-    E2BSandboxTemplateSyncRecord.objects.filter(pk__in=stale).update(
-        status=E2BTemplateSyncStatus.PENDING.value, message=""
-    )
-
-
-def forget_cluster(cluster_name: str) -> None:
-    """集群的 e2b 配置删除后调用：删掉该集群的全部下发记录。
-
-    记录按集群名关联，不会随配置一起删除。留着的话，同名集群换了命名空间重新配置后，
-    新命名空间里还没有 CR，旧记录却会让模板显示为可用
-    """
-    E2BSandboxTemplateSyncRecord.objects.filter(cluster_name=cluster_name).delete()
-
-
-def _record(template: E2BSandboxTemplate, cluster_name: str, status: E2BTemplateSyncStatus, message: str = "") -> None:
-    """记录下发状态。下发完成（无论成败）时 template 须是刚下发的那份，摘要按它计算"""
-    defaults: dict[str, Any] = {"status": status.value, "message": _truncate(message)}
-    if status != E2BTemplateSyncStatus.PENDING:
-        defaults["digest"] = spec_digest(template)
-    E2BSandboxTemplateSyncRecord.objects.update_or_create(
-        template=template, cluster_name=cluster_name, defaults=defaults
-    )
-
-
-def _delete_non_target_records(template: E2BSandboxTemplate, target_names: set[str]) -> None:
-    """删掉不再是目标的集群的记录，如已停用 e2b 的集群"""
-    E2BSandboxTemplateSyncRecord.objects.filter(template=template).exclude(cluster_name__in=target_names).delete()
-
-
-def _truncate(message: str) -> str:
-    """失败原因入库、返回前截断，k8s 的报错可能带上整个响应体"""
-    return message[:2000]
-
-
 # 集群资源操作
 
 
-def _apply(client: EnhancedApiClient, template: E2BSandboxTemplate, namespace: str) -> None:
-    """创建或覆盖模板的 CR。先模板后池子，池子引用的模板必须先存在"""
+def _apply_resources(client: EnhancedApiClient, template: E2BSandboxTemplate, namespace: str) -> None:
+    """创建或更新模板的 CR。先模板后池子，池子引用的模板必须先存在"""
     name = template.resource_name
-    _kres(kres.KSandboxTemplate, client).create_or_update(
+    _create_or_patch(
+        _kres(kres.KSandboxTemplate, client),
         name,
-        namespace=namespace,
-        body=build_template_manifest(template, namespace),
-        update_method="replace",
-        auto_add_version=True,
+        namespace,
+        manifest=build_template_manifest(template, namespace),
+        patch=build_template_patch(template, namespace),
     )
-    _kres(kres.KSandboxPool, client).create_or_update(
-        name,
-        namespace=namespace,
-        body=build_pool_manifest(template, namespace),
-        update_method="replace",
-        auto_add_version=True,
-    )
+    pool = build_pool_manifest(template, namespace)
+    _create_or_patch(_kres(kres.KSandboxPool, client), name, namespace, manifest=pool, patch=pool)
+
+
+def _create_or_patch(res: kres.BaseKresource, name: str, namespace: str, manifest: dict, patch: dict) -> None:
+    """不存在时按清单创建，已存在时以 merge patch 更新。
+
+    不用 replace：整体覆盖会清掉控制器写在对象上的 finalizers、annotations 等元数据
+    """
+    try:
+        res.get(name, namespace=namespace)
+    except ResourceMissing:
+        res.create(name, body=manifest, namespace=namespace)
+    else:
+        res.patch(name, body=patch, namespace=namespace, ptype=kres.PatchType.MERGE)
 
 
 def _delete_managed(client: EnhancedApiClient, resource_name: str, namespace: str) -> bool:
@@ -313,7 +218,10 @@ def _delete_managed(client: EnhancedApiClient, resource_name: str, namespace: st
 
 
 def _prune(client: EnhancedApiClient, namespace: str, known_resource_names: set[str]) -> list[str]:
-    """清理由平台管理、但数据库中已不存在的模板留下的 CR"""
+    """清理由平台管理、但数据库中已不存在的模板留下的 CR。
+
+    模板仍在、但集群已不再是它的目标（自定义模板的分配集群被下掉）时，CR 不会清理，需要手动删除
+    """
     selector = managed_labels()
     stale: set[str] = set()
     for kres_cls in (kres.KSandboxPool, kres.KSandboxTemplate):

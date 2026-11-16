@@ -586,14 +586,8 @@ class E2BSandboxTemplate(UuidAuditedModel):
 class E2BSandboxTemplateSyncRecord(UuidAuditedModel):
     """模板在单个集群上的下发状态。
 
-    每个目标集群恰好一条：保存模板时即为所有目标集群写入待同步，不再是目标的集群的记录随之删除，
-    因此记录齐全即可据此判断模板或集群是否同步完成。
-
-    只描述最近一次下发：status 是它的结果，digest 是它所下发配置的摘要。下发成功且摘要与模板
-    当前配置一致，才说明集群里的 SandboxTemplate 是当前配置，能否用模板创建沙箱以此为准。
-    失败时集群里可能只写入了一部分，因此不再沿用更早的成功结果。
-
-    [multi-tenancy] This model is not tenant-aware.
+    每个目标集群恰好一条：保存模板时即为所有目标集群写入待同步，因此记录齐全即可据此判断模板或集群是否同步完成。
+    不再是目标的集群（如已停用 e2b）可能还留着旧记录，读取时只看目标集群，由全量同步收尾时清理。
     """
 
     template = models.ForeignKey(

@@ -31,7 +31,7 @@ from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BTemplateSyncInProgress,
 )
 from paasng.platform.agent_sandbox.e2b.serializers import E2BBuiltinTemplateCreateInputSLZ
-from paasng.platform.agent_sandbox.e2b.template_sync.sync import sync_all
+from paasng.platform.agent_sandbox.e2b.template_sync.sync import sync_templates
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate
 
 
@@ -214,7 +214,7 @@ class Command(BaseCommand):
 
     def _sync(self):
         try:
-            results = sync_all()
+            results = sync_templates()
         except E2BTemplateSyncInProgress:
             raise CommandError("Another template sync is running, try again later")
         for result in results:

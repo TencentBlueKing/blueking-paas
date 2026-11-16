@@ -21,22 +21,13 @@ from paasng.platform.agent_sandbox.e2b import tasks
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BTemplateSyncInProgress
 
 
-class TestSyncTemplateTask:
+class TestSyncTemplatesTask:
     def test_retries_while_another_sync_runs(self):
         """拿不到锁时不能跳过，否则模板会一直停在待同步"""
         with mock.patch.object(
-            tasks, "sync_template", side_effect=[E2BTemplateSyncInProgress("running"), None]
-        ) as sync_template:
-            result = tasks.sync_e2b_template_task.apply(args=["e2b-envd"])
+            tasks, "sync_templates", side_effect=[E2BTemplateSyncInProgress("running"), []]
+        ) as sync_templates:
+            result = tasks.sync_e2b_templates_task.apply(kwargs={"resource_names": ["e2b-envd"]})
 
         assert result.successful()
-        assert sync_template.call_args_list == [mock.call("e2b-envd")] * 2
-
-
-class TestSyncAllTemplatesTask:
-    def test_retries_while_another_sync_runs(self):
-        with mock.patch.object(tasks, "sync_all", side_effect=[E2BTemplateSyncInProgress("running"), []]) as sync_all:
-            result = tasks.sync_all_e2b_templates_task.apply()
-
-        assert result.successful()
-        assert sync_all.call_count == 2
+        assert sync_templates.call_args_list == [mock.call(None, {"e2b-envd"})] * 2

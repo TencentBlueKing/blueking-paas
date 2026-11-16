@@ -33,7 +33,7 @@ from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterE2BConfigUpsertInputSLZ,
 )
 from paasng.platform.agent_sandbox.e2b.clusters import count_live_sandboxes
-from paasng.platform.agent_sandbox.e2b.template_sync.sync import forget_cluster
+from paasng.platform.agent_sandbox.e2b.template_sync.records import delete_cluster_records
 from paasng.utils.error_codes import error_codes
 
 
@@ -115,7 +115,7 @@ class ClusterE2BConfigViewSet(viewsets.GenericViewSet):
             data_before=DataDetail(data=self._to_audit_data(config)),
         )
         config.delete()
-        forget_cluster(cluster.name)
+        delete_cluster_records(cluster.name)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

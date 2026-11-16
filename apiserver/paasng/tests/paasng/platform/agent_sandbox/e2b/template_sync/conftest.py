@@ -48,15 +48,15 @@ def race_after_first_apply(monkeypatch):
     """在第一次下发完成后插入一段操作，模拟锁过期后另一次下发与当前下发交错执行"""
 
     def _install(action):
-        original = sync._apply
+        original = sync._apply_resources
         pending = [action]
 
-        def _apply(client, template, namespace):
+        def _apply_resources(client, template, namespace):
             original(client, template, namespace)
             if pending:
                 pending.pop()()
 
-        monkeypatch.setattr(sync, "_apply", _apply)
+        monkeypatch.setattr(sync, "_apply_resources", _apply_resources)
 
     return _install
 

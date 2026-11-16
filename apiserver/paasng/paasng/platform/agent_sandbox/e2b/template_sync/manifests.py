@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""由模板生成集群里的 CR 清单，以及判断集群里的 CR 是否已是当前配置所用的摘要。
+"""由模板生成集群里的 CR 清单。
 
 平台下发的 CR 都带 managed-by 标签。删除与清理只动带标签的 CR，集群里手工创建的不受影响。
 """
@@ -109,6 +109,20 @@ def _add_rootfs_disk(spec: dict[str, Any], disk_size_mb: int) -> None:
             },
         }
     ]
+
+
+def build_template_patch(template: E2BSandboxTemplate, namespace: str) -> dict[str, Any]:
+    """更新已有 SandboxTemplate 用的 merge patch。
+
+    merge patch 不会删掉清单里缺的键，去掉系统盘时须把 ``_add_rootfs_disk`` 加的字段显式置空
+    """
+    patch = build_template_manifest(template, namespace)
+    if not template.disk_size_mb:
+        spec = patch["spec"]["template"]["spec"]
+        spec["domain"]["devices"] = None
+        spec["podTemplate"]["volumes"] = None
+        spec["volumeClaimTemplates"] = None
+    return patch
 
 
 def build_pool_manifest(template: E2BSandboxTemplate, namespace: str) -> dict[str, Any]:

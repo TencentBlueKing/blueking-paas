@@ -47,7 +47,7 @@ SPEC = {"name": "x", "image": IMAGE, "cpu_count": 2, "memory_mb": 4096, "disk_si
 
 @pytest.fixture()
 def sync_task():
-    with mock.patch.object(templates, "sync_e2b_template_task") as task:
+    with mock.patch.object(templates, "sync_e2b_templates_task") as task:
         yield task
 
 
@@ -112,7 +112,7 @@ class TestCreate:
 
         assert len(callbacks) == 1
         callbacks[0]()
-        sync_task.delay.assert_called_once_with(template.resource_name)
+        sync_task.delay.assert_called_once_with(resource_names=[template.resource_name])
 
     @pytest.mark.usefixtures("e2b_config")
     def test_marks_target_clusters_pending(self, bk_app, sync_task):
@@ -186,7 +186,7 @@ class TestUpdate:
         with django_capture_on_commit_callbacks(execute=True):
             templates.update_template(template, name="renamed", **changes)
 
-        sync_task.delay.assert_called_once_with("e2b-envd")
+        sync_task.delay.assert_called_once_with(resource_names=["e2b-envd"])
 
 
 class TestGetUsable:
@@ -262,7 +262,7 @@ class TestDeleteCustomTemplatesOf:
             templates.delete_custom_templates_of(bk_app)
 
         assert set(E2BSandboxTemplate.objects.values_list("pk", flat=True)) == {theirs.pk, builtin.pk}
-        assert sorted(c.args[0] for c in sync_task.delay.call_args_list) == [
+        assert sorted(c.kwargs["resource_names"][0] for c in sync_task.delay.call_args_list) == [
             f"{bk_app.code}--a",
             f"{bk_app.code}--b",
         ]

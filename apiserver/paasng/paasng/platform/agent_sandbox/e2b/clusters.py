@@ -91,10 +91,7 @@ def list_enabled_e2b_cluster_names() -> set[str]:
 
 
 class TemplateTargetResolver:
-    """求模板应当下发到的集群：内置模板是全部启用 e2b 的集群，自定义模板只到应用租户可分配的那些。
-
-    自定义模板的目标集群要走一遍集群分配，同一（租户, region）下的结果相同，实例内按此缓存，
-    批量处理模板时复用同一个实例即可。
+    """求模板应当下发到的集群：内置模板是全部启用 e2b 的集群，自定义模板只到应用租户可分配的集群。
 
     :param enabled_e2b_clusters: 启用 e2b 的集群名
     """

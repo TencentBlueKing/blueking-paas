@@ -17,10 +17,12 @@
 
 """集群侧的内存替身，以及各测试共用的常量与断言辅助"""
 
+import copy
 from contextlib import contextmanager
 from types import SimpleNamespace
 
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
+from paas_wl.infras.resources.base.kres import PatchType
 from paasng.platform.agent_sandbox.e2b.constants import TEMPLATE_MANAGED_BY_LABEL, TEMPLATE_MANAGED_BY_VALUE
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplateSyncRecord
 
@@ -66,11 +68,21 @@ class _FakeResource:
         self.kind = kind
         self.ops_batch = self
 
-    def create_or_update(self, name, namespace, body, **kwargs):
+    def create(self, name, body, namespace):
+        self._check_writable(name, namespace)
+        assert (self.cluster, self.kind, name) not in self.clusters.objects
+        self.clusters.objects[(self.cluster, self.kind, name)] = copy.deepcopy(body)
+
+    def patch(self, name, body, namespace, ptype):
+        self._check_writable(name, namespace)
+        assert ptype == PatchType.MERGE
+        key = (self.cluster, self.kind, name)
+        self.clusters.objects[key] = _merge_patch(self.clusters.objects[key], body)
+
+    def _check_writable(self, name, namespace):
         assert namespace == NAMESPACE
         if name in self.clusters.failing_names or (self.kind == "SandboxPool" and name in self.clusters.failing_pools):
             raise RuntimeError(f"admission webhook denied {name}")
-        self.clusters.objects[(self.cluster, self.kind, name)] = body
 
     def get(self, name, namespace):
         try:
@@ -89,6 +101,19 @@ class _FakeResource:
             if c == self.cluster and k == self.kind and all(obj_labels.get(lk) == v for lk, v in labels.items()):
                 items.append(SimpleNamespace(metadata=SimpleNamespace(name=n)))
         return SimpleNamespace(items=items)
+
+
+def _merge_patch(target, patch):
+    """按 RFC 7386 合并：字典逐键合并、值为 None 的键删除，其余（含列表）整体替换"""
+    if not isinstance(patch, dict):
+        return copy.deepcopy(patch)
+    result = dict(target) if isinstance(target, dict) else {}
+    for key, value in patch.items():
+        if value is None:
+            result.pop(key, None)
+        else:
+            result[key] = _merge_patch(result.get(key), value)
+    return result
 
 
 class FakeLock:

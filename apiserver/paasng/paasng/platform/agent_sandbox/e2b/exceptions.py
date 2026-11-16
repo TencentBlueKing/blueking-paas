@@ -66,7 +66,7 @@ class E2BTemplateInUse(E2BError):
 class E2BTemplateSyncInProgress(E2BError):
     """另一次模板下发还没结束
 
-    全量同步与单模板同步都会覆盖、清理集群里的 CR，并发执行时旧状态会盖掉新状态，因此互斥(全局维度互斥)。
+    每次下发都会覆盖、清理集群里的 CR，并发执行时旧状态会盖掉新状态，因此互斥(全局维度互斥)。
     """
 
 

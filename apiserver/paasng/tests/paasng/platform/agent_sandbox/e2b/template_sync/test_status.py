@@ -21,7 +21,7 @@ import pytest
 
 from paas_wl.infras.cluster.models import ClusterE2BConfig
 from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateStatus, E2BTemplateSyncStatus
-from paasng.platform.agent_sandbox.e2b.template_sync import status, sync
+from paasng.platform.agent_sandbox.e2b.template_sync import records, status, sync
 from tests.paasng.platform.agent_sandbox.e2b.helpers import make_builtin_template, make_custom_template
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
@@ -33,7 +33,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestOverviews:
     def test_template_status_follows_worst_cluster(self, clusters):
         template = make_builtin_template("e2b-envd")
-        sync.mark_pending(template)
+        records.mark_pending(template)
 
         def _status():
             refreshed = type(template).objects.prefetch_related("sync_records").get(pk=template.pk)
@@ -42,12 +42,30 @@ class TestOverviews:
         assert _status() == E2BTemplateSyncStatus.PENDING.value
 
         clusters.broken_clusters.add(OTHER_CLUSTER)
-        sync.sync_template("e2b-envd")
+        sync.sync_templates(resource_names={"e2b-envd"})
         assert _status() == E2BTemplateSyncStatus.FAILED.value
 
         clusters.broken_clusters.clear()
-        sync.sync_template("e2b-envd")
+        sync.sync_templates(resource_names={"e2b-envd"})
         assert _status() == E2BTemplateSyncStatus.SUCCEEDED.value
+
+    def test_outdated_success_is_pending(self, clusters, bk_app, race_after_first_apply):
+        """记录是成功，但下发的不是当前配置：概览与应用视角一致，都不算同步完成"""
+        template = make_custom_template(bk_app, "mine", image="old:v1")
+        race_after_first_apply(lambda: type(template).objects.filter(pk=template.pk).update(image="new:v2"))
+        sync.sync_templates(resource_names={template.resource_name})
+        assert status_of(template) == {CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value}
+
+        refreshed = (
+            type(template).objects.select_related("application").prefetch_related("sync_records").get(pk=template.pk)
+        )
+        (template_overview,) = status.get_template_overviews([refreshed])
+        assert template_overview.status == E2BTemplateSyncStatus.PENDING.value
+
+        cluster_overview = {o.cluster_name: o for o in status.get_cluster_overviews()}[CLUSTER_NAME_FOR_TESTING]
+        assert cluster_overview.pending == [template.resource_name]
+        assert not cluster_overview.succeeded
+        assert not cluster_overview.completed
 
     def test_template_without_target_cluster(self, bk_app):
         ClusterE2BConfig.objects.update(enabled=False)
@@ -68,71 +86,69 @@ class TestTemplateStatuses:
 
     def test_available_once_applied(self, clusters, bk_app):
         template = make_custom_template(bk_app, "mine")
-        sync.mark_pending(template)
+        records.mark_pending(template)
         assert self._status(bk_app, template) == E2BTemplateStatus.SYNCING
 
-        sync.sync_template(template.resource_name)
+        sync.sync_templates(resource_names={template.resource_name})
 
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
     def test_changed_spec_is_syncing_until_applied(self, clusters, bk_app):
         template = make_custom_template(bk_app, "mine")
-        sync.sync_template(template.resource_name)
+        sync.sync_templates(resource_names={template.resource_name})
 
         template.image = "new:v2"
         template.save()
-        sync.mark_pending(template)
+        records.mark_pending(template)
         assert self._status(bk_app, template) == E2BTemplateStatus.SYNCING
 
-        sync.sync_template(template.resource_name)
+        sync.sync_templates(resource_names={template.resource_name})
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
     def test_non_spec_change_keeps_available(self, clusters, bk_app):
         template = make_custom_template(bk_app, "mine")
-        sync.sync_template(template.resource_name)
+        sync.sync_templates(resource_names={template.resource_name})
 
         type(template).objects.filter(pk=template.pk).update(name="renamed", description="changed")
 
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
-    def test_available_during_resync_until_it_fails(self, clusters, bk_app):
-        """运维重新同步期间照常可用；只看最近一次下发，重新同步失败了也不再可用"""
+    def test_unavailable_after_resync_fails(self, clusters, bk_app):
+        """只看最近一次下发，重新同步失败了也不再可用"""
         template = make_custom_template(bk_app, "mine")
-        sync.sync_template(template.resource_name)
-
-        sync.mark_sync_pending()
+        sync.sync_templates(resource_names={template.resource_name})
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
         clusters.broken_clusters.add(CLUSTER_NAME_FOR_TESTING)
-        sync.sync_all()
+        sync.sync_templates()
         assert self._status(bk_app, template) == E2BTemplateStatus.SYNC_FAILED
 
     def test_partial_push_then_revert_is_not_available(self, clusters, bk_app):
         """模板已写入、池子失败时，集群里已是新配置；改回旧配置后不能凭更早的成功判为可用"""
         template = make_custom_template(bk_app, "mine", image="old:v1")
-        sync.sync_template(template.resource_name)
+        sync.sync_templates(resource_names={template.resource_name})
         template.image = "new:v2"
         template.save()
         clusters.failing_pools.add(template.resource_name)
-        sync.sync_template(template.resource_name)
+        sync.sync_templates(resource_names={template.resource_name})
         assert image_of(clusters, CLUSTER_NAME_FOR_TESTING, template.resource_name) == "new:v2"
 
         template.image = "old:v1"
         template.save()
-        sync.mark_pending(template)
+        records.mark_pending(template)
 
         assert self._status(bk_app, template) == E2BTemplateStatus.SYNCING
         assert not status.is_applied(template, CLUSTER_NAME_FOR_TESTING)
 
         clusters.failing_pools.clear()
-        sync.sync_template(template.resource_name)
+        sync.sync_templates(resource_names={template.resource_name})
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
     def test_failed_push_of_current_spec(self, clusters, bk_app):
         template = make_custom_template(bk_app, "mine")
         clusters.failing_names.add(template.resource_name)
 
-        sync.sync_template(template.resource_name)
+        sync.sync_templates(resource_names={template.resource_name})
 
         assert self._status(bk_app, template) == E2BTemplateStatus.SYNC_FAILED
 
@@ -140,7 +156,7 @@ class TestTemplateStatuses:
         template = make_builtin_template("e2b-envd")
         clusters.broken_clusters.add(OTHER_CLUSTER)
 
-        sync.sync_template("e2b-envd")
+        sync.sync_templates(resource_names={"e2b-envd"})
 
         assert status_of(template)[OTHER_CLUSTER] == E2BTemplateSyncStatus.FAILED.value
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
@@ -150,7 +166,7 @@ class TestTemplateStatuses:
         template = make_custom_template(bk_app, "mine", image="old:v1")
         race_after_first_apply(lambda: type(template).objects.filter(pk=template.pk).update(image="new:v2"))
 
-        sync.sync_template(template.resource_name)
+        sync.sync_templates(resource_names={template.resource_name})
 
         assert status_of(template) == {CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value}
         assert self._status(bk_app, template) == E2BTemplateStatus.SYNCING

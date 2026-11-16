@@ -43,9 +43,9 @@ from .exceptions import (
     E2BTemplateInUse,
     E2BTemplateQuotaExceeded,
 )
-from .tasks import sync_e2b_template_task
+from .tasks import sync_e2b_templates_task
 from .template_sync.manifests import MANIFEST_FIELDS
-from .template_sync.sync import mark_pending
+from .template_sync.records import mark_pending
 
 # 创建后可修改的字段，模板标识决定了资源名，不能改
 COMMON_MUTABLE_FIELDS = (
@@ -192,9 +192,9 @@ def _schedule_sync(template: E2BSandboxTemplate) -> None:
     """目标集群先记为待同步，事务提交后再下发，任务读到的才是已落库的状态"""
     mark_pending(template)
     resource_name = template.resource_name
-    transaction.on_commit(lambda: sync_e2b_template_task.delay(resource_name))
+    transaction.on_commit(lambda: sync_e2b_templates_task.delay(resource_names=[resource_name]))
 
 
 def _schedule_cleanup(resource_name: str) -> None:
     """模板删除后，从集群中删除它的 CR。下发记录随模板一起删除"""
-    transaction.on_commit(lambda: sync_e2b_template_task.delay(resource_name))
+    transaction.on_commit(lambda: sync_e2b_templates_task.delay(resource_names=[resource_name]))

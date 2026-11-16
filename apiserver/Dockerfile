@@ -22,7 +22,7 @@ ADD ./configs ./configs
 RUN EDITION=${EDITION} npm run build
 
 ################# PaaS #################
-FROM python:3.11.10-slim-bullseye
+FROM python:3.11.18-slim-bookworm
 USER root
 
 RUN apt-get update && apt-get install -y gcc subversion ssh default-libmysqlclient-dev pkg-config vim git gettext

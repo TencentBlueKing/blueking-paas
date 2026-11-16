@@ -1,4 +1,4 @@
-FROM python:3.11.10-slim-bullseye
+FROM python:3.11.18-slim-bookworm
 USER root
 
 RUN apt-get update && apt-get install gcc curl procps -y

@@ -372,6 +372,10 @@ msgid "隔离部署的 AI Agent 沙箱"
 msgstr "Isolated AI Agent Sandbox"
 
 #: paas_wl/infras/cluster/constants.py:39
+msgid "E2B 沙箱"
+msgstr "E2B Sandbox"
+
+#: paas_wl/infras/cluster/constants.py:40
 msgid "AI Agent 应用"
 msgstr "AI Agent App"
 

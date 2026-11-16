@@ -24,6 +24,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
+from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -155,11 +156,12 @@ class SandboxManager(models.Manager):
             raise SandboxAlreadyExists(f"sandbox name {name} in application {application.code} already exists")
 
         # 分配可调度集群；SandboxInstance -> AGENT_SANDBOX_ISOLATED
-        alloc_ctx = AllocationContext.create_for_agent_sandbox(
-            application.tenant_id,
-            application.region,
-            is_isolated=workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value,
+        usage = (
+            ClusterUsage.AGENT_SANDBOX_ISOLATED
+            if workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value
+            else ClusterUsage.AGENT_SANDBOX
         )
+        alloc_ctx = AllocationContext.create_for_agent_sandbox(application.tenant_id, application.region, usage=usage)
 
         try:
             cluster = ClusterAllocator(alloc_ctx).get_default()

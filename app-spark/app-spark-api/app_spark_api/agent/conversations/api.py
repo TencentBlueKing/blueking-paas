@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, BinaryIO, cast
 from uuid import UUID  # noqa: TC003
 
 from django.http import HttpResponse, StreamingHttpResponse
+from django.utils.http import content_disposition_header
 from ninja import File, Path, Query, Router, Status, UploadedFile
 from ninja.pagination import paginate
 
@@ -69,7 +70,7 @@ SSE_RESPONSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 # classified as a query parameter and every request would fail validation.
 PROJECT_ID = Path(..., description="项目 ID")
 
-ATTACHMENT_FILE = File(..., description="图片文件，支持 PNG、JPEG、GIF、WebP，不超过 5MB")
+ATTACHMENT_FILE = File(..., description="任意类型的文件，不超过 5MB")
 
 # 附件内容的浏览器缓存时长：一年。内容按附件 ID 固定不变，没有需要提前失效的时候。
 ATTACHMENT_CACHE_SECONDS = 365 * 24 * 3600
@@ -181,7 +182,7 @@ async def start_run(
     "{number}/attachments/",
     response={**ERROR_RESPONSES, HTTPStatus.CREATED: AttachmentResponse},
     url_name="conversations-attachments-create",
-    summary="上传一张图片附件",
+    summary="上传一个文件附件",
 )
 async def upload_attachment(
     request: HttpRequest,
@@ -189,10 +190,10 @@ async def upload_attachment(
     file: UploadedFile = ATTACHMENT_FILE,
     project_id: str = PROJECT_ID,
 ):
-    """上传一张图片，返回附件 ID；发起一轮对话时把 ID 放进 attachment_ids 引用它。
+    """上传一个文件，返回附件 ID；发起一轮对话时把 ID 放进 attachment_ids 引用它。
 
-    - 添加图片时就上传；没发出去的附件留在会话里，没有删除接口；
-    - 类型按文件头识别，非图片返回 422，超过 5MB 返回 413，已结束的会话返回 409。
+    - 添加文件时就上传；没发出去的附件留在会话里，没有删除接口；
+    - 不限类型，按内容识别为主、扩展名为辅得出 mime_type；超过 5MB 返回 413，已结束的会话返回 409。
     """
     conversation = await _get_conversation(request, project_id, number)
     attachment = await attachments.asave_attachment(
@@ -208,7 +209,7 @@ async def upload_attachment(
     "{number}/attachments/{attachment_id}/",
     response={**ERROR_RESPONSES, HTTPStatus.OK: AttachmentResponse},
     url_name="conversations-attachments-retrieve",
-    summary="查看一张图片附件",
+    summary="查看一个文件附件",
 )
 async def get_attachment(
     request: HttpRequest,
@@ -226,7 +227,7 @@ async def get_attachment(
     "{number}/attachments/{attachment_id}/content/",
     response={**ERROR_RESPONSES, HTTPStatus.OK: None},
     url_name=attachments.ATTACHMENT_CONTENT_URL_NAME,
-    summary="读取图片附件的内容",
+    summary="读取文件附件的内容",
 )
 async def get_attachment_content(
     request: HttpRequest,
@@ -234,7 +235,7 @@ async def get_attachment_content(
     attachment_id: UUID,
     project_id: str = PROJECT_ID,
 ):
-    """返回图片本身，可直接用作 img 的 src；同一张附件的内容永远不变，浏览器会长期缓存。"""
+    """返回文件本身：图片可直接用作 img 的 src，其他类型按下载处理；内容永远不变，浏览器会长期缓存。"""
     conversation = await _get_conversation(request, project_id, number)
     attachment = await attachments.aget_attachment(conversation, attachment_id)
     return HttpResponse(
@@ -243,8 +244,12 @@ async def get_attachment_content(
         headers={
             # private：要登录才能看，共享缓存不能替别人存。内容按 ID 固定不变，可以长期缓存不回源。
             "Cache-Control": f"private, max-age={ATTACHMENT_CACHE_SECONDS}, immutable",
-            # 只按声明的图片类型解释，防止伪装的附件被浏览器按 HTML 渲染。
+            # 只按声明的类型解释，防止伪装的附件被浏览器按 HTML 渲染。
             "X-Content-Type-Options": "nosniff",
+            # 只有几种位图内联显示。HTML、SVG 这类在本服务的源下打开会执行里面的脚本，一律按下载处理。
+            "Content-Disposition": content_disposition_header(
+                as_attachment=not attachments.is_image(attachment.mime_type), filename=attachment.filename
+            ),
         },
     )
 

@@ -98,7 +98,7 @@ MAX_RUN_CONTENT_LENGTH = 32 * 1024
 # 模型 ID 的长度上限。
 MAX_MODEL_ID_LENGTH = 128
 
-# 一轮对话最多引用几张图片附件，与前端一致。
+# 一轮对话最多引用几个附件，与前端一致。
 MAX_ATTACHMENTS_PER_RUN = 3
 
 
@@ -148,13 +148,13 @@ class RunStopResponse(Schema):
 
 
 class AttachmentResponse(Schema):
-    """会话里的一张图片附件。"""
+    """会话里的一个文件附件。"""
 
     id: UUID = Field(description="附件 ID，发起一轮对话时放进 attachment_ids")
     filename: str = Field(description="上传时的文件名，仅用于展示")
-    mime_type: str = Field(description="按文件头识别出的图片类型")
+    mime_type: str = Field(description="按内容识别为主、扩展名为辅得出的文件类型；image/ 开头时前端可以预览")
     size: int = Field(description="字节数")
-    url: str = Field(description="读取图片内容的地址，需要登录态，不会过期，可直接用作 img 的 src")
+    url: str = Field(description="读取文件内容的地址，需要登录态，不会过期；图片可直接用作 img 的 src")
     created_at: datetime = Field(description="上传时间")
 
 
@@ -174,8 +174,8 @@ class StartRunRequest(Schema):
         default_factory=list,
         max_length=MAX_ATTACHMENTS_PER_RUN,
         description=(
-            "本轮引用的图片附件，取自上传附件接口返回的 id，每张只能随一轮发出。"
-            "所选模型不支持图片时返回 422 MODEL_IMAGE_INPUT_UNSUPPORTED"
+            "本轮引用的文件附件，取自上传附件接口返回的 id，每个只能随一轮发出。"
+            "其中有图片而所选模型不支持图片时返回 422 MODEL_IMAGE_INPUT_UNSUPPORTED"
         ),
     )
     # 先去掉首尾空白再量长度：纯空白在这里就是 422，带空格的 ID 也不会原样转发给网关。
@@ -195,7 +195,7 @@ class StartRunRequest(Schema):
         if not self.content.strip() and not self.attachment_ids:
             raise ValueError("content and attachment_ids cannot both be empty")
 
-        # 同一张图在一轮里出现两次，模型会以为用户发了两张，绑定时也只会记一次。
+        # 同一个附件在一轮里出现两次，模型会以为用户发了两份，绑定时也只会记一次。
         if len(set(self.attachment_ids)) != len(self.attachment_ids):
             raise ValueError("attachment_ids contains duplicates")
 
@@ -237,7 +237,7 @@ class UserMessageHistoryRecord(Schema):
     after_seq: int = Field(description="插在该 UI event 序号之后，0 表示所有事件之前")
     created_at: datetime
     content: str
-    attachments: list[AttachmentResponse] = Field(default_factory=list, description="随这条输入发出的图片附件")
+    attachments: list[AttachmentResponse] = Field(default_factory=list, description="随这条输入发出的文件附件")
 
 
 class ConversationHistoryRecord(Schema):

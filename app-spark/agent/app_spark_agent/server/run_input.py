@@ -12,6 +12,7 @@ from uuid import UUID
 
 from ag_ui.core import (
     PROTOCOL_VERSION,
+    DocumentInputContent,
     ImageInputContent,
     InputContent,
     InputContentUrlSource,
@@ -22,8 +23,12 @@ from ag_ui.core import (
 from fastapi import HTTPException, Request, status
 from starlette.types import Message
 
-from app_spark_agent.attachments import IMAGE_MEDIA_TYPES, parse_attachment_id
+from app_spark_agent.attachments import ATTACHMENT_URI_SCHEME, IMAGE_MEDIA_TYPES, parse_attachment_id
 from app_spark_agent.state import AppendLog, ConversationContext
+
+# 用户消息里除了附件引用，也接受外部链接：沙箱本来就能访问外网，模型需要时自己去取。
+EXTERNAL_URL_SCHEMES = frozenset({"http", "https"})
+ALLOWED_FILE_URL_SCHEMES = EXTERNAL_URL_SCHEMES | {ATTACHMENT_URI_SCHEME}
 
 
 @dataclass(frozen=True)
@@ -118,13 +123,13 @@ def prepare_run(
     if user_message is None:
         raise HTTPException(status_code=422, detail="A user message is required.")
 
-    _check_user_content(user_message.content)
+    checked_message = user_message.model_copy(update={"content": _check_user_content(user_message.content)})
 
     filtered_input = run_input.model_copy(
         update={
             "thread_id": conversation_id,
             "run_id": run_id,
-            "messages": [user_message],
+            "messages": [checked_message],
             "state": {},
             "tools": [],
             "context": [],
@@ -142,38 +147,57 @@ def prepare_run(
     )
 
 
-def _check_user_content(content: str | Sequence[InputContent]) -> None:
-    """Refuse user content other than text and images referenced as app-spark-attachment://."""
+def _check_user_content(content: str | Sequence[InputContent]) -> str | list[InputContent]:
+    """Refuse user content other than text and image or document URLs, and return what is kept."""
     if isinstance(content, str):
         if not content.strip():
             raise HTTPException(status_code=422, detail="The user message cannot be empty.")
 
-        return
+        return content
 
     has_input = False
+    checked: list[InputContent] = []
     for part in content:
         if isinstance(part, TextInputContent):
             has_input = has_input or bool(part.text.strip())
+            checked.append(part)
             continue
 
-        # 图片只认控制面签发的附件引用。外部 URL 会让 Agent 替调用方去拉任意地址，内联 data
-        # 会把字节带进上下文，两者都不放行。
-        if (
-            isinstance(part, ImageInputContent)
-            and isinstance(part.source, InputContentUrlSource)
-            and parse_attachment_id(part.source.value) is not None
-            and part.source.mime_type in IMAGE_MEDIA_TYPES
-        ):
-            has_input = True
-            continue
+        if not _is_accepted_file(part):
+            raise HTTPException(
+                status_code=422,
+                detail="Only text, app-spark-attachment references and http(s) image or document URLs are accepted.",
+            )
 
-        raise HTTPException(
-            status_code=422,
-            detail="Only text and app-spark-attachment image references are accepted.",
-        )
+        # metadata 由客户端随意填写，其中的 force_download 会让 Agent 替调用方下载它给的地址，一律丢掉。
+        checked.append(part.model_copy(update={"metadata": None}))
+        has_input = True
 
     if not has_input:
         raise HTTPException(status_code=422, detail="The user message cannot be empty.")
+
+    return checked
+
+
+def _is_accepted_file(part: InputContent) -> bool:
+    """Return whether a non-text part is an image or document URL this Runtime can handle."""
+
+    # 内联 data 会把字节带进上下文，上游托管的 file 引用模型这边解析不了，只收 URL。
+    if not isinstance(part, ImageInputContent | DocumentInputContent) or not isinstance(
+        part.source, InputContentUrlSource
+    ):
+        return False
+
+    url = part.source.value
+    if parse_attachment_id(url) is None:
+        return url.partition("://")[0] in EXTERNAL_URL_SCHEMES
+
+    # 附件引用里的类型是控制面识别出来的：没有类型，模型侧也推断不出来。image 段还必须真是
+    # 模型能读的图片，否则在能看图的模型上会被当图发出。
+    if not part.source.mime_type:
+        return False
+
+    return not isinstance(part, ImageInputContent) or part.source.mime_type in IMAGE_MEDIA_TYPES
 
 
 def _read_model_id(forwarded_props: dict[str, object]) -> str | None:

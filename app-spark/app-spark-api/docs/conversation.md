@@ -79,10 +79,15 @@ Runtime 在后台把状态推过来，会话历史的权威副本在本服务的
 | AG-UI 事件历史 | `ConversationUiEvent` | 查看历史，直接读库、不起 Runtime |
 | 会话上下文 | blob + `ConversationContextVersion`（一版一行） | 冷启动时注入回 Runtime |
 | 检查点 | `ConversationCheckpoint` | 冷启动时据此把文件放回去 |
-| 图片附件 | blob + `ConversationAttachment` | 历史展示，Runtime 调模型前按 ID 取回字节 |
+| 文件附件 | blob + `ConversationAttachment` | 历史展示，Runtime 在一轮开始前按 ID 下载进工作区 |
 
-上下文可能有好几 MB，所以存 blob 而不是塞进数据库行里，图片附件同理。本地和 Chart 默认存本机目录 `host_tmp_path`；
+上下文可能有好几 MB，所以存 blob 而不是塞进数据库行里，文件附件同理。本地和 Chart 默认存本机目录 `host_tmp_path`；
 多副本 e2b 要用制品库 `bk_repo`，因为上下文和附件都不能只留在单个 Pod 的磁盘上。
+
+附件不限类型，单个不超过 5MB，类型按内容识别为主、扩展名为辅。前端预览始终经本服务读取。Runtime 从哪下载由存储后端决定：
+`bk_repo` 给它短时效的预签名地址，字节不经过本服务，所以沙箱要能访问制品库；`host_tmp_path` 只能经本服务转出。
+Runtime 把附件放在工作区的 `.app-spark/attachments/` 下，这个目录不进 git，模型按说明里的路径用文件工具去读；
+最近几轮的图片在能看图的模型上另外直接发字节。
 
 - 可选：`AGENT_CONTEXT_STORAGE`；`AGENT_ATTACHMENT_STORAGE`；`DATA_UPLOAD_MAX_MEMORY_SIZE`（Runtime 回写的请求体很大，不要调回 Django 默认值）
 - 按条件必填：`AGENT_CONTEXT_STORAGE` 或 `AGENT_ATTACHMENT_STORAGE` 的 backend 为 `bk_repo` 时要配 `BLOBSTORE_BKREPO_CONFIG`

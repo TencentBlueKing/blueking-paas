@@ -64,6 +64,10 @@ class TestExcludeDocument:
         assert ".venv" in excludes
         assert "node_modules/" in excludes
 
+    def test_platform_files_are_excluded_whatever_the_language(self):
+        """User attachments are downloaded into .app-spark/ and must never reach a commit."""
+        assert "/.app-spark/" in WorkspacePolicy().exclude_document().splitlines()
+
 
 class TestMeasure:
     def test_a_symlink_is_measured_as_the_link_not_its_target(self, tmp_path: Path):

@@ -1,6 +1,8 @@
-"""Attachment references in the context become image bytes only on the way to the model."""
+"""Attachments land in the workspace before a turn; the model sees descriptions and recent image bytes."""
 
+import json
 from collections.abc import AsyncIterator
+from pathlib import Path
 from uuid import uuid4
 
 import httpx2
@@ -8,6 +10,7 @@ import pytest
 from pydantic_ai import Agent
 from pydantic_ai.messages import (
     BinaryContent,
+    DocumentUrl,
     ImageUrl,
     ModelMessage,
     ModelRequest,
@@ -19,42 +22,50 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from app_spark_agent.attachments import (
+    ATTACHMENT_FETCH_FAILED_TEXT,
     ATTACHMENT_URI_PREFIX,
-    OMITTED_IMAGE_TEXT,
-    UNAVAILABLE_IMAGE_TEXT,
+    ATTACHMENTS_DIR,
     AttachmentFetchError,
-    AttachmentImages,
+    AttachmentMaterializer,
+    AttachmentResolver,
     build_control_plane_fetcher,
     parse_attachment_id,
+    sanitize_filename,
 )
-from app_spark_agent.replication import ControlPlaneClient
+from app_spark_agent.replication import AttachmentDownload, AttachmentMeta, ControlPlaneClient
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 PNG = BinaryContent(data=PNG_BYTES, media_type="image/png")
+CSV_BYTES = b"name,age\nbob,3\n"
 
 
 class FakeFetcher:
-    """Serve PNGs for the known IDs, raise the queued failures first, and record every call."""
+    """Serve the known attachments, raise the queued failures first, and record every call."""
 
-    def __init__(self, *known: str, failures: tuple[AttachmentFetchError, ...] = (), media_type: str = "image/png"):
-        self.known = set(known)
+    def __init__(self, files: dict[str, tuple[str, str, bytes]], failures: tuple[AttachmentFetchError, ...] = ()):
+        self.files = files
         self.failures = list(failures)
-        self.media_type = media_type
         self.calls: list[str] = []
 
-    async def __call__(self, attachment_id: str) -> tuple[bytes, str]:
+    async def __call__(self, attachment_id: str) -> tuple[AttachmentMeta, bytes]:
         self.calls.append(attachment_id)
         if self.failures:
             raise self.failures.pop(0)
 
-        if attachment_id not in self.known:
+        if attachment_id not in self.files:
             raise AttachmentFetchError("gone", retryable=False)
 
-        return PNG_BYTES, self.media_type
+        filename, mime_type, data = self.files[attachment_id]
+        download = AttachmentDownload(url="unused", authenticated=False)
+        return AttachmentMeta(filename=filename, mime_type=mime_type, size=len(data), download=download), data
 
 
-def make_ref(attachment_id: str) -> ImageUrl:
+def make_image_ref(attachment_id: str) -> ImageUrl:
     return ImageUrl(url=f"{ATTACHMENT_URI_PREFIX}{attachment_id}", media_type="image/png")
+
+
+def make_document_ref(attachment_id: str) -> DocumentUrl:
+    return DocumentUrl(url=f"{ATTACHMENT_URI_PREFIX}{attachment_id}", media_type="text/csv")
 
 
 def make_turn(*content: UserContent) -> ModelRequest:
@@ -69,8 +80,29 @@ def collect_user_content(message: ModelMessage) -> list[UserContent]:
     return list(part.content)
 
 
-async def resolve_one(images: AttachmentImages, attachment_id: str) -> list[UserContent]:
-    return collect_user_content((await images.resolve_messages([make_turn(make_ref(attachment_id))]))[0])
+def describe(attachment_id: str, filename: str, mime_type: str, size: int) -> str:
+    path = (ATTACHMENTS_DIR / attachment_id / filename).as_posix()
+    return f"[Attached file: {filename} ({mime_type}, {size} bytes) at {path}]"
+
+
+@pytest.fixture()
+def image_id() -> str:
+    return str(uuid4())
+
+
+@pytest.fixture()
+def csv_id() -> str:
+    return str(uuid4())
+
+
+@pytest.fixture()
+def fetch(image_id: str, csv_id: str) -> FakeFetcher:
+    return FakeFetcher({image_id: ("shot.png", "image/png", PNG_BYTES), csv_id: ("data.csv", "text/csv", CSV_BYTES)})
+
+
+@pytest.fixture()
+def materializer(tmp_path: Path, fetch: FakeFetcher) -> AttachmentMaterializer:
+    return AttachmentMaterializer(tmp_path, fetch)
 
 
 @pytest.mark.parametrize(
@@ -85,104 +117,212 @@ def test_only_uuid_references_name_an_attachment(url: str, expected: str | None)
     assert parse_attachment_id(url) == expected
 
 
-async def test_only_the_latest_turns_carry_image_bytes() -> None:
-    """Turns are counted by user prompts, so a picture three prompts back is omitted."""
-    old, recent = str(uuid4()), str(uuid4())
-    fetch = FakeFetcher(old, recent)
-    images = AttachmentImages(fetch, recent_turns=2)
-    text_only: list[ModelMessage] = [make_turn("hello")]
-    assert await images.resolve_messages(text_only) is text_only, "nothing to resolve, nothing copied"
+@pytest.mark.parametrize(
+    ("filename", "expected"),
+    [
+        ("report.csv", "report.csv"),
+        ("../../etc/passwd", "passwd"),
+        ("a;rm -rf $(x).md", "a_rm -rf __x_.md"),
+        ("...", "attachment"),
+        ("x" * 200 + ".json", "x" * 95 + ".json"),
+    ],
+)
+def test_stored_file_names_are_safe_and_keep_their_extension(filename: str, expected: str) -> None:
+    assert sanitize_filename(filename) == expected
+
+
+async def test_ensure_downloads_only_what_is_missing(
+    tmp_path: Path, materializer: AttachmentMaterializer, fetch: FakeFetcher, image_id: str, csv_id: str
+) -> None:
+    messages: list[ModelMessage] = [make_turn("look", make_image_ref(image_id), make_document_ref(csv_id))]
+
+    await materializer.ensure(messages)
+    await materializer.ensure(messages)
+
+    assert sorted(fetch.calls) == sorted([image_id, csv_id]), "the second ensure finds both on disk"
+    stored = materializer.find(csv_id)
+    assert stored is not None
+    assert (tmp_path / stored.path).read_bytes() == CSV_BYTES
+    assert stored.describe() == describe(csv_id, "data.csv", "text/csv", len(CSV_BYTES))
+
+
+async def test_a_failed_download_leaves_the_attachment_missing(tmp_path: Path, image_id: str) -> None:
+    fetch = FakeFetcher({}, failures=(AttachmentFetchError("x", retryable=False),))
+    materializer = AttachmentMaterializer(tmp_path, fetch)
+
+    await materializer.ensure([make_turn(make_image_ref(image_id))])
+
+    assert materializer.find(image_id) is None
+
+
+async def test_without_a_control_plane_nothing_is_downloaded(tmp_path: Path, image_id: str) -> None:
+    materializer = AttachmentMaterializer(tmp_path, None)
+
+    await materializer.ensure([make_turn(make_image_ref(image_id))])
+
+    assert materializer.find(image_id) is None
+
+
+async def test_a_file_without_its_metadata_counts_as_missing(
+    tmp_path: Path, materializer: AttachmentMaterializer, image_id: str
+) -> None:
+    """The metadata is written last, so a half-written download is fetched again."""
+    await materializer.ensure([make_turn(make_image_ref(image_id))])
+    (tmp_path / ATTACHMENTS_DIR / f"{image_id}.json").unlink()
+
+    assert materializer.find(image_id) is None
+
+
+async def test_recent_images_carry_bytes_and_everything_carries_a_description(
+    tmp_path: Path, fetch: FakeFetcher, image_id: str, csv_id: str
+) -> None:
+    """Turns are counted by user prompts, so a picture three prompts back is only described."""
+    old_image = str(uuid4())
+    fetch.files[old_image] = ("old.png", "image/png", PNG_BYTES)
+    materializer = AttachmentMaterializer(tmp_path, fetch)
     reply = ModelResponse(parts=[TextPart(content="ok")])
     messages: list[ModelMessage] = [
-        make_turn("first", make_ref(old)),
+        make_turn("first", make_image_ref(old_image)),
         reply,
         make_turn("second"),
         reply,
-        make_turn("third", make_ref(recent)),
+        make_turn("third", make_image_ref(image_id), make_document_ref(csv_id)),
     ]
+    await materializer.ensure(messages)
+    resolver = AttachmentResolver(materializer, recent_turns=2, send_images=True)
 
-    resolved = await images.resolve_messages(messages)
+    resolved = resolver.resolve_messages(messages)
 
-    assert collect_user_content(resolved[0]) == ["first", OMITTED_IMAGE_TEXT]
-    assert collect_user_content(resolved[4]) == ["third", PNG]
-    assert fetch.calls == [recent]
-    assert collect_user_content(messages[4])[1] == make_ref(recent), "the input is the run's history"
+    assert collect_user_content(resolved[0]) == ["first", describe(old_image, "old.png", "image/png", len(PNG_BYTES))]
+    assert collect_user_content(resolved[4]) == [
+        "third",
+        describe(image_id, "shot.png", "image/png", len(PNG_BYTES)),
+        PNG,
+        describe(csv_id, "data.csv", "text/csv", len(CSV_BYTES)),
+    ]
+    assert collect_user_content(messages[4])[1] == make_image_ref(image_id), "the input is the run's history"
+
+
+async def test_a_model_that_cannot_read_images_gets_descriptions_only(
+    materializer: AttachmentMaterializer, image_id: str
+) -> None:
+    messages: list[ModelMessage] = [make_turn(make_image_ref(image_id))]
+    await materializer.ensure(messages)
+
+    resolved = AttachmentResolver(materializer, recent_turns=2, send_images=False).resolve_messages(messages)
+
+    assert collect_user_content(resolved[0]) == [describe(image_id, "shot.png", "image/png", len(PNG_BYTES))]
+
+
+def test_text_only_history_is_not_copied(materializer: AttachmentMaterializer) -> None:
+    messages: list[ModelMessage] = [make_turn("hello")]
+
+    assert AttachmentResolver(materializer, recent_turns=2, send_images=True).resolve_messages(messages) is messages
+
+
+def test_a_missing_attachment_reaches_the_model_as_unavailable(
+    materializer: AttachmentMaterializer, image_id: str
+) -> None:
+    messages: list[ModelMessage] = [make_turn(make_image_ref(image_id))]
+
+    resolved = AttachmentResolver(materializer, recent_turns=2, send_images=True).resolve_messages(messages)
+
+    assert collect_user_content(resolved[0]) == [ATTACHMENT_FETCH_FAILED_TEXT]
 
 
 @pytest.mark.parametrize(
-    ("fetch_failures", "media_type", "expected", "calls"),
+    ("item", "send_images", "expected"),
     [
-        pytest.param((), "image/png", [PNG], 1, id="fetched"),
-        pytest.param((AttachmentFetchError("x", retryable=True),), "image/png", [PNG], 2, id="retried-once"),
         pytest.param(
-            (AttachmentFetchError("x", retryable=True),) * 2,
-            "image/png",
-            [UNAVAILABLE_IMAGE_TEXT],
-            2,
-            id="still-failing",
+            ImageUrl(url="https://example.com/a.png"), True, [ImageUrl(url="https://example.com/a.png")], id="image"
         ),
         pytest.param(
-            (AttachmentFetchError("x", retryable=False),), "image/png", [UNAVAILABLE_IMAGE_TEXT], 1, id="gone"
+            ImageUrl(url="https://example.com/a.png"),
+            False,
+            ["[Linked file: https://example.com/a.png]"],
+            id="image-text-model",
         ),
-        pytest.param((), "text/html", [UNAVAILABLE_IMAGE_TEXT], 1, id="not-an-image"),
+        pytest.param(
+            DocumentUrl(url="https://example.com/a.pdf"), True, ["[Linked file: https://example.com/a.pdf]"], id="doc"
+        ),
     ],
 )
-async def test_how_a_fetch_outcome_reaches_the_model(fetch_failures, media_type, expected, calls) -> None:
-    attachment_id = str(uuid4())
-    fetch = FakeFetcher(attachment_id, failures=fetch_failures, media_type=media_type)
+def test_external_links_reach_the_model_as_links(
+    materializer: AttachmentMaterializer, item: UserContent, send_images: bool, expected: list[UserContent]
+) -> None:
+    resolver = AttachmentResolver(materializer, recent_turns=2, send_images=send_images)
 
-    assert await resolve_one(AttachmentImages(fetch, recent_turns=2), attachment_id) == expected
-    assert len(fetch.calls) == calls
-
-
-async def test_without_a_control_plane_or_recent_turns_no_bytes_are_sent() -> None:
-    attachment_id = str(uuid4())
-
-    assert await resolve_one(AttachmentImages(None, recent_turns=2), attachment_id) == [UNAVAILABLE_IMAGE_TEXT]
-    assert await resolve_one(AttachmentImages(FakeFetcher(attachment_id), recent_turns=0), attachment_id) == [
-        OMITTED_IMAGE_TEXT
-    ]
+    assert collect_user_content(resolver.resolve_messages([make_turn(item)])[0]) == expected
 
 
-async def test_the_cache_keeps_recent_images_and_drops_the_least_recently_used() -> None:
-    first, second, third = (str(uuid4()) for _ in range(3))
-    fetch = FakeFetcher(first, second, third)
-    images = AttachmentImages(fetch, recent_turns=1, cache_size=2)
-
-    for attachment_id in (first, first, second, third, first):
-        await resolve_one(images, attachment_id)
-
-    assert fetch.calls == [first, second, third, first]
-
-
-async def test_the_model_sees_bytes_while_the_run_keeps_the_reference() -> None:
+async def test_the_model_sees_bytes_while_the_run_keeps_the_reference(
+    materializer: AttachmentMaterializer, image_id: str
+) -> None:
     """Streamed like every Runtime run; all_messages() is what the context will store."""
-    attachment_id = str(uuid4())
     seen: list[list[ModelMessage]] = []
 
     async def stream(messages: list[ModelMessage], info: AgentInfo) -> AsyncIterator[str]:
         seen.append(messages)
         yield "I see it"
 
+    await materializer.ensure([make_turn(make_image_ref(image_id))])
     agent = Agent(
         FunctionModel(stream_function=stream),
-        capabilities=[AttachmentImages(FakeFetcher(attachment_id), recent_turns=2)],
+        capabilities=[AttachmentResolver(materializer, recent_turns=2, send_images=True)],
     )
 
-    async with agent.run_stream(["what is this", make_ref(attachment_id)]) as result:
+    async with agent.run_stream(["what is this", make_image_ref(image_id)]) as result:
         assert await result.get_output() == "I see it"
 
-    assert collect_user_content(seen[0][-1]) == ["what is this", PNG]
-    assert collect_user_content(result.all_messages()[0]) == ["what is this", make_ref(attachment_id)]
+    assert collect_user_content(seen[0][-1])[-1] == PNG
+    assert collect_user_content(result.all_messages()[0]) == ["what is this", make_image_ref(image_id)]
+
+
+def make_meta_body(url: str, *, authenticated: bool) -> bytes:
+    download = {"url": url, "authenticated": authenticated}
+    return json.dumps({"filename": "data.csv", "mime_type": "text/csv", "size": 15, "download": download}).encode()
 
 
 @pytest.mark.parametrize(
-    ("status_code", "retryable"), [(200, None), (404, False), (401, False), (502, True), (None, True)]
+    ("download_url", "authenticated", "expected_url", "expected_auth"),
+    [
+        pytest.param("attachments/{id}/content", True, "http://api.invalid/c/state/attachments/{id}/content", True),
+        pytest.param("https://repo.example.com/x?sig=1", False, "https://repo.example.com/x?sig=1", False),
+    ],
 )
-async def test_the_control_plane_fetcher_reads_the_content_path_and_classifies_failures(
-    status_code, retryable
+async def test_the_fetcher_downloads_with_the_token_only_when_told_to(
+    csv_id: str, download_url: str, authenticated: bool, expected_url: str, expected_auth: bool
 ) -> None:
-    attachment_id = str(uuid4())
+    downloads: list[tuple[str, bool]] = []
+
+    def respond(request: httpx2.Request) -> httpx2.Response:
+        if request.url.path == f"/c/state/attachments/{csv_id}/":
+            return httpx2.Response(
+                200, content=make_meta_body(download_url.format(id=csv_id), authenticated=authenticated)
+            )
+
+        downloads.append((str(request.url), "authorization" in request.headers))
+        return httpx2.Response(200, content=CSV_BYTES)
+
+    client = ControlPlaneClient(
+        base_url="http://api.invalid/c/state/", token="t", transport=httpx2.MockTransport(respond)
+    )
+    try:
+        meta, data = await build_control_plane_fetcher(client)(csv_id)
+    finally:
+        await client.aclose()
+
+    assert (meta.filename, data) == ("data.csv", CSV_BYTES)
+    assert downloads == [(expected_url.format(id=csv_id), expected_auth)]
+
+
+@pytest.mark.parametrize(
+    ("status_code", "retryable", "calls"), [(404, False, 1), (401, False, 1), (502, True, 2), (None, True, 2)]
+)
+async def test_the_fetcher_retries_transient_failures_once(
+    monkeypatch: pytest.MonkeyPatch, csv_id: str, status_code: int | None, retryable: bool, calls: int
+) -> None:
+    monkeypatch.setattr("app_spark_agent.attachments.FETCH_RETRY_DELAY_SECONDS", 0)
     requested: list[str] = []
 
     def respond(request: httpx2.Request) -> httpx2.Response:
@@ -190,20 +330,35 @@ async def test_the_control_plane_fetcher_reads_the_content_path_and_classifies_f
         if status_code is None:
             raise httpx2.ConnectError("unreachable")
 
-        return httpx2.Response(status_code, content=PNG_BYTES, headers={"content-type": "image/png"})
+        return httpx2.Response(status_code)
 
     client = ControlPlaneClient(
         base_url="http://api.invalid/c/state/", token="t", transport=httpx2.MockTransport(respond)
     )
-    fetch = build_control_plane_fetcher(client)
     try:
-        if retryable is None:
-            assert await fetch(attachment_id) == (PNG_BYTES, "image/png")
-        else:
-            with pytest.raises(AttachmentFetchError) as caught:
-                await fetch(attachment_id)
-            assert caught.value.retryable is retryable
+        with pytest.raises(AttachmentFetchError) as caught:
+            await build_control_plane_fetcher(client)(csv_id)
     finally:
         await client.aclose()
 
-    assert requested == [f"/c/state/attachments/{attachment_id}/content"]
+    assert caught.value.retryable is retryable
+    assert len(requested) == calls
+
+
+async def test_an_oversized_download_is_refused(monkeypatch: pytest.MonkeyPatch, csv_id: str) -> None:
+    monkeypatch.setattr("app_spark_agent.attachments.MAX_ATTACHMENT_BYTES", 4)
+
+    def respond(request: httpx2.Request) -> httpx2.Response:
+        if request.url.path.endswith(f"{csv_id}/"):
+            return httpx2.Response(200, content=make_meta_body("https://repo.example.com/x", authenticated=False))
+
+        return httpx2.Response(200, content=CSV_BYTES)
+
+    client = ControlPlaneClient(
+        base_url="http://api.invalid/c/state/", token="t", transport=httpx2.MockTransport(respond)
+    )
+    try:
+        with pytest.raises(AttachmentFetchError, match="exceeded 4 bytes"):
+            await build_control_plane_fetcher(client)(csv_id)
+    finally:
+        await client.aclose()

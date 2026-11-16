@@ -1,15 +1,24 @@
-"""会话图片附件：上下文里只存引用，调模型前才换成图片字节。
+"""会话附件：上下文里只存引用，一轮开始前把文件放进工作区，调模型前再换成模型看得懂的内容。
 
 用户消息里只带 app-spark-attachment://<附件 ID>，上下文和回写给控制面的文档都只存引用。
-AttachmentImages 在 wrap_model_request 里复制一份消息、把引用换成字节交给模型，换过的那份不进
-历史。不放在 before_model_request：那里改过的消息会写回历史，TranscriptRecorder 还会把它当成
-一次压缩，立即把带图片字节的上下文提交出去。
+
+AttachmentMaterializer 在一轮开始前把本轮和上下文里还引用着的附件下载到工作区的
+.app-spark/attachments 下。这个目录在平台的 git 排除规则里，不会被提交，也不进发布包；
+换了沙箱、工作区从 git 恢复后它是空的，下一轮会按上下文里的引用补齐。
+
+AttachmentResolver 在 wrap_model_request 里复制一份消息，把每个引用换成一行说明（文件名、类型、
+大小和工作区里的路径），模型用文件工具按需去读。最近几轮里的图片在能看图的模型上另外直接附上字节。
+换过的那份不进历史。不放在 before_model_request：那里改过的消息会写回历史，TranscriptRecorder
+还会把它当成一次压缩，立即提交出去。
 """
 
+import asyncio
+import json
 import logging
-from collections import OrderedDict
-from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import replace
+import re
+from collections.abc import Awaitable, Callable, Iterator, Sequence
+from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -17,6 +26,7 @@ from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability, CapabilityOrdering, WrapModelRequestHandler
 from pydantic_ai.messages import (
     BinaryContent,
+    FileUrl,
     ImageUrl,
     ModelMessage,
     ModelRequest,
@@ -26,23 +36,32 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models import ModelRequestContext
 
-from app_spark_agent.replication import ControlPlaneClient, ControlPlaneError
+from app_spark_agent.replication import AttachmentMeta, ControlPlaneClient, ControlPlaneError
 
 logger = logging.getLogger(__name__)
 
 ATTACHMENT_URI_SCHEME = "app-spark-attachment"
 ATTACHMENT_URI_PREFIX = f"{ATTACHMENT_URI_SCHEME}://"
 
-# 与 API 上传时按文件头识别的类型一致。
+# 能作为图片直接发给模型的类型，与 API 侧的 IMAGE_MIME_TYPES 一致。
 IMAGE_MEDIA_TYPES = frozenset({"image/png", "image/jpeg", "image/gif", "image/webp"})
 
-# 只写进发给模型的请求副本，不进会话上下文。更早的用户轮不再取字节，用这句告诉模型这里曾经有图。
-OMITTED_IMAGE_TEXT = "[Image from an earlier turn omitted]"
-# 本该发图但没拿到字节：没有控制面、附件不在、token 已吊销、重试后仍失败，或类型不是这四种图。这一轮照常继续。
-UNAVAILABLE_IMAGE_TEXT = "[Image unavailable]"
+# 与 API 的单个附件上限一致。下载时据此截断，防止被指到一个大得离谱的地址。
+MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
-# 默认只给最近 2 轮、每轮最多 3 张发字节，留一倍余量让下一轮开始时上一轮的图仍然命中。
-DEFAULT_CACHE_SIZE = 12
+# 相对工作区。以点开头，模型列目录时不会顺手当成项目代码。
+ATTACHMENTS_DIR = Path(".app-spark") / "attachments"
+
+# 本该有这个附件但没拿到：没有控制面、附件不在、token 已吊销、重试后仍失败。这一轮照常继续。
+ATTACHMENT_FETCH_FAILED_TEXT = "[Attached file unavailable]"
+
+# 控制面瞬时 5xx 时再试一次前先等一会儿，零间隔重试多半撞上同一个故障。
+FETCH_RETRY_DELAY_SECONDS = 0.3
+
+# 落盘的文件名只留常见字符，其余换成下划线：它会出现在给模型的说明和 shell 命令里。
+_UNSAFE_FILENAME_CHARS = re.compile(r"[^\w.\- ]")
+MAX_STORED_FILENAME_LENGTH = 100
+DEFAULT_STORED_FILENAME = "attachment"
 
 
 class AttachmentFetchError(Exception):
@@ -53,7 +72,24 @@ class AttachmentFetchError(Exception):
         self.retryable = retryable
 
 
-type FetchAttachment = Callable[[str], Awaitable[tuple[bytes, str]]]
+type FetchAttachment = Callable[[str], Awaitable[tuple[AttachmentMeta, bytes]]]
+
+
+@dataclass(frozen=True)
+class StoredAttachment:
+    """An attachment already in the workspace.
+
+    :param path: Workspace-relative path of the file.
+    """
+
+    path: Path
+    filename: str
+    mime_type: str
+    size: int
+
+    def describe(self) -> str:
+        """Return the line the model sees in place of the attachment reference."""
+        return f"[Attached file: {self.filename} ({self.mime_type}, {self.size} bytes) at {self.path.as_posix()}]"
 
 
 def parse_attachment_id(url: str) -> str | None:
@@ -61,7 +97,7 @@ def parse_attachment_id(url: str) -> str | None:
     if not url.startswith(ATTACHMENT_URI_PREFIX):
         return None
 
-    # 只认 UUID：ID 会被拼进请求路径，任何别的东西都可能借机改写路径。
+    # 只认 UUID：ID 会被拼进请求路径和工作区路径，任何别的东西都可能借机改写路径。
     try:
         return str(UUID(url.removeprefix(ATTACHMENT_URI_PREFIX)))
     except ValueError:
@@ -69,36 +105,132 @@ def parse_attachment_id(url: str) -> str | None:
 
 
 def build_control_plane_fetcher(client: ControlPlaneClient) -> FetchAttachment:
-    """Adapt the control plane client to what AttachmentImages calls."""
+    """Adapt the control plane client to what AttachmentMaterializer calls, retrying once."""
 
-    async def fetch(attachment_id: str) -> tuple[bytes, str]:
+    async def fetch_once(attachment_id: str) -> tuple[AttachmentMeta, bytes]:
         try:
-            return await client.get_attachment(attachment_id)
+            meta = await client.get_attachment(attachment_id)
+            return meta, await client.download_attachment(meta.download, max_bytes=MAX_ATTACHMENT_BYTES)
         except ControlPlaneError as exc:
-            # 没收到响应或对方 5xx 可以再试；4xx 是附件不在了或 token 已被吊销，再试也一样。
+            # 没收到响应或对方 5xx 可以再试；4xx 是附件不在了、token 已被吊销或签名过期，再试也一样。
             retryable = exc.status_code is None or exc.status_code >= 500
             raise AttachmentFetchError(str(exc), retryable=retryable) from exc
+
+    async def fetch(attachment_id: str) -> tuple[AttachmentMeta, bytes]:
+        try:
+            return await fetch_once(attachment_id)
+        except AttachmentFetchError as exc:
+            if not exc.retryable:
+                raise
+
+        # 只重试一次：再失败就按不可用处理，不拖住这一轮。重新取元数据，预签名地址可能已经过期。
+        await asyncio.sleep(FETCH_RETRY_DELAY_SECONDS)
+        return await fetch_once(attachment_id)
 
     return fetch
 
 
-class AttachmentImages(AbstractCapability[Any]):
-    """Swap attachment references for image bytes in each model request, without touching history.
+class AttachmentMaterializer:
+    """Keep the attachments a conversation refers to as files in its workspace.
 
-    :param fetch: Downloads one attachment by ID; None without a control plane, which turns
-        every image into a placeholder.
-    :param recent_turns: How many of the latest user turns have their images sent as bytes.
-    :param cache_size: How many images are kept in memory between requests.
+    :param workspace: The Runtime's workspace root.
+    :param fetch: Downloads one attachment by ID; None without a control plane, in which case
+        no attachment is ever available.
     """
 
-    def __init__(self, fetch: FetchAttachment | None, *, recent_turns: int, cache_size: int = DEFAULT_CACHE_SIZE):
+    def __init__(self, workspace: Path, fetch: FetchAttachment | None) -> None:
+        self._workspace = workspace
+        self._root = workspace / ATTACHMENTS_DIR
         self._fetch = fetch
-        self._recent_turns = recent_turns
-        self._cache_size = cache_size
-        self._cache: OrderedDict[str, BinaryContent] = OrderedDict()
+
+    def find(self, attachment_id: str) -> StoredAttachment | None:
+        """Return the attachment if it is already in the workspace."""
+        meta_path = self._meta_path(attachment_id)
+
+        # 元数据最后写，有它就说明文件已经完整落盘；读坏了也按不在处理，下一轮会重新下载。
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            stored = StoredAttachment(
+                path=ATTACHMENTS_DIR / attachment_id / meta["stored_name"],
+                filename=meta["filename"],
+                mime_type=meta["mime_type"],
+                size=int(meta["size"]),
+            )
+        except OSError, ValueError, KeyError, TypeError:
+            return None
+
+        if not (self._workspace / stored.path).is_file():
+            return None
+
+        return stored
+
+    def read_bytes(self, stored: StoredAttachment) -> bytes:
+        """Return a stored attachment's content."""
+        return (self._workspace / stored.path).read_bytes()
+
+    async def ensure(self, messages: Sequence[ModelMessage]) -> None:
+        """Download every attachment the messages refer to that is not in the workspace yet."""
+        missing = sorted(
+            {attachment_id for attachment_id in iter_attachment_ids(messages) if self.find(attachment_id) is None}
+        )
+        if not missing:
+            return
+
+        # 没有控制面就无处可取。引用留着，模型看到的是「附件不可用」。
+        if self._fetch is None:
+            logger.warning("no control plane to fetch attachments %s from", missing)
+            return
+
+        # 换沙箱后上下文里的附件会一次缺很多，并发取；单个失败不影响其他附件和这一轮。
+        await asyncio.gather(*(self._download(attachment_id) for attachment_id in missing))
+
+    async def _download(self, attachment_id: str) -> None:
+        assert self._fetch is not None
+        try:
+            meta, data = await self._fetch(attachment_id)
+        except AttachmentFetchError as exc:
+            logger.warning("attachment %s is unavailable: %s", attachment_id, exc)
+            return
+
+        stored_name = sanitize_filename(meta.filename)
+        directory = self._root / attachment_id
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            (directory / stored_name).write_bytes(data)
+            # 元数据最后写，find 才不会把写了一半的文件当成已就绪。
+            self._meta_path(attachment_id).write_text(
+                json.dumps(
+                    {
+                        "stored_name": stored_name,
+                        "filename": meta.filename,
+                        "mime_type": meta.mime_type,
+                        "size": len(data),
+                    }
+                ),
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            logger.warning("attachment %s could not be written to the workspace: %s", attachment_id, exc)
+
+    def _meta_path(self, attachment_id: str) -> Path:
+        return self._root / f"{attachment_id}.json"
+
+
+class AttachmentResolver(AbstractCapability[Any]):
+    """Swap attachment references for descriptions, and recent images for bytes, in each model request.
+
+    :param materializer: Where the attachments already are.
+    :param recent_turns: How many of the latest user turns have their images sent as bytes.
+    :param send_images: False when this turn's model cannot read images, so none are sent.
+    """
+
+    def __init__(self, materializer: AttachmentMaterializer, *, recent_turns: int, send_images: bool) -> None:
+        self._materializer = materializer
+        self._recent_turns = recent_turns if send_images else 0
+        self._send_images = send_images
 
     def get_ordering(self) -> CapabilityOrdering:
-        """Run innermost, so no other capability ever sees the swapped-in bytes."""
+        """Run innermost, so no other capability ever sees the swapped-in content."""
         return CapabilityOrdering(position="innermost")
 
     async def wrap_model_request(
@@ -108,13 +240,13 @@ class AttachmentImages(AbstractCapability[Any]):
         request_context: ModelRequestContext,
         handler: WrapModelRequestHandler,
     ) -> ModelResponse:
-        """Hand the model a copy of the request whose attachment references are resolved."""
-        messages = await self.resolve_messages(request_context.messages)
+        """Hand the model a copy of the request whose file references are resolved."""
+        messages = self.resolve_messages(request_context.messages)
         if messages is request_context.messages:
             return await handler(request_context)
 
         # 新建而不是改传进来的那份：after_model_request 拿到的是原来那份，改了它，
-        # TranscriptRecorder 就会把图片字节当成压缩结果提交进上下文。
+        # TranscriptRecorder 就会把换进来的内容当成压缩结果提交进上下文。
         sent = ModelRequestContext(
             model=request_context.model,
             messages=messages,
@@ -125,19 +257,19 @@ class AttachmentImages(AbstractCapability[Any]):
         sent.streaming = request_context.streaming
         return await handler(sent)
 
-    async def resolve_messages(self, messages: list[ModelMessage]) -> list[ModelMessage]:
-        """Return a copy with recent images as bytes and older ones as placeholders, or messages itself if none."""
-        if not any(_has_attachment(message) for message in messages):
+    def resolve_messages(self, messages: list[ModelMessage]) -> list[ModelMessage]:
+        """Return a copy with every file reference resolved, or messages itself if there is none."""
+        if not any(_has_file_url(message) for message in messages):
             return messages
 
         recent = self._find_recent_turns(messages)
         resolved: list[ModelMessage] = []
         for index, message in enumerate(messages):
-            if not isinstance(message, ModelRequest) or not _has_attachment(message):
+            if not isinstance(message, ModelRequest) or not _has_file_url(message):
                 resolved.append(message)
                 continue
 
-            parts = [await self._resolve_part(part, send_bytes=index in recent) for part in message.parts]
+            parts = [self._resolve_part(part, send_bytes=index in recent) for part in message.parts]
             resolved.append(replace(message, parts=parts))
 
         return resolved
@@ -155,68 +287,82 @@ class AttachmentImages(AbstractCapability[Any]):
         ]
         return set(turns[-self._recent_turns :])
 
-    async def _resolve_part(self, part: Any, *, send_bytes: bool) -> Any:
+    def _resolve_part(self, part: Any, *, send_bytes: bool) -> Any:
         if not isinstance(part, UserPromptPart) or isinstance(part.content, str):
             return part
 
         content: list[UserContent] = []
         for item in part.content:
-            attachment_id = parse_attachment_id(item.url) if isinstance(item, ImageUrl) else None
-            if attachment_id is None:
-                content.append(item)
-            elif send_bytes:
-                content.append(await self._load_image(attachment_id))
+            if isinstance(item, FileUrl):
+                content.extend(self._resolve_file_url(item, send_bytes=send_bytes))
             else:
-                content.append(OMITTED_IMAGE_TEXT)
+                content.append(item)
 
         return replace(part, content=content)
 
-    async def _load_image(self, attachment_id: str) -> BinaryContent | str:
-        if (cached := self._cache.get(attachment_id)) is not None:
-            self._cache.move_to_end(attachment_id)
-            return cached
+    def _resolve_file_url(self, item: FileUrl, *, send_bytes: bool) -> list[UserContent]:
+        attachment_id = parse_attachment_id(item.url)
 
-        # 取不到图不让这一轮失败：模型看到占位，仍然可以根据文字回答，或者请用户重发。
+        # 外部链接：能看图的模型照常收图片链接，其余换成文字，模型需要时自己去取。
+        if attachment_id is None:
+            if isinstance(item, ImageUrl) and self._send_images:
+                return [item]
+
+            return [f"[Linked file: {item.url}]"]
+
+        stored = self._materializer.find(attachment_id)
+        if stored is None:
+            return [ATTACHMENT_FETCH_FAILED_TEXT]
+
+        # 说明总在：图片早于最近几轮、或模型看不了图时，模型仍知道文件在哪，需要时能自己读。
+        if not (send_bytes and stored.mime_type in IMAGE_MEDIA_TYPES):
+            return [stored.describe()]
+
+        # 字节每次从磁盘读，不在内存里留缓存：最近几轮的图有限，读一次本地文件的开销可以忽略。
         try:
-            data, media_type = await self._fetch_with_retry(attachment_id)
-        except AttachmentFetchError as exc:
-            logger.warning("attachment %s is unavailable: %s", attachment_id, exc)
-            return UNAVAILABLE_IMAGE_TEXT
+            data = self._materializer.read_bytes(stored)
+        except OSError as exc:
+            logger.warning("attachment %s could not be read from the workspace: %s", attachment_id, exc)
+            return [stored.describe()]
 
-        # API 只存这几种类型，对方说是别的就是出了岔子，不把来历不明的字节当图发给模型。
-        if media_type not in IMAGE_MEDIA_TYPES:
-            logger.warning("attachment %s came back as %r, not an image", attachment_id, media_type)
-            return UNAVAILABLE_IMAGE_TEXT
-
-        image = BinaryContent(data=data, media_type=media_type)
-        self._cache[attachment_id] = image
-        # 内容按 ID 固定不变，缓存不会过时，只需按最近使用淘汰来控制内存。
-        while len(self._cache) > self._cache_size:
-            self._cache.popitem(last=False)
-
-        return image
-
-    async def _fetch_with_retry(self, attachment_id: str) -> tuple[bytes, str]:
-        # 本地开发和单测没有控制面，附件无处可取。
-        if self._fetch is None:
-            raise AttachmentFetchError("no control plane to fetch from", retryable=False)
-
-        # 只重试一次：连不上或对方 5xx 值得再试，再失败就按不可用处理，不拖住这一轮。
-        try:
-            return await self._fetch(attachment_id)
-        except AttachmentFetchError as exc:
-            if not exc.retryable:
-                raise
-
-        return await self._fetch(attachment_id)
+        return [stored.describe(), BinaryContent(data=data, media_type=stored.mime_type)]
 
 
-def _has_attachment(message: ModelMessage) -> bool:
+def sanitize_filename(filename: str) -> str:
+    """Return a file name safe to place in the workspace and to show in shell commands."""
+    name = _UNSAFE_FILENAME_CHARS.sub("_", Path(filename).name).strip(" .")
+    if not name:
+        return DEFAULT_STORED_FILENAME
+
+    # 截断时保留扩展名：模型和工具靠它判断怎么打开文件。
+    if len(name) > MAX_STORED_FILENAME_LENGTH:
+        suffix = Path(name).suffix[:16]
+        name = name[: MAX_STORED_FILENAME_LENGTH - len(suffix)] + suffix
+
+    return name
+
+
+def iter_attachment_ids(messages: Sequence[ModelMessage]) -> Iterator[str]:
+    """Yield the ID of every attachment reference in the messages, in order, repeats included."""
+    for message in messages:
+        if not isinstance(message, ModelRequest):
+            continue
+
+        for part in message.parts:
+            if not isinstance(part, UserPromptPart) or isinstance(part.content, str):
+                continue
+
+            for item in part.content:
+                if isinstance(item, FileUrl) and (attachment_id := parse_attachment_id(item.url)) is not None:
+                    yield attachment_id
+
+
+def _has_file_url(message: ModelMessage) -> bool:
     if not isinstance(message, ModelRequest):
         return False
 
     return any(
-        isinstance(item, ImageUrl) and item.url.startswith(ATTACHMENT_URI_PREFIX)
+        isinstance(item, FileUrl)
         for part in message.parts
         if isinstance(part, UserPromptPart) and not isinstance(part.content, str)
         for item in part.content

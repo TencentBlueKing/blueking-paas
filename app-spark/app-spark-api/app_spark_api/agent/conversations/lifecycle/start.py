@@ -30,8 +30,9 @@ from asgiref.sync import sync_to_async
 
 from app_spark_api.agent.conversations.attachments import (
     acheck_run_attachments,
-    ahas_sent_attachments,
+    ahas_sent_images,
     build_attachment_uri,
+    is_image,
 )
 from app_spark_api.agent.conversations.exceptions import ConversationClosedError, ModelImageInputUnsupportedError
 from app_spark_api.agent.conversations.lifecycle.utils import (
@@ -43,13 +44,14 @@ from app_spark_api.agent.conversations.models import ConversationUserMessage
 from app_spark_api.agent.conversations.services import open_client
 from app_spark_api.agent.model_catalog.services import list_models, resolve_run_model_id
 from app_spark_api.agent.runtime import AgentWorkspaceSavePendingError
-from app_spark_api.agent.runtime.entities import ImageInput
+from app_spark_api.agent.runtime.entities import AttachmentInput
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
     from app_spark_api.agent.conversations.models import Conversation
+    from app_spark_api.agent.model_catalog.services import ModelCatalog
     from app_spark_api.agent.runtime import AgentRun, AgentRuntimeClient, PreviewStartOutcome, RuntimeHealth
     from app_spark_api.infras.bk_access_token import UserCredential
 
@@ -74,12 +76,11 @@ async def start_run(
     :param content: The user's message; may be empty when the turn carries attachments.
     :param credential: The caller's BlueKing login, passed to :func:`~app_spark_api.agent.conversations.services.open_client`.
     :param model_id: The model this turn asked for; None runs it on the Runtime's default.
-    :param attachment_ids: Images sent with this turn, in the order the user attached them.
+    :param attachment_ids: Files sent with this turn, in the order the user attached them.
     :return: The accepted run, whose bytes are still to come.
     :raises ConversationClosedError: If the conversation has been closed.
     :raises ModelNotAvailableError: If the model list does not offer model_id.
-    :raises AttachmentNotFoundError: If an attachment is not the conversation's.
-    :raises AttachmentAlreadyUsedError: If an attachment was already sent with another turn.
+    :raises APIError: ATTACHMENT_NOT_FOUND or ATTACHMENT_ALREADY_USED, see select_unsent.
     :raises ModelImageInputUnsupportedError: If the turn carries images its model cannot read.
     :raises AgentBusyError: If a run is already occupying the Runtime.
     :raises AgentProvisionError: If no Runtime could be brought up.
@@ -96,13 +97,19 @@ async def start_run(
     if not conversation.is_live:
         raise ConversationClosedError(CLOSED_MESSAGE.format(id=conversation.id))
 
-    # 模型不可用时在拉起沙箱、写入用户消息之前就拒掉：这一轮本来就不会发生，不该为它付启动成本，
-    # 也不该在历史里留一条没有回答的输入。
-    forwarded_model_id = await resolve_run_model_id(model_id, credential)
-
-    # 附件归属和模型能力同理，在拉起沙箱之前查。绑定时还会在锁下复查一次归属。
+    # 附件归属、模型可用性和模型能力都在拉起沙箱、写入用户消息之前查：这一轮本来就不会发生，
+    # 不该为它付启动成本，也不该在历史里留一条没有回答的输入。绑定时还会在锁下复查一次归属。
     run_attachments = await acheck_run_attachments(conversation, attachment_ids)
-    image_input = await _check_image_input(conversation, model_id, credential, sends_images=bool(run_attachments))
+    sends_images = any(is_image(attachment.mime_type) for attachment in run_attachments)
+
+    # Runtime 会把最近几轮的历史图片也发给模型，所以本轮没带图也要看模型能不能读图：
+    # 上一轮在多模态模型上发了图、这一轮换成纯文本模型时，图片不能跟着发过去。
+    may_send_images = sends_images or await ahas_sent_images(conversation)
+
+    # 两项检查都要模型列表时只取一次，两项看的是同一份。会话里从没有图、又没选模型时不必查。
+    catalog = await list_models(credential) if model_id is not None or may_send_images else None
+    forwarded_model_id = await resolve_run_model_id(model_id, credential, catalog=catalog)
+    image_input = _check_image_input(catalog, model_id, sends_images=sends_images, may_send_images=may_send_images)
 
     client, health = await _open_resumed_client(conversation, credential)
     logger.info(
@@ -130,9 +137,13 @@ async def start_run(
             context_version=health.context_version,
             run_id=run_id,
             model_id=forwarded_model_id,
-            # 只传引用不传字节，Agent 每次调模型前再经内部接口取图。
-            images=[
-                ImageInput(url=build_attachment_uri(attachment.id), mime_type=attachment.mime_type)
+            # 只传引用不传字节，Agent 在这一轮开始前自己把文件下载进工作区。
+            attachments=[
+                AttachmentInput(
+                    url=build_attachment_uri(attachment.id),
+                    mime_type=attachment.mime_type,
+                    is_image=is_image(attachment.mime_type),
+                )
                 for attachment in run_attachments
             ],
             image_input=image_input,
@@ -202,29 +213,21 @@ async def start_preview(
     return outcome
 
 
-async def _check_image_input(
-    conversation: Conversation,
-    model_id: str | None,
-    credential: UserCredential | None,
-    *,
-    sends_images: bool,
+def _check_image_input(
+    catalog: ModelCatalog | None, model_id: str | None, *, sends_images: bool, may_send_images: bool
 ) -> bool:
     """Return whether this turn's model may be handed the conversation's images.
 
-    :param conversation: Conversation the turn belongs to.
+    :param catalog: The model list; None only when may_send_images is false.
     :param model_id: The model the turn asked for; None means the catalog's default model.
-    :param credential: The caller's BlueKing login, needed to read the bkaidev model list.
     :param sends_images: Whether this turn itself carries images.
+    :param may_send_images: Whether this turn or an earlier one carries images.
     :return: False when the model cannot read images, so the Runtime sends none of them.
     :raises ModelImageInputUnsupportedError: If this turn carries images its model cannot read.
     """
-    # 会话里从没发过图，就没有图会被发给模型，纯文字对话不必为此多查一次模型列表。
-    if not sends_images and not await ahas_sent_attachments(conversation):
+    # 会话里没有图会被发给模型，模型能不能看图无关紧要；请求体也就不必带上这一项。
+    if catalog is None or not may_send_images:
         return True
-
-    # Runtime 会把最近几轮的历史图片也发给模型，所以本轮没带图也要看模型能不能读图：
-    # 上一轮在多模态模型上发了图、这一轮换成纯文本模型时，图片不能跟着发过去。
-    catalog = await list_models(credential)
 
     # 不选模型时按列表的默认模型判断：沙箱的 MODEL_ID 由 resolve_model_access 取同一个默认模型，
     # 改了一边就要同步改另一边。

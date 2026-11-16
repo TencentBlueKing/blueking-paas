@@ -517,8 +517,8 @@ AGENT_CONTEXT_STORAGE = settings.get(
     {"backend": "host_tmp_path", "root": "/tmp/app-spark/agent-contexts"},
 )
 
-## 会话里用户上传的图片附件存哪儿，字段与 AGENT_CONTEXT_STORAGE 相同。附件的元数据在数据库里，
-## 字节在这里；前端预览和 Agent 取图都经本服务读出，不对外签发存储地址。
+## 会话里用户上传的文件附件存哪儿，字段与 AGENT_CONTEXT_STORAGE 相同。附件的元数据在数据库里，
+## 字节在这里；前端预览经本服务读出，Agent 从哪下载由存储后端决定（bk_repo 签预签名地址）。
 AGENT_ATTACHMENT_STORAGE = settings.get(
     "AGENT_ATTACHMENT_STORAGE",
     {"backend": "host_tmp_path", "root": "/tmp/app-spark/agent-attachments"},

@@ -14,91 +14,104 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""会话图片附件：上传即存、发送时只引用 ID，字节始终经本服务读出。
+"""会话文件附件：上传即存、发送时只引用 ID。
 
-上下文里只放 app-spark-attachment://<附件 ID>，Agent 调模型前再经内部接口按 ID 取回字节。
-前端预览和 Agent 取图都不签发存储链接：沙箱和浏览器能否直连 BkRepo 没有保证。日后要让字节
-绕开本服务，把内容接口改成 302 跳转即可，调用方不用改。
+上下文里只放 app-spark-attachment://<附件 ID>，Agent 在一轮开始前按 ID 把文件下载进工作区。
+前端预览始终经本服务读取，有浏览器缓存兜着；Agent 从哪下载由存储后端决定，见 attachment_storage。
 """
 
 from __future__ import annotations
 
+import functools
 import hashlib
+import logging
+import mimetypes
+import re
 import uuid
+from pathlib import PurePath
 from typing import TYPE_CHECKING, BinaryIO
 
 from asgiref.sync import sync_to_async
 from blue_krill.storages.blobstore.bkrepo import RequestError
-from django.conf import settings
+from magika import Magika
 
-from app_spark_api.agent.conversations.context_storage import ContextStorageConfig
-from app_spark_api.agent.conversations.entities import AttachmentResponse
-from app_spark_api.agent.conversations.exceptions import (
-    AttachmentAlreadyUsedError,
-    AttachmentNotFoundError,
-    AttachmentStorageError,
-    AttachmentTooLargeError,
-    AttachmentTypeUnsupportedError,
-    ConversationClosedError,
+from app_spark_api.agent.conversations.attachment_storage import (
+    get_attachment_storage_config,
+    resolve_attachment_storage,
 )
+from app_spark_api.agent.conversations.entities import AttachmentResponse
+from app_spark_api.agent.conversations.exceptions import AttachmentStorageError, ConversationClosedError
 from app_spark_api.agent.conversations.models import ConversationAttachment
-from app_spark_api.repository.storage.constants import StorageBackend
-from app_spark_api.repository.storage.exceptions import StorageConfigurationError
-from app_spark_api.utils import structure_config
+from app_spark_api.utils.api_errors.error_codes import error_codes
 from app_spark_api.utils.urls import reverse_public
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from app_spark_api.agent.conversations.attachment_storage import AgentDownload
     from app_spark_api.agent.conversations.models import Conversation
 
-# 单张附件的大小上限。前端会先压缩到最长边 2048，正常截图远小于它，所以读写都整张放内存。
+logger = logging.getLogger(__name__)
+
+# 单个附件的大小上限。读写都整份放内存，所以不能放得太大。
 MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024
 MAX_FILENAME_LENGTH = 255
 ATTACHMENT_URI_SCHEME = "app-spark-attachment"
-BK_REPO_KEY_PREFIX = "attachments"
+
+# 能作为图片直接交给多模态模型、也能在浏览器里内联显示的类型。SVG 不在其中：它能带脚本。
+IMAGE_MIME_TYPES = frozenset({"image/png", "image/jpeg", "image/gif", "image/webp"})
+
+# magika 只认出「某种文本」或完全认不出时的标签。这时扩展名往往更具体，例如 Markdown 会被认成 txt。
+GENERIC_CONTENT_LABELS = frozenset({"txt", "unknown", "empty"})
+FALLBACK_MIME_TYPE = "application/octet-stream"
+
+# 扩展名只收短的字母数字：它会进存储路径，也会拿去猜类型，奇怪的后缀不如没有。
+EXTENSION_PATTERN = re.compile(r"\.[a-z0-9]{1,16}")
 
 # 用户侧内容接口的路由名，AttachmentResponse.url 由它反解出来。
 ATTACHMENT_CONTENT_URL_NAME = "conversations-attachments-content"
 
 
-def blob_location(conversation_id: uuid.UUID, attachment_id: uuid.UUID) -> tuple[str, dict[str, str]]:
-    """Return the backend name and blob-store configuration for one attachment.
-
-    :raises StorageConfigurationError: If AGENT_ATTACHMENT_STORAGE is invalid.
-    """
-    # 与上下文存储的配置同构（backend + root），直接复用它的结构。
-    config = structure_config(
-        settings.AGENT_ATTACHMENT_STORAGE, ContextStorageConfig, error_cls=StorageConfigurationError
-    )
-    if config.backend == StorageBackend.HOST_TMP_PATH:
-        return config.backend, {"path": f"{config.root.rstrip('/')}/{conversation_id}/{attachment_id}"}
-
-    if config.backend == StorageBackend.BK_REPO:
-        return config.backend, {
-            "bucket": config.root,
-            "key": f"{BK_REPO_KEY_PREFIX}/{conversation_id}/{attachment_id}",
-        }
-
-    raise StorageConfigurationError(f"Unsupported storage backend: {config.backend}")
+@functools.cache
+def get_magika() -> Magika:
+    """Return the process-wide content type detector, loading its model on first use."""
+    return Magika()
 
 
-def sniff_image_type(head: bytes) -> str | None:
-    """Return the image MIME type the leading bytes of a file identify, or None."""
-    if head.startswith(b"\x89PNG\r\n\x1a\n"):
-        return "image/png"
+def normalize_extension(filename: str) -> str:
+    """Return the file name's extension, lowercased and with its dot, or "" when it has no usable one."""
+    suffix = PurePath(filename).suffix.lower()
+    if EXTENSION_PATTERN.fullmatch(suffix) is None:
+        return ""
 
-    if head.startswith(b"\xff\xd8\xff"):
-        return "image/jpeg"
+    return suffix
 
-    if head.startswith((b"GIF87a", b"GIF89a")):
-        return "image/gif"
 
-    # WebP 是 RIFF 容器：前 4 字节 RIFF，中间 4 字节是长度，再 4 字节才是格式名。
-    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
-        return "image/webp"
+def detect_mime_type(data: bytes, extension: str) -> str:
+    """Return a file's MIME type, judged by its content first and its extension second."""
+    result = get_magika().identify_bytes(data)
+    if not result.ok:
+        return FALLBACK_MIME_TYPE
 
-    return None
+    detected = result.output
+    guessed = mimetypes.guess_type(f"file{extension}")[0] if extension else None
+
+    # 没有扩展名可比，或两者说的是同一种类型：以内容为准。
+    if guessed is None or extension.removeprefix(".") in detected.extensions or guessed == detected.mime_type:
+        return detected.mime_type
+
+    # 内容只认出泛泛的文本或认不出时，扩展名更具体。但扩展名不能单独把文件定成图片：
+    # 图片会原样作为图片交给模型，伪装成图片的文件只会让模型调用失败。
+    if detected.label in GENERIC_CONTENT_LABELS and guessed not in IMAGE_MIME_TYPES:
+        return guessed
+
+    logger.info("attachment content looks like %s but its extension %s says %s", detected.label, extension, guessed)
+    return detected.mime_type
+
+
+def is_image(mime_type: str) -> bool:
+    """Return whether a model that reads images is handed this type as an image."""
+    return mime_type in IMAGE_MIME_TYPES
 
 
 def build_attachment_uri(attachment_id: uuid.UUID) -> str:
@@ -126,12 +139,12 @@ def build_attachment_response(
 
 @sync_to_async
 def asave_attachment(conversation: Conversation, *, handle: BinaryIO, filename: str) -> ConversationAttachment:
-    """Store one uploaded image and record it as an unused attachment of the conversation.
+    """Store one uploaded file and record it as an unused attachment of the conversation.
 
     :raises ConversationClosedError: If the conversation has been closed.
-    :raises AttachmentTooLargeError: If the file exceeds MAX_ATTACHMENT_SIZE.
-    :raises AttachmentTypeUnsupportedError: If the file is not an allowed image type.
+    :raises APIError: ATTACHMENT_TOO_LARGE if the file exceeds MAX_ATTACHMENT_SIZE.
     :raises AttachmentStorageError: If the bytes could not be written.
+    :raises StorageConfigurationError: If AGENT_ATTACHMENT_STORAGE is invalid.
     """
     # 已结束的会话不会再有下一轮，往里上传的附件永远不会被用上。
     if not conversation.is_live:
@@ -140,24 +153,23 @@ def asave_attachment(conversation: Conversation, *, handle: BinaryIO, filename: 
     # 多读一个字节就能判断是否超限，不信任 multipart 头里声明的大小。
     data = handle.read(MAX_ATTACHMENT_SIZE + 1)
     if len(data) > MAX_ATTACHMENT_SIZE:
-        raise AttachmentTooLargeError(f"Attachment exceeds {MAX_ATTACHMENT_SIZE} bytes")
+        raise error_codes.ATTACHMENT_TOO_LARGE
 
-    # 按文件头识别类型，不信任客户端声明的 Content-Type 和扩展名。
-    mime_type = sniff_image_type(data[:12])
-    if mime_type is None:
-        raise AttachmentTypeUnsupportedError("The uploaded file is not a PNG, JPEG, GIF or WebP image")
-
+    extension = normalize_extension(filename)
     attachment_id = uuid.uuid4()
-    backend, config = blob_location(conversation.id, attachment_id)
+    config = get_attachment_storage_config()
     attachment = ConversationAttachment(
         id=attachment_id,
         conversation=conversation,
         filename=filename[:MAX_FILENAME_LENGTH],
-        mime_type=mime_type,
+        extension=extension,
+        mime_type=detect_mime_type(data, extension),
         size=len(data),
         sha256=hashlib.sha256(data).hexdigest(),
-        backend=backend,
-        config=config,
+        backend=config.backend,
+        config=resolve_attachment_storage(config.backend).locate(
+            config.root, conversation.id, attachment_id, extension
+        ),
         tenant_id=conversation.tenant_id,
         owner=conversation.owner,
     )
@@ -175,12 +187,12 @@ def asave_attachment(conversation: Conversation, *, handle: BinaryIO, filename: 
 async def aget_attachment(conversation: Conversation, attachment_id: uuid.UUID) -> ConversationAttachment:
     """Return one of the conversation's attachments.
 
-    :raises AttachmentNotFoundError: If the conversation has no such attachment.
+    :raises APIError: ATTACHMENT_NOT_FOUND if the conversation has no such attachment.
     """
     try:
         return await ConversationAttachment.objects.aget(conversation=conversation, id=attachment_id)
     except ConversationAttachment.DoesNotExist as exc:
-        raise AttachmentNotFoundError(f"Conversation {conversation.id} has no attachment {attachment_id}") from exc
+        raise error_codes.ATTACHMENT_NOT_FOUND from exc
 
 
 @sync_to_async
@@ -195,6 +207,17 @@ def aread_content(attachment: ConversationAttachment) -> bytes:
         raise AttachmentStorageError(f"Could not read attachment {attachment.id}") from exc
 
 
+@sync_to_async
+def abuild_agent_download(attachment: ConversationAttachment) -> AgentDownload:
+    """Return where the Runtime downloads an attachment from, as its storage backend decides.
+
+    :raises AttachmentStorageError: If the storage service could not issue a download.
+    :raises StorageConfigurationError: If the attachment's backend is not supported.
+    """
+    # 按这一行记下的后端选，而不是按当前配置：部署切换存储之后，老附件仍在原来的地方。
+    return resolve_attachment_storage(attachment.backend).build_agent_download(attachment)
+
+
 async def acheck_run_attachments(
     conversation: Conversation, attachment_ids: Sequence[uuid.UUID]
 ) -> list[ConversationAttachment]:
@@ -203,23 +226,13 @@ async def acheck_run_attachments(
     Checked before a Runtime is brought up, so a turn that cannot happen costs nothing; the
     binding re-checks under a lock, see ConversationUserMessageManager.
 
-    :raises AttachmentNotFoundError: If one of them is not the conversation's.
-    :raises AttachmentAlreadyUsedError: If one of them was already sent with another turn.
+    :raises APIError: ATTACHMENT_NOT_FOUND or ATTACHMENT_ALREADY_USED, see select_unsent.
     """
-    found = {
-        attachment.id: attachment
-        async for attachment in ConversationAttachment.objects.filter(conversation=conversation, id__in=attachment_ids)
-    }
-    if missing := [attachment_id for attachment_id in attachment_ids if attachment_id not in found]:
-        raise AttachmentNotFoundError(f"Conversation {conversation.id} has no attachments {missing}")
-
-    attachments = [found[attachment_id] for attachment_id in attachment_ids]
-    if used := [attachment.id for attachment in attachments if attachment.user_message_id is not None]:
-        raise AttachmentAlreadyUsedError(f"Attachments {used} of conversation {conversation.id} are already in use")
-
-    return attachments
+    return await sync_to_async(ConversationAttachment.objects.select_unsent)(conversation, attachment_ids)
 
 
-async def ahas_sent_attachments(conversation: Conversation) -> bool:
-    """Return whether any earlier turn of the conversation was sent with an attachment."""
-    return await ConversationAttachment.objects.filter(conversation=conversation, user_message__isnull=False).aexists()
+async def ahas_sent_images(conversation: Conversation) -> bool:
+    """Return whether any earlier turn of the conversation was sent with an image attachment."""
+    return await ConversationAttachment.objects.filter(
+        conversation=conversation, user_message__isnull=False, mime_type__in=IMAGE_MIME_TYPES
+    ).aexists()

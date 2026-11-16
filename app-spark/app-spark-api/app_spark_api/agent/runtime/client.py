@@ -51,7 +51,7 @@ PREVIEW_PORT_TAKEN_CODE = "port_taken"
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
 
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, ImageInput
+    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, AttachmentInput
 
 # What the AG-UI protocol asks for when it wants the event stream rather than a buffered body.
 SSE_HEADERS = {"Accept": "text/event-stream", "Content-Type": "application/json"}
@@ -286,7 +286,7 @@ class AgentRuntimeClient:
         context_version: int,
         run_id: str | None = None,
         model_id: str | None = None,
-        images: Sequence[ImageInput] = (),
+        attachments: Sequence[AttachmentInput] = (),
         image_input: bool = True,
     ) -> AgentRun:
         """Submit one conversation turn and return its still-open event stream.
@@ -294,14 +294,14 @@ class AgentRuntimeClient:
         Only the new user message is sent. The Runtime owns the history and rejects anything a
         client tries to resend, so there is nothing here to keep in step with it.
 
-        :param content: The user's message for this turn; may be empty when images are sent.
+        :param content: The user's message for this turn; may be empty when files are attached.
         :param context_version: Version read from ``/health`` immediately beforehand. Compaction
             can move it in the middle of a run, so a value carried over from an earlier turn is
             not good enough.
         :param run_id: Identifier for this turn; a fresh UUID when omitted. The Runtime refuses
             a replayed one.
         :param model_id: Model to run this turn on; None leaves the Runtime on its default.
-        :param images: Images sent with this turn, as references the Runtime resolves itself.
+        :param attachments: Files sent with this turn, as references the Runtime resolves itself.
         :param image_input: False when this turn's model cannot read images, so the Runtime
             sends it none of the conversation's earlier images either.
         :return: The accepted run.
@@ -326,7 +326,7 @@ class AgentRuntimeClient:
             # The Runtime speaks AG-UI 1.0 only and refuses a request that does not say so.
             "protocolVersion": "1.0",
             "state": {},
-            "messages": [{"id": str(uuid4()), "role": "user", "content": _build_user_content(content, images)}],
+            "messages": [{"id": str(uuid4()), "role": "user", "content": _build_user_content(content, attachments)}],
             "tools": [],
             "context": [],
             "forwardedProps": forwarded_props,
@@ -456,20 +456,25 @@ class AgentRuntimeClient:
         return response.text[:200]
 
 
-def _build_user_content(content: str, images: Sequence[ImageInput]) -> str | list[dict[str, Any]]:
-    """Return the AG-UI user message content for a turn's text and images.
+def _build_user_content(content: str, attachments: Sequence[AttachmentInput]) -> str | list[dict[str, Any]]:
+    """Return the AG-UI user message content for a turn's text and attachments.
 
-    A turn without images keeps sending a plain string, so a text-only conversation produces
-    exactly the request body it always did.
+    A turn without attachments keeps sending a plain string, so a text-only conversation
+    produces exactly the request body it always did.
     """
-    if not images:
+    if not attachments:
         return content
 
     # content 为空时不带 text 段，否则模型的用户内容里会多一个空字符串。
     parts: list[dict[str, Any]] = [{"type": "text", "text": content}] if content.strip() else []
+
+    # 图片用 image 段，Runtime 才会在能看图的模型上把它作为图片发出；其他文件一律是 document 段。
     parts.extend(
-        {"type": "image", "source": {"type": "url", "value": image.url, "mimeType": image.mime_type}}
-        for image in images
+        {
+            "type": "image" if attachment.is_image else "document",
+            "source": {"type": "url", "value": attachment.url, "mimeType": attachment.mime_type},
+        }
+        for attachment in attachments
     )
     return parts
 

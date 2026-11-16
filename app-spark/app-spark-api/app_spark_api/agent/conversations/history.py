@@ -153,7 +153,7 @@ def read_page(
     page_messages = list(
         messages.filter(after_seq__gte=max(start_seq - 1, 0))
         .order_by("after_seq", "id")
-        .prefetch_related(Prefetch("attachments", queryset=ConversationAttachment.objects.order_by("position")))
+        .prefetch_related(Prefetch("attachments", queryset=ConversationAttachment.objects.in_input_order()))
     )
 
     return HistoryPage(

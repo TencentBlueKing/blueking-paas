@@ -293,9 +293,10 @@
 #   backend: bk_repo
 #   root: app-spark-contexts
 
-## 可选，默认如下。会话里用户上传的图片附件存在哪，backend 取值与 AGENT_CONTEXT_STORAGE 相同。
+## 可选，默认如下。会话里用户上传的文件附件存在哪，backend 取值与 AGENT_CONTEXT_STORAGE 相同。
 ## root 在 host_tmp_path 下是本机父目录；在 bk_repo 下是通用仓库名，须事先在
-## BLOBSTORE_BKREPO_CONFIG.PROJECT 下建好。对象 key 为 attachments/<会话 ID>/<附件 ID>。
+## BLOBSTORE_BKREPO_CONFIG.PROJECT 下建好。对象 key 为 attachments/<会话 ID>/<附件 ID><原扩展名>。
+## bk_repo 下 Agent 用预签名地址直接从制品库下载，沙箱须能访问 BLOBSTORE_BKREPO_CONFIG.ENDPOINT。
 ## 多副本 e2b 必须用 bk_repo，两段示例只启用一段。
 # AGENT_ATTACHMENT_STORAGE:
 #   backend: host_tmp_path

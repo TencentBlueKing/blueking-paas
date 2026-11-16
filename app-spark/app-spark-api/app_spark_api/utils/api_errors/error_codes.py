@@ -71,16 +71,14 @@ class ErrorCodes:
 
     # --- Conversation attachments -----------------------------------------------------------------
     ATTACHMENT_NOT_FOUND = ErrorCode(_("No such attachment in this conversation."), status_code=HTTPStatus.NOT_FOUND)
-    # An attachment rides with exactly one turn; sending it again would put the same image into
+    # An attachment rides with exactly one turn; sending it again would put the same file into
     # the context twice under two different user messages.
     ATTACHMENT_ALREADY_USED = ErrorCode(
         _("This attachment has already been sent with another message."), status_code=HTTPStatus.CONFLICT
     )
+    # 文案里的 5 MB 与 attachments.MAX_ATTACHMENT_SIZE 对应，改一边要同步改另一边。
     ATTACHMENT_TOO_LARGE = ErrorCode(
-        _("The image is too large. Please upload one under 5 MB."), status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE
-    )
-    ATTACHMENT_TYPE_UNSUPPORTED = ErrorCode(
-        _("Only PNG, JPEG, GIF and WebP images are supported."), status_code=HTTPStatus.UNPROCESSABLE_ENTITY
+        _("The file is too large. Please upload one under 5 MB."), status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE
     )
     ATTACHMENT_STORAGE_UNAVAILABLE = ErrorCode(
         _("Attachment storage is unavailable. Please retry later."), status_code=HTTPStatus.SERVICE_UNAVAILABLE

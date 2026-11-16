@@ -218,7 +218,8 @@ agent:
   # contextStorage:
   #   backend: bk_repo
   #   root: app-spark-contexts
-  # 会话里用户上传的图片附件存在哪，字段和多副本要求都与 contextStorage 相同，两者各用一个仓库。
+  # 会话里用户上传的文件附件存在哪，字段和多副本要求都与 contextStorage 相同，两者各用一个仓库。
+  # 用 bk_repo 时 Agent 直接从制品库下载附件，沙箱要能访问制品库。
   attachmentStorage:
     backend: host_tmp_path
     root: /data/app-spark/agent-attachments

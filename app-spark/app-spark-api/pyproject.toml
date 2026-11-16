@@ -20,6 +20,7 @@ dependencies = [
     # Already installed as a transitive dependency of bkpaas-auth, declared here because this
     # project imports it directly to drive the Agent Runtime over HTTP.
     "httpx2>=2.10.0,<3.0.0",
+    "magika>=1.0.3",
     "packaging>=26.3,<27.0",
     "pydantic-ai-slim[openai]>=2.32.1,<3.0.0",
     "pymysql>=1.2.0,<2.0.0",

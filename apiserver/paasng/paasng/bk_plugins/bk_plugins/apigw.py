@@ -106,7 +106,7 @@ def safe_remove_apigw_maintainers(plugin_app: Application, usernames: Collection
         )
     except ApiGatewayServiceError:
         # 兼容未升级的网关 (接口不存在时返回 404), 记录日志后放弃, 不阻塞成员变更主流程
-        logger.exception('Unable to remove API Gateway maintainers for "%s"', plugin_app.code)
+        logger.exception('Unable to remove API Gateway maintainers %s for "%s"', to_remove, plugin_app.code)
         return
 
     logger.info("Removed API Gateway maintainers %s of %s", deleted, plugin_app.code)

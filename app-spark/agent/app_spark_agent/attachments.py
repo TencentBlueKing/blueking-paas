@@ -36,7 +36,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models import ModelRequestContext
 
-from app_spark_agent.replication import AttachmentMeta, ControlPlaneClient, ControlPlaneError
+from app_spark_agent.replication import AttachmentMeta, AttachmentTooLargeError, ControlPlaneClient, ControlPlaneError
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +111,9 @@ def build_control_plane_fetcher(client: ControlPlaneClient) -> FetchAttachment:
         try:
             meta = await client.get_attachment(attachment_id)
             return meta, await client.download_attachment(meta.download, max_bytes=MAX_ATTACHMENT_BYTES)
+        # 超限是内容本身的问题，再下一次还是这么大。
+        except AttachmentTooLargeError as exc:
+            raise AttachmentFetchError(str(exc), retryable=False) from exc
         except ControlPlaneError as exc:
             # 没收到响应或对方 5xx 可以再试；4xx 是附件不在了、token 已被吊销或签名过期，再试也一样。
             retryable = exc.status_code is None or exc.status_code >= 500
@@ -150,8 +153,9 @@ class AttachmentMaterializer:
         # 元数据最后写，有它就说明文件已经完整落盘；读坏了也按不在处理，下一轮会重新下载。
         try:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            stored_name = meta["stored_name"]
             stored = StoredAttachment(
-                path=ATTACHMENTS_DIR / attachment_id / meta["stored_name"],
+                path=ATTACHMENTS_DIR / attachment_id / stored_name,
                 filename=meta["filename"],
                 mime_type=meta["mime_type"],
                 size=int(meta["size"]),
@@ -159,14 +163,41 @@ class AttachmentMaterializer:
         except OSError, ValueError, KeyError, TypeError:
             return None
 
-        if not (self._workspace / stored.path).is_file():
+        # 元数据在工作区里，模型能改它：文件名必须是我们自己会写出来的样子，不能借它拼出别的路径。
+        if not isinstance(stored_name, str) or sanitize_filename(stored_name) != stored_name:
+            return None
+
+        file_path = self._resolve_inside(attachment_id, stored_name)
+        if file_path is None or not file_path.is_file():
             return None
 
         return stored
 
     def read_bytes(self, stored: StoredAttachment) -> bytes:
-        """Return a stored attachment's content."""
-        return (self._workspace / stored.path).read_bytes()
+        """Return a stored attachment's content.
+
+        :raises OSError: If the file is gone, has moved out of its directory, or is over the size limit.
+        """
+        file_path = self._resolve_inside(stored.path.parent.name, stored.path.name)
+        if file_path is None:
+            raise OSError(f"{stored.path} is no longer inside its attachment directory")
+
+        # 读回的文件可能已被换掉，套上和下载一样的上限，不把一个大文件整份读进内存发给模型。
+        if file_path.stat().st_size > MAX_ATTACHMENT_BYTES:
+            raise OSError(f"{stored.path} is larger than {MAX_ATTACHMENT_BYTES} bytes")
+
+        return file_path.read_bytes()
+
+    def _resolve_inside(self, attachment_id: str, name: str) -> Path | None:
+        """Return the path of a file in the attachment's directory, or None if a symlink leads elsewhere."""
+        expected = self._workspace.resolve() / ATTACHMENTS_DIR / attachment_id / name
+
+        # 解析后必须原样落在预期位置：路径上任何一段是符号链接（例如仓库里提交了一个 .app-spark
+        # 链接），读写都会被带到工作区外。
+        if (self._workspace / ATTACHMENTS_DIR / attachment_id / name).resolve() != expected:
+            return None
+
+        return expected
 
     async def ensure(self, messages: Sequence[ModelMessage]) -> None:
         """Download every attachment the messages refer to that is not in the workspace yet."""
@@ -193,10 +224,14 @@ class AttachmentMaterializer:
             return
 
         stored_name = sanitize_filename(meta.filename)
-        directory = self._root / attachment_id
+        file_path = self._resolve_inside(attachment_id, stored_name)
+        if file_path is None:
+            logger.warning("attachment %s is not written: its path leads out of the workspace", attachment_id)
+            return
+
         try:
-            directory.mkdir(parents=True, exist_ok=True)
-            (directory / stored_name).write_bytes(data)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            file_path.write_bytes(data)
             # 元数据最后写，find 才不会把写了一半的文件当成已就绪。
             self._meta_path(attachment_id).write_text(
                 json.dumps(

@@ -238,19 +238,24 @@ async def get_attachment_content(
     """返回文件本身：图片可直接用作 img 的 src，其他类型按下载处理；内容永远不变，浏览器会长期缓存。"""
     conversation = await _get_conversation(request, project_id, number)
     attachment = await attachments.aget_attachment(conversation, attachment_id)
+    inline = attachments.is_image(attachment.mime_type)
+    headers = {
+        # private：要登录才能看，共享缓存不能替别人存。内容按 ID 固定不变，可以长期缓存不回源。
+        "Cache-Control": f"private, max-age={ATTACHMENT_CACHE_SECONDS}, immutable",
+        # 只按声明的类型解释，防止伪装的附件被浏览器按 HTML 渲染。
+        "X-Content-Type-Options": "nosniff",
+        # 只有几种位图内联显示。HTML、SVG 这类在本服务的源下打开会执行里面的脚本，一律按下载处理。
+        # 文件名为空时 Django 给 inline 返回 None，原样塞进响应头会变成字面上的 "None"。
+        "Content-Disposition": content_disposition_header(as_attachment=not inline, filename=attachment.filename)
+        or "inline",
+    }
+
+    # 下载与否最终取决于浏览器是否遵守 Content-Disposition；再加一层沙箱，即便被直接打开也不执行脚本。
+    if not inline:
+        headers["Content-Security-Policy"] = "sandbox"
+
     return HttpResponse(
-        await attachments.aread_content(attachment),
-        content_type=attachment.mime_type,
-        headers={
-            # private：要登录才能看，共享缓存不能替别人存。内容按 ID 固定不变，可以长期缓存不回源。
-            "Cache-Control": f"private, max-age={ATTACHMENT_CACHE_SECONDS}, immutable",
-            # 只按声明的类型解释，防止伪装的附件被浏览器按 HTML 渲染。
-            "X-Content-Type-Options": "nosniff",
-            # 只有几种位图内联显示。HTML、SVG 这类在本服务的源下打开会执行里面的脚本，一律按下载处理。
-            "Content-Disposition": content_disposition_header(
-                as_attachment=not attachments.is_image(attachment.mime_type), filename=attachment.filename
-            ),
-        },
+        await attachments.aread_content(attachment), content_type=attachment.mime_type, headers=headers
     )
 
 

@@ -84,6 +84,10 @@ class ControlPlaneError(RuntimeError):
         self.detail = detail
 
 
+class AttachmentTooLargeError(ControlPlaneError):
+    """An attachment download was longer than the caller accepts; downloading it again changes nothing."""
+
+
 class ControlPlaneClient:
     """An HTTP client for one conversation's state-ingest endpoints.
 
@@ -199,6 +203,7 @@ class ControlPlaneClient:
         """Download an attachment from where the control plane said it is.
 
         :param max_bytes: Largest body accepted; a longer one is refused rather than cut short.
+        :raises AttachmentTooLargeError: If the body is longer than max_bytes.
         :raises ControlPlaneError: If the download failed, with status_code set when the server
             answered.
         """
@@ -216,7 +221,7 @@ class ControlPlaneClient:
                     body.extend(chunk)
                     # 边收边量：Content-Length 可能缺失或不实，超限就断开，不先把整份收进内存。
                     if len(body) > max_bytes:
-                        raise ControlPlaneError(f"an attachment download exceeded {max_bytes} bytes")
+                        raise AttachmentTooLargeError(f"an attachment download exceeded {max_bytes} bytes")
         except httpx2.HTTPError as exc:
             raise ControlPlaneError(f"could not download an attachment: {exc}") from exc
 

@@ -173,6 +173,15 @@ def test_a_replayed_run_id_is_rejected(api: TestClient) -> None:
         ),
         pytest.param(make_user_turn({"type": "text", "text": "   "}), id="only-blank-text-parts"),
         pytest.param(make_user_turn(make_image("ftp://example.com/a.png")), id="url-scheme-not-http"),
+        pytest.param(make_user_turn(make_image("https://")), id="url-without-a-host"),
+        pytest.param(make_user_turn(make_image("http://169.254.169.254/latest")), id="url-to-link-local"),
+        pytest.param(make_user_turn(make_document("http://10.0.0.1/a.pdf")), id="url-to-private-network"),
+        pytest.param(make_user_turn(make_image("http://localhost/a.png")), id="url-to-localhost"),
+        pytest.param(make_user_turn(make_image("https://u:p@example.com/a.png")), id="url-with-credentials"),
+        pytest.param(
+            make_user_turn(make_image("https://example.com/page", mime_type="text/html")),
+            id="external-image-not-image",
+        ),
         pytest.param(make_user_turn(make_image("file:///etc/passwd")), id="local-file-url"),
         pytest.param(make_user_turn(make_image("iVBORw0KGgo=", kind="data")), id="inline-image-data"),
         pytest.param(make_user_turn(make_image("app-spark-attachment://x")), id="reference-is-not-a-uuid"),
@@ -244,6 +253,16 @@ def test_an_external_image_link_reaches_only_a_model_that_reads_images(
     )
 
     assert sent == [expected]
+
+
+def test_client_metadata_on_a_file_part_is_dropped(recording_api: TestClient, seen: list[list[ModelMessage]]) -> None:
+    """force_download in metadata would make the Runtime fetch whatever address the caller chose."""
+    image = make_image("https://example.com/a.png") | {"metadata": {"force_download": True}}
+
+    [sent] = post_turn_and_collect_sent(recording_api, seen, image)
+
+    assert isinstance(sent, ImageUrl)
+    assert sent.force_download is False
 
 
 def test_an_external_document_link_reaches_the_model_as_text(

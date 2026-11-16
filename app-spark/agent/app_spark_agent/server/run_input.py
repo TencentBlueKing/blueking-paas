@@ -5,9 +5,11 @@ to act on: a single new user turn. The trusted history comes from the Runtime's 
 no display history, tool list, or system prompt submitted by the caller ever reaches the model.
 """
 
+import ipaddress
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from ag_ui.core import (
@@ -189,15 +191,40 @@ def _is_accepted_file(part: InputContent) -> bool:
         return False
 
     url = part.source.value
-    if parse_attachment_id(url) is None:
-        return url.partition("://")[0] in EXTERNAL_URL_SCHEMES
-
-    # 附件引用里的类型是控制面识别出来的：没有类型，模型侧也推断不出来。image 段还必须真是
-    # 模型能读的图片，否则在能看图的模型上会被当图发出。
-    if not part.source.mime_type:
+    is_attachment = parse_attachment_id(url) is not None
+    if not is_attachment and not _is_public_web_url(url):
         return False
 
-    return not isinstance(part, ImageInputContent) or part.source.mime_type in IMAGE_MEDIA_TYPES
+    # image 段在能看图的模型上会被当图发出（外链由网关去取），所以必须声明为模型能读的图片类型。
+    if isinstance(part, ImageInputContent):
+        return part.source.mime_type in IMAGE_MEDIA_TYPES
+
+    # 附件引用里的类型是控制面识别出来的：没有类型，模型侧也推断不出来。外链文档只会变成文字，不看类型。
+    return bool(part.source.mime_type) or not is_attachment
+
+
+def _is_public_web_url(url: str) -> bool:
+    """Return whether url is an http(s) address on a host that is not obviously internal."""
+    try:
+        parts = urlsplit(url)
+        hostname = parts.hostname
+    except ValueError:
+        return False
+
+    # 带账号密码的链接会把凭据交给网关；没有主机名的链接让模型调用直接失败。
+    if parts.scheme not in EXTERNAL_URL_SCHEMES or not hostname or parts.username or parts.password:
+        return False
+
+    # 外链图片由模型网关去取，网关可能在内网里：非公网 IP 一律拒绝。
+    try:
+        return ipaddress.ip_address(hostname).is_global
+    except ValueError:
+        pass
+
+    # 其余必须是带顶级域名的域名：挡住 localhost 这类单段主机名，也挡住 2130706433、0x7f.1 这类
+    # 会被 HTTP 客户端当成 IP 的写法。域名解析到内网的情况这里查不出来，只能靠网关自己的出网限制。
+    labels = hostname.rstrip(".").split(".")
+    return len(labels) > 1 and labels[-1].isalpha() and labels[-1] != "localhost"
 
 
 def _read_model_id(forwarded_props: dict[str, object]) -> str | None:

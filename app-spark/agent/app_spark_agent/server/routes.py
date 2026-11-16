@@ -414,6 +414,12 @@ async def _start_run(
         # drop every attachment reference. prepare_run accepts exactly these three schemes.
         allowed_file_url_schemes=ALLOWED_FILE_URL_SCHEMES,
     )
+
+    # 先把本轮和上下文里引用的附件放进工作区，模型从第一次请求起就能按说明里的路径去读；
+    # 换了沙箱时上下文里的附件也在这里补齐。放在写对话记录之前：下载是网络操作，这期间
+    # 被取消时还没有任何东西落盘，同一个 run_id 可以原样重试。
+    await runtime.attachments.ensure([*context.messages, *adapter.messages])
+
     # Recorded here rather than inferred from the run's history: the framework merges
     # this turn into a restored trailing request before any capability sees it, and the
     # adapter is the only place that still knows the turn on its own.
@@ -429,10 +435,6 @@ async def _start_run(
         run_id=prepared.run_id,
     )
     stopper = RunStopper()
-
-    # 先把本轮和上下文里引用的附件放进工作区，模型从第一次请求起就能按说明里的路径去读。
-    # 换了沙箱时上下文里的附件也在这里补齐。
-    await runtime.attachments.ensure([*context.messages, *adapter.messages])
 
     # 本轮模型读不了图时一张图也不发：最近几轮的图本来会照发，换了纯文本模型之后发过去只会让
     # 模型调用失败。说明照样给，模型仍知道文件在哪。

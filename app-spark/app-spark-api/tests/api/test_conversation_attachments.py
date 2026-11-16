@@ -217,6 +217,18 @@ async def test_a_non_image_file_is_accepted_and_served_as_a_download(
     content = await aapi_client.get(body["url"])
     assert content.content == data
     assert content["Content-Disposition"] == f'attachment; filename="{filename}"'
+    assert content["Content-Security-Policy"] == "sandbox"
+
+
+async def test_an_image_without_a_filename_is_still_served_inline(aapi_client, conversation) -> None:
+    """Django 对空文件名的 inline 返回 None，不能让响应头变成字面上的 "None"。"""
+    body = await upload_ok(aapi_client, conversation.number)
+    await ConversationAttachment.objects.filter(id=body["id"]).aupdate(filename="")
+
+    content = await aapi_client.get(body["url"])
+
+    assert content["Content-Disposition"] == "inline"
+    assert "Content-Security-Policy" not in content
 
 
 async def test_history_lists_attachments_in_the_order_they_were_sent(aapi_client, conversation) -> None:

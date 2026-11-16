@@ -173,6 +173,47 @@ async def test_a_file_without_its_metadata_counts_as_missing(
     assert materializer.find(image_id) is None
 
 
+@pytest.mark.parametrize("stored_name", ["../../../../etc/passwd", "/etc/passwd", "a/b.txt", ".."])
+async def test_tampered_metadata_cannot_point_outside_the_attachment(
+    tmp_path: Path, materializer: AttachmentMaterializer, image_id: str, stored_name: str
+) -> None:
+    """The sidecar lives in the workspace, where the model can rewrite it."""
+    await materializer.ensure([make_turn(make_image_ref(image_id))])
+    meta_path = tmp_path / ATTACHMENTS_DIR / f"{image_id}.json"
+    meta = json.loads(meta_path.read_text())
+    meta_path.write_text(json.dumps(meta | {"stored_name": stored_name}))
+
+    assert materializer.find(image_id) is None
+
+
+async def test_a_symlinked_attachments_directory_is_not_written_through(
+    tmp_path: Path, fetch: FakeFetcher, image_id: str
+) -> None:
+    """A repository can commit .app-spark as a link; downloads must not follow it out of the workspace."""
+    workspace, outside = tmp_path / "workspace", tmp_path / "outside"
+    workspace.mkdir()
+    outside.mkdir()
+    (workspace / ".app-spark").symlink_to(outside, target_is_directory=True)
+    materializer = AttachmentMaterializer(workspace, fetch)
+
+    await materializer.ensure([make_turn(make_image_ref(image_id))])
+
+    assert list(outside.iterdir()) == []
+    assert materializer.find(image_id) is None
+
+
+async def test_a_stored_file_grown_past_the_limit_is_not_read(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, materializer: AttachmentMaterializer, image_id: str
+) -> None:
+    await materializer.ensure([make_turn(make_image_ref(image_id))])
+    stored = materializer.find(image_id)
+    assert stored is not None
+    monkeypatch.setattr("app_spark_agent.attachments.MAX_ATTACHMENT_BYTES", len(PNG_BYTES) - 1)
+
+    with pytest.raises(OSError, match="larger than"):
+        materializer.read_bytes(stored)
+
+
 async def test_recent_images_carry_bytes_and_everything_carries_a_description(
     tmp_path: Path, fetch: FakeFetcher, image_id: str, csv_id: str
 ) -> None:
@@ -345,20 +386,25 @@ async def test_the_fetcher_retries_transient_failures_once(
     assert len(requested) == calls
 
 
-async def test_an_oversized_download_is_refused(monkeypatch: pytest.MonkeyPatch, csv_id: str) -> None:
+async def test_an_oversized_download_is_refused_without_a_retry(monkeypatch: pytest.MonkeyPatch, csv_id: str) -> None:
     monkeypatch.setattr("app_spark_agent.attachments.MAX_ATTACHMENT_BYTES", 4)
+    downloads: list[str] = []
 
     def respond(request: httpx2.Request) -> httpx2.Response:
         if request.url.path.endswith(f"{csv_id}/"):
             return httpx2.Response(200, content=make_meta_body("https://repo.example.com/x", authenticated=False))
 
+        downloads.append(str(request.url))
         return httpx2.Response(200, content=CSV_BYTES)
 
     client = ControlPlaneClient(
         base_url="http://api.invalid/c/state/", token="t", transport=httpx2.MockTransport(respond)
     )
     try:
-        with pytest.raises(AttachmentFetchError, match="exceeded 4 bytes"):
+        with pytest.raises(AttachmentFetchError, match="exceeded 4 bytes") as caught:
             await build_control_plane_fetcher(client)(csv_id)
     finally:
         await client.aclose()
+
+    assert caught.value.retryable is False
+    assert len(downloads) == 1, "the same oversized body is not downloaded twice"

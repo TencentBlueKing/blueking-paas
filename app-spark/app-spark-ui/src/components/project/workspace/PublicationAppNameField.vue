@@ -84,7 +84,7 @@ const problemText = computed(() => {
   if (!props.modelValue.trim()) return editing.value ? '' : '请输入蓝鲸应用名';
   if (!props.result || props.result.is_available) return '';
   // 带上过滤后的名字：输入「Spa rk」时实际撞的是「Spark」。
-  if (props.result.problem === TAKEN_PROBLEM) return `「${props.result.name}」已被开发者中心的其他应用使用，请换一个名称`;
+  if (props.result.problem === TAKEN_PROBLEM) return `「${props.result.name}」已被其他蓝鲸应用使用，请换一个名称`;
   if (props.result.message) return props.result.message;
 
   // 不认识的错误码没有现成说明时，把 code 露出来。

@@ -19,13 +19,13 @@ import base64
 import logging
 import os
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Optional
 
 import yaml
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.db import IntegrityError as DjangoIntegrityError
 from django.db.transaction import atomic, set_rollback
 
@@ -40,7 +40,6 @@ from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import global_app_tenant_info, stub_app_tenant_info, validate_app_tenant_info
-from paasng.infras.bk_user.client import BkUserClient
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.infras.iam.shim import get_paas_system_id
@@ -74,33 +73,6 @@ class Simple3rdAppDesc:
     creator: Optional[str] = None
 
 
-class BuiltinAdminResolver:
-    """获取平台内置管理员在指定租户下编码后的用户 ID
-
-    多租户模式下，各租户内都有 login_name 为 settings.ADMIN_USERNAME 的虚拟用户，但用户 ID 各不相同，
-    需要到用户管理中按租户查询；非多租户模式下用户名即用户 ID。
-    """
-
-    def __init__(self):
-        self._cache: Dict[str, str] = {}
-
-    def get_user_id(self, tenant_id: str) -> str:
-        if tenant_id not in self._cache:
-            self._cache[tenant_id] = user_id_encoder.encode(settings.USER_TYPE, self._get_username(tenant_id))
-        return self._cache[tenant_id]
-
-    def _get_username(self, tenant_id: str) -> str:
-        login_name = settings.ADMIN_USERNAME
-        if not settings.ENABLE_MULTI_TENANT_MODE:
-            return login_name
-
-        users = BkUserClient(tenant_id).batch_lookup_virtual_users_by_login_name([login_name])
-        for u in users:
-            if u.login_name == login_name:
-                return u.bk_username
-        raise CommandError(f"virtual user(login_name: {login_name}) not found in tenant({tenant_id})")
-
-
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--source", type=str, dest="source")
@@ -132,7 +104,8 @@ class Command(BaseCommand):
         env_init_codes = os.getenv("PAAS_THIRD_APP_INIT_CODES", "")
         env_init_code_list = env_init_codes.split(",") if env_init_codes else []
 
-        admin_resolver = BuiltinAdminResolver()
+        # 按用户名编码，多租户下各租户的内置管理员 ID 不同，暂不区分
+        default_creator = user_id_encoder.encode(settings.USER_TYPE, settings.ADMIN_USERNAME)
         with open(source, "r") as f:
             apps = yaml.safe_load(f)
             for app in apps:
@@ -155,7 +128,7 @@ class Command(BaseCommand):
                     continue
 
                 if not desc.creator:
-                    desc.creator = admin_resolver.get_user_id(app_tenant_info.tenant_id)
+                    desc.creator = default_creator
 
                 logger.info("going to create App according to desc: %s", f"{desc.name} - {desc.code}")
                 already_in_paas2 = bool(legacy_app)

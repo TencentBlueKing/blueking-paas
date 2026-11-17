@@ -63,12 +63,3 @@ class BkUserClient:
             resp = self.client.list_tenants()
 
         return cattrs.structure(resp["data"], List[entities.Tenant])
-
-    def batch_lookup_virtual_users_by_login_name(self, login_names: List[str]) -> List[entities.VirtualUser]:
-        """根据登录名批量查询当前租户下的虚拟用户"""
-        with wrap_request_exc():
-            resp = self.client.batch_lookup_virtual_user(
-                params={"lookup_field": "login_name", "lookups": ",".join(login_names)}
-            )
-
-        return cattrs.structure(resp["data"], List[entities.VirtualUser])

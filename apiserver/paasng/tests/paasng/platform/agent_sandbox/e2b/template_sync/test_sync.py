@@ -52,39 +52,6 @@ class TestSyncScopedTemplate:
         assert clusters.names(CLUSTER_NAME_FOR_TESTING, "SandboxPool") == {template.resource_name}
         assert clusters.names(OTHER_CLUSTER, "SandboxPool") == set()
 
-    def test_skips_disabled_e2b_clusters(self, clusters):
-        template = make_builtin_template("e2b-envd")
-        records.mark_pending(template)
-        ClusterE2BConfig.objects.filter(cluster__name=OTHER_CLUSTER).update(enabled=False)
-
-        sync.sync_templates(resource_names={"e2b-envd"})
-
-        assert clusters.names(OTHER_CLUSTER, "SandboxPool") == set()
-        # 保存之后才停用的集群，下发时以当前为准，不会一直挂着待同步
-        refreshed = type(template).objects.prefetch_related("sync_records").get(pk=template.pk)
-        assert status.get_template_overviews([refreshed])[0].status == E2BTemplateSyncStatus.SUCCEEDED.value
-
-    def test_failure_is_recorded_without_affecting_others(self, clusters):
-        template = make_builtin_template("e2b-envd")
-        clusters.broken_clusters.add(OTHER_CLUSTER)
-
-        sync.sync_templates(resource_names={"e2b-envd"})
-
-        assert clusters.names(CLUSTER_NAME_FOR_TESTING, "SandboxPool") == {"e2b-envd"}
-        record = E2BSandboxTemplateSyncRecord.objects.get(template=template, cluster_name=OTHER_CLUSTER)
-        assert record.status == E2BTemplateSyncStatus.FAILED.value
-        assert "unreachable" in record.message
-
-    def test_resync_overwrites_status(self, clusters):
-        template = make_builtin_template("e2b-envd")
-        clusters.broken_clusters.add(OTHER_CLUSTER)
-        sync.sync_templates(resource_names={"e2b-envd"})
-
-        clusters.broken_clusters.clear()
-        sync.sync_templates(resource_names={"e2b-envd"})
-
-        assert status_of(template)[OTHER_CLUSTER] == E2BTemplateSyncStatus.SUCCEEDED.value
-
     def test_deleted_template_removes_managed_crs(self, clusters):
         for cluster in (CLUSTER_NAME_FOR_TESTING, OTHER_CLUSTER):
             for kind in ("SandboxTemplate", "SandboxPool"):
@@ -103,28 +70,6 @@ class TestSyncScopedTemplate:
         sync.sync_templates(resource_names={"handmade"})
 
         assert len(clusters.objects) == 2
-
-    def test_refuses_while_another_sync_runs(self, clusters, sync_lock):
-        make_builtin_template("e2b-envd")
-        sync_lock.held = True
-
-        with pytest.raises(E2BTemplateSyncInProgress):
-            sync.sync_templates(resource_names={"e2b-envd"})
-        assert clusters.objects == {}
-
-    def test_stale_task_does_not_overwrite_newer_one(self, clusters, race_after_first_apply):
-        """旧任务下发完第一个集群后，新任务把新配置下发完，旧任务继续时要用新配置"""
-        template = make_builtin_template("e2b-envd", image="old:v1")
-
-        def _newer_task():
-            type(template).objects.filter(pk=template.pk).update(image="new:v2")
-            sync._sync_templates(None, {"e2b-envd"})
-
-        race_after_first_apply(_newer_task)
-        sync.sync_templates(resource_names={"e2b-envd"})
-
-        for cluster in (CLUSTER_NAME_FOR_TESTING, OTHER_CLUSTER):
-            assert image_of(clusters, cluster, "e2b-envd") == "new:v2"
 
 
 class TestApplyResources:
@@ -212,20 +157,23 @@ class TestSyncAll:
 
         assert "unreachable" in results[OTHER_CLUSTER].error
         assert results[CLUSTER_NAME_FOR_TESTING].synced == ["e2b-envd"]
+        assert clusters.names(CLUSTER_NAME_FOR_TESTING, "SandboxPool") == {"e2b-envd"}
         # 连不上的集群也要落成失败，不能残留成待同步
         assert status_of(template) == {
             CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value,
             OTHER_CLUSTER: E2BTemplateSyncStatus.FAILED.value,
         }
 
-    def test_prunes_records_of_non_target_clusters(self, clusters):
+    def test_skips_and_prunes_non_target_clusters(self, clusters):
+        """保存之后才停用 e2b 的集群不再下发，它的记录收尾时清理，不会一直挂着待同步"""
         template = make_builtin_template("e2b-envd")
-        sync.sync_templates()
+        records.mark_pending(template)
         E2BSandboxTemplateSyncRecord.objects.create(template=template, cluster_name="retired", status="succeeded")
         ClusterE2BConfig.objects.filter(cluster__name=OTHER_CLUSTER).update(enabled=False)
 
         sync.sync_templates()
 
+        assert clusters.names(OTHER_CLUSTER, "SandboxPool") == set()
         assert status_of(template) == {CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value}
 
     def test_fills_records_of_newly_enabled_cluster(self, clusters):

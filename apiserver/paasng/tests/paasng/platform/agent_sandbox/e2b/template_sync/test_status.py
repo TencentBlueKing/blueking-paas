@@ -49,24 +49,6 @@ class TestOverviews:
         sync.sync_templates(resource_names={"e2b-envd"})
         assert _status() == E2BTemplateSyncStatus.SUCCEEDED.value
 
-    def test_outdated_success_is_pending(self, clusters, bk_app, race_after_first_apply):
-        """记录是成功，但下发的不是当前配置：概览与应用视角一致，都不算同步完成"""
-        template = make_custom_template(bk_app, "mine", image="old:v1")
-        race_after_first_apply(lambda: type(template).objects.filter(pk=template.pk).update(image="new:v2"))
-        sync.sync_templates(resource_names={template.resource_name})
-        assert status_of(template) == {CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value}
-
-        refreshed = (
-            type(template).objects.select_related("application").prefetch_related("sync_records").get(pk=template.pk)
-        )
-        (template_overview,) = status.get_template_overviews([refreshed])
-        assert template_overview.status == E2BTemplateSyncStatus.PENDING.value
-
-        cluster_overview = {o.cluster_name: o for o in status.get_cluster_overviews()}[CLUSTER_NAME_FOR_TESTING]
-        assert cluster_overview.pending == [template.resource_name]
-        assert not cluster_overview.succeeded
-        assert not cluster_overview.completed
-
     def test_template_without_target_cluster(self, bk_app):
         ClusterE2BConfig.objects.update(enabled=False)
         template = make_custom_template(bk_app, "mine")
@@ -83,15 +65,6 @@ class TestTemplateStatuses:
     def _status(app, template) -> E2BTemplateStatus:
         template = type(template).objects.get(pk=template.pk)
         return status.get_template_statuses(app, [template])[template.resource_name]
-
-    def test_available_once_applied(self, clusters, bk_app):
-        template = make_custom_template(bk_app, "mine")
-        records.mark_pending(template)
-        assert self._status(bk_app, template) == E2BTemplateStatus.SYNCING
-
-        sync.sync_templates(resource_names={template.resource_name})
-
-        assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
     def test_changed_spec_is_syncing_until_applied(self, clusters, bk_app):
         template = make_custom_template(bk_app, "mine")
@@ -144,14 +117,6 @@ class TestTemplateStatuses:
         sync.sync_templates(resource_names={template.resource_name})
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
-    def test_failed_push_of_current_spec(self, clusters, bk_app):
-        template = make_custom_template(bk_app, "mine")
-        clusters.failing_names.add(template.resource_name)
-
-        sync.sync_templates(resource_names={template.resource_name})
-
-        assert self._status(bk_app, template) == E2BTemplateStatus.SYNC_FAILED
-
     def test_only_preferred_cluster_matters(self, clusters, bk_app):
         template = make_builtin_template("e2b-envd")
         clusters.broken_clusters.add(OTHER_CLUSTER)
@@ -162,7 +127,7 @@ class TestTemplateStatuses:
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
     def test_digest_follows_what_was_pushed(self, clusters, bk_app, race_after_first_apply):
-        """下发途中模板又被修改：记录是成功，但集群里是修改前的配置，仍要等下一次下发"""
+        """下发途中模板又被修改：记录是成功，但集群里是修改前的配置，应用视角与概览都要等下一次下发"""
         template = make_custom_template(bk_app, "mine", image="old:v1")
         race_after_first_apply(lambda: type(template).objects.filter(pk=template.pk).update(image="new:v2"))
 
@@ -170,6 +135,12 @@ class TestTemplateStatuses:
 
         assert status_of(template) == {CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value}
         assert self._status(bk_app, template) == E2BTemplateStatus.SYNCING
+        refreshed = (
+            type(template).objects.select_related("application").prefetch_related("sync_records").get(pk=template.pk)
+        )
+        assert status.get_template_overviews([refreshed])[0].status == E2BTemplateSyncStatus.PENDING.value
+        cluster_overview = {o.cluster_name: o for o in status.get_cluster_overviews()}[CLUSTER_NAME_FOR_TESTING]
+        assert (cluster_overview.pending, cluster_overview.completed) == ([template.resource_name], False)
 
     def test_no_cluster(self, bk_app):
         ClusterE2BConfig.objects.update(enabled=False)

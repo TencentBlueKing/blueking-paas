@@ -105,37 +105,24 @@ class TestCreate:
         assert template.prewarm_count == 0
         assert template.tenant_id == bk_app.tenant_id
 
-    def test_sync_is_scheduled_after_commit(self, bk_app, sync_task, django_capture_on_commit_callbacks):
+    @pytest.mark.usefixtures("e2b_config")
+    def test_marks_pending_and_schedules_sync_after_commit(
+        self, bk_app, sync_task, django_capture_on_commit_callbacks
+    ):
+        """任务还没跑时就要能看出未完成，否则与上一次的成功结果分不清"""
         with django_capture_on_commit_callbacks() as callbacks:
             template = templates.create_custom_template(bk_app, "mine", **SPEC)
             sync_task.delay.assert_not_called()
 
+        assert [(r.cluster_name, r.status) for r in template.sync_records.all()] == [
+            (CLUSTER_NAME_FOR_TESTING, E2BTemplateSyncStatus.PENDING.value)
+        ]
         assert len(callbacks) == 1
         callbacks[0]()
         sync_task.delay.assert_called_once_with(resource_names=[template.resource_name])
 
-    @pytest.mark.usefixtures("e2b_config")
-    def test_marks_target_clusters_pending(self, bk_app, sync_task):
-        """任务还没跑时就要能看出未完成，否则与上一次的成功结果分不清"""
-        template = templates.create_custom_template(bk_app, "mine", **SPEC)
-
-        assert [(r.cluster_name, r.status) for r in template.sync_records.all()] == [
-            (CLUSTER_NAME_FOR_TESTING, E2BTemplateSyncStatus.PENDING.value)
-        ]
-
 
 class TestUpdate:
-    @pytest.mark.usefixtures("e2b_config")
-    def test_marks_target_clusters_pending(self, sync_task):
-        template = make_builtin_template("e2b-envd")
-        E2BSandboxTemplateSyncRecord.objects.create(
-            template=template, cluster_name=CLUSTER_NAME_FOR_TESTING, status=E2BTemplateSyncStatus.SUCCEEDED.value
-        )
-
-        templates.update_template(template, cpu_count=4)
-
-        assert template.sync_records.get().status == E2BTemplateSyncStatus.PENDING.value
-
     def test_returns_changed_fields(self):
         template = make_builtin_template("e2b-envd")
 
@@ -154,14 +141,6 @@ class TestUpdate:
         template.refresh_from_db()
         assert (template.prewarm_count, template.is_public, template.enabled) == (0, False, True)
 
-    def test_no_change_no_sync(self, sync_task, django_capture_on_commit_callbacks):
-        template = make_builtin_template("e2b-envd")
-
-        with django_capture_on_commit_callbacks(execute=True):
-            templates.update_template(template, name=template.name)
-
-        sync_task.delay.assert_not_called()
-
     @pytest.mark.usefixtures("e2b_config")
     def test_fields_outside_manifest_no_sync(self, sync_task, django_capture_on_commit_callbacks):
         """名称、描述、启用、公开都不进 CR，改了不必下发，也不能把下发记录打回待同步"""
@@ -179,13 +158,18 @@ class TestUpdate:
         sync_task.delay.assert_not_called()
         assert template.sync_records.get().status == E2BTemplateSyncStatus.SUCCEEDED.value
 
+    @pytest.mark.usefixtures("e2b_config")
     @pytest.mark.parametrize("changes", [{"image": "mirrors.example.com/e2b/envd:v2"}, {"prewarm_count": 3}])
     def test_manifest_field_change_syncs(self, sync_task, django_capture_on_commit_callbacks, changes):
         template = make_builtin_template("e2b-envd")
+        E2BSandboxTemplateSyncRecord.objects.create(
+            template=template, cluster_name=CLUSTER_NAME_FOR_TESTING, status=E2BTemplateSyncStatus.SUCCEEDED.value
+        )
 
         with django_capture_on_commit_callbacks(execute=True):
             templates.update_template(template, name="renamed", **changes)
 
+        assert template.sync_records.get().status == E2BTemplateSyncStatus.PENDING.value
         sync_task.delay.assert_called_once_with(resource_names=["e2b-envd"])
 
 

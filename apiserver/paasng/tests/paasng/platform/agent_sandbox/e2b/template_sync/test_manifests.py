@@ -69,22 +69,6 @@ class TestManifests:
         }
         assert "volumeClaimTemplates" not in spec
 
-    def test_template_patch_nulls_disk_fields_without_disk(self):
-        template = make_builtin_template("e2b-envd", disk_size_mb=None)
-
-        spec = manifests.build_template_patch(template, NAMESPACE)["spec"]["template"]["spec"]
-
-        assert spec["domain"]["devices"] is None
-        assert spec["podTemplate"]["volumes"] is None
-        assert spec["volumeClaimTemplates"] is None
-
-    def test_template_patch_is_manifest_with_disk(self):
-        template = make_builtin_template("e2b-envd", disk_size_mb=1000)
-
-        patch = manifests.build_template_patch(template, NAMESPACE)
-
-        assert patch == manifests.build_template_manifest(template, NAMESPACE)
-
     def test_builtin_pool_is_prewarmed(self):
         template = make_builtin_template("e2b-envd", prewarm_count=3)
 

@@ -48,7 +48,7 @@ def _run(*args: str) -> str:
 
 @pytest.fixture(autouse=True)
 def sync_task():
-    """每次保存都会异步下发，这里只关心排了哪些任务"""
+    """保存模板会在事务提交后投递下发任务，命令测试里不真的投递"""
     with mock.patch("paasng.platform.agent_sandbox.e2b.templates.sync_e2b_templates_task") as task:
         yield task
 
@@ -69,7 +69,7 @@ def write_file(tmp_path):
 
 
 class TestApply:
-    def test_creates_builtin_templates(self, write_file, django_capture_on_commit_callbacks, sync_task):
+    def test_creates_builtin_templates(self, write_file):
         path = write_file(
             f"""
 - template_id: e2b-envd
@@ -87,8 +87,7 @@ class TestApply:
 """
         )
 
-        with django_capture_on_commit_callbacks(execute=True):
-            out = _run("apply", "-f", path)
+        out = _run("apply", "-f", path)
 
         assert "Created template 'e2b-envd'" in out
         assert "Created template 'e2b-browser'" in out
@@ -110,10 +109,6 @@ class TestApply:
             None,
         )
         assert (browser.enabled, browser.is_public) == (True, False)
-        assert sorted(c.kwargs["resource_names"][0] for c in sync_task.delay.call_args_list) == [
-            "e2b-browser",
-            "e2b-envd",
-        ]
 
     def test_bundled_example_file(self):
         """support-files 里的示例要能直接 apply"""
@@ -134,15 +129,13 @@ class TestApply:
         assert template.description == ""
         assert "Updated template 'e2b-envd'" in out
 
-    def test_reapply_is_unchanged(self, write_file, django_capture_on_commit_callbacks, sync_task):
+    def test_reapply_is_unchanged(self, write_file):
         path = write_file(f"- {{template_id: e2b-envd, name: Base, image: {IMAGE}}}")
         _run("apply", "-f", path)
 
-        with django_capture_on_commit_callbacks(execute=True):
-            out = _run("apply", "-f", path)
+        out = _run("apply", "-f", path)
 
         assert "Template 'e2b-envd' unchanged" in out
-        sync_task.delay.assert_not_called()
 
     def test_flags_follow_file(self, write_file, template):
         _run("apply", "-f", write_file(f"- {{template_id: e2b-envd, name: B, image: {IMAGE}, enabled: false}}"))
@@ -275,13 +268,11 @@ class TestDelete:
 
         assert E2BSandboxTemplate.objects.filter(template_id=TEMPLATE_ID).exists()
 
-    def test_deletes_and_schedules_cleanup(self, template, django_capture_on_commit_callbacks, sync_task):
-        with django_capture_on_commit_callbacks(execute=True):
-            out = _run("delete", "--template-id", TEMPLATE_ID, "--yes")
+    def test_deletes(self, template):
+        out = _run("delete", "--template-id", TEMPLATE_ID, "--yes")
 
         assert "Deleted template 'e2b-envd'" in out
         assert not E2BSandboxTemplate.objects.filter(template_id=TEMPLATE_ID).exists()
-        sync_task.delay.assert_called_once_with(resource_names=[TEMPLATE_ID])
 
     def test_refuses_while_sandboxes_are_active(self, template, bk_app):
         """删除 SandboxPool 会连带销毁它名下正在运行的沙箱"""

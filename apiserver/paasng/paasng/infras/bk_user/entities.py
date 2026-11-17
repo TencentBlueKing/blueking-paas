@@ -27,3 +27,16 @@ class Tenant(BaseModel):
     id: str
     name: str
     status: str
+
+
+@register
+class VirtualUser(BaseModel):
+    """租户下的虚拟用户
+
+    :param bk_username: 蓝鲸用户唯一标识（即租户用户 ID）
+    :param login_name: 登录名，同一环境下各租户内同名虚拟用户的 login_name 相同，bk_username 不同
+    """
+
+    bk_username: str
+    login_name: str
+    display_name: str = ""

@@ -21,6 +21,13 @@ from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationG
 class Group(OperationGroup):
     # 获取所有租户列表
     list_tenants = bind_property(Operation, name="list_tenant", method="GET", path="/api/v3/open/tenants/")
+    # 批量查询虚拟用户信息
+    batch_lookup_virtual_user = bind_property(
+        Operation,
+        name="batch_lookup_virtual_user",
+        method="GET",
+        path="/api/v3/open/tenant/virtual-users/-/lookup/",
+    )
 
 
 class Client(APIGatewayClient):

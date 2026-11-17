@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v2.5.1
+
+- 更新：heroku-24 基础镜像版本到 24.v191
+
 ## v2.5.0
 
 - 更新：升级 bk-buildpack-nodejs 到 v375

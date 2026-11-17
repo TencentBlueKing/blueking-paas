@@ -1,6 +1,6 @@
 # cloudnative-buildpacks/builders/heroku-builder
 
-蓝鲸 SaaS Builder, 基于 [heroku-24](https://github.com/heroku/base-images/tree/v149/heroku-24) 镜像, 底层镜像是 ubuntu:noble.
+蓝鲸 SaaS Builder, 基于 [heroku-24](https://github.com/heroku/base-images/tree/v191/heroku-24) 镜像, 底层镜像是 ubuntu:noble.
 
 ## 使用说明
 

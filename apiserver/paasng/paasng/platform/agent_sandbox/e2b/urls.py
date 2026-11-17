@@ -18,7 +18,13 @@
 from django.urls import path
 
 from .sandbox_views import E2BSandboxViewSet
-from .views import E2BApiKeyViewSet, E2BConsoleApiKeyViewSet, E2BConsoleSandboxViewSet, E2BConsoleTemplateViewSet
+from .views import (
+    E2BApiKeyViewSet,
+    E2BConsoleApiKeyViewSet,
+    E2BConsoleSandboxViewSet,
+    E2BConsoleTemplateViewSet,
+    E2BTemplateViewSet,
+)
 
 # e2b 协议端点的挂载前缀。用户侧要设 E2B_API_URL=https://<domain>/api/agent_sandbox/e2b，
 # SDK 拿它当 httpx 的 base_url，再接协议规定的相对路径（/sandboxes、/v2/sandboxes 等）。
@@ -50,12 +56,12 @@ urlpatterns = [
     ),
     path(
         E2B_CONSOLE_PREFIX + "templates/",
-        E2BConsoleTemplateViewSet.as_view({"get": "list"}),
+        E2BConsoleTemplateViewSet.as_view({"get": "list", "post": "create"}),
         name="agent_sandbox.e2b.console.templates",
     ),
     path(
         E2B_CONSOLE_PREFIX + "templates/<str:template_id>",
-        E2BConsoleTemplateViewSet.as_view({"get": "retrieve"}),
+        E2BConsoleTemplateViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="agent_sandbox.e2b.console.templates.detail",
     ),
     path(
@@ -67,6 +73,16 @@ urlpatterns = [
         "api/agent_sandbox/applications/<slug:code>/e2b/api_keys/<uuid:key_id>",
         E2BApiKeyViewSet.as_view({"delete": "destroy"}),
         name="agent_sandbox.e2b.api_key.destroy",
+    ),
+    path(
+        "api/agent_sandbox/applications/<slug:code>/e2b/templates/",
+        E2BTemplateViewSet.as_view({"get": "list", "post": "create"}),
+        name="agent_sandbox.e2b.templates",
+    ),
+    path(
+        "api/agent_sandbox/applications/<slug:code>/e2b/templates/<str:template_id>",
+        E2BTemplateViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
+        name="agent_sandbox.e2b.templates.detail",
     ),
     path(
         E2B_PROTOCOL_PREFIX + "sandboxes",

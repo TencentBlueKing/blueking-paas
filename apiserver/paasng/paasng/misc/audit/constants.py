@@ -94,6 +94,7 @@ class OperationTarget(StrStructuredEnum):
     EGRESS_SPEC = EnumField("egress_spec", label=_("Egress 配置"))
     TEMPLATE = EnumField("template", label=_("模板"))
     DASHBOARD_TEMPLATE = EnumField("dashboard_template", label=_("仪表盘模板"))
+    E2B_SANDBOX_TEMPLATE = EnumField("e2b_sandbox_template", label=_("e2b 沙箱模板"))
     BUILDPACK = EnumField("buildpack", label="Buildpack")
     SLUGBUILDER = EnumField("slugbuilder", label="Slugbuilder")
     SLUGRUNNER = EnumField("slugrunner", label="Slugrunner")

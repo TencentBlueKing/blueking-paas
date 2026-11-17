@@ -31,9 +31,10 @@ from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BGatewayUnavailable,
     E2BSandboxNotFound,
     E2BTemplateNotFound,
+    E2BTemplateNotReady,
 )
-from paasng.platform.agent_sandbox.models import E2BApiKey
-from tests.paasng.platform.agent_sandbox.e2b.test_utils import make_builtin_template
+from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandboxTemplate
+from tests.paasng.platform.agent_sandbox.e2b.test_utils import make_builtin_template, make_custom_template
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -59,9 +60,9 @@ def e2b_client(bk_app, bk_user) -> APIClient:
 
 
 @pytest.fixture(autouse=True)
-def _registered_template():
-    """创建沙箱要求模板已登记且启用，用例里统一用 e2b-envd。"""
-    make_builtin_template("e2b-envd")
+def builtin_template() -> E2BSandboxTemplate:
+    """创建沙箱要求模板存在且启用，用例里统一用 e2b-envd。"""
+    return make_builtin_template("e2b-envd")
 
 
 class TestAuthentication:
@@ -95,19 +96,20 @@ class TestCreate:
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_forwards_full_request_body(self, e2b_client):
+    def test_forwards_full_request_body(self, e2b_client, builtin_template):
         """序列化器只认 templateID，但转发的必须是原始请求体。"""
         body = {"templateID": "e2b-envd", "timeout": 600, "metadata": {"owner": "a"}}
 
         with mock.patch.object(sandboxes, "create_sandbox", return_value={}) as create:
             e2b_client.post(CREATE_URL, data=body, format="json")
 
-        assert create.call_args.args[1] == body
+        assert create.call_args.args[1:] == (builtin_template, body)
 
-    @pytest.mark.parametrize("template_id", ["not-registered", "e2b-legacy"])
-    def test_rejects_unavailable_template(self, e2b_client, template_id):
-        """未登记与已下线的模板都不能用，且不能走到网关。"""
+    @pytest.mark.parametrize("template_id", ["not-registered", "e2b-legacy", "other-tpl"])
+    def test_rejects_unavailable_template(self, e2b_client, bk_app_full, template_id):
+        """不存在、已停用、属于其他应用的模板都不能用，且不能走到网关。"""
         make_builtin_template("e2b-legacy", enabled=False)
+        make_custom_template(bk_app_full, "other-tpl")
 
         with mock.patch.object(sandboxes, "create_sandbox") as create:
             resp = e2b_client.post(CREATE_URL, data={"templateID": template_id}, format="json")
@@ -125,6 +127,15 @@ class TestCreate:
 
         assert resp.status_code == status.HTTP_201_CREATED
         create.assert_called_once()
+
+    def test_accepts_own_custom_template(self, e2b_client, bk_app):
+        template = make_custom_template(bk_app, "my-tpl")
+
+        with mock.patch.object(sandboxes, "create_sandbox", return_value={}) as create:
+            resp = e2b_client.post(CREATE_URL, data={"templateID": "my-tpl"}, format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert create.call_args.args[1] == template
 
 
 class TestList:
@@ -214,6 +225,16 @@ class TestErrorMapping:
 
         assert resp.status_code == status.HTTP_404_NOT_FOUND
         assert resp.json() == {"code": 404, "message": "Template not found"}
+
+    def test_template_not_ready_asks_to_retry(self, e2b_client):
+        with mock.patch.object(sandboxes, "create_sandbox", side_effect=E2BTemplateNotReady("syncing")):
+            resp = e2b_client.post(CREATE_URL, data={"templateID": "e2b-envd"}, format="json")
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.json() == {
+            "code": 409,
+            "message": "Template is not ready yet, check its status in the developer center and retry later",
+        }
 
     def test_does_not_leak_internal_details(self, e2b_client):
         """异常自带的信息里有集群名、网关地址这类内部拓扑，不该出现在响应里。"""

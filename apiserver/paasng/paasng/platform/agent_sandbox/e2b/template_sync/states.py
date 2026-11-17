@@ -27,12 +27,34 @@ from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateSyncStatus
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate, E2BSandboxTemplateSyncState
 
 from .manifests import spec_digest
+from .status import is_current
 
 
 def mark_pending(template: E2BSandboxTemplate) -> None:
     """模板保存后、下发前调用：目标集群全部置为待同步"""
     for cluster_name in resolve_template_targets([template])[template.resource_name]:
         save_sync_state(template, cluster_name, E2BTemplateSyncStatus.PENDING)
+
+
+def mark_stale_pending(cluster_names: set[str] | None = None, resource_names: set[str] | None = None) -> None:
+    """投递同步任务前调用：范围内已有、且不是当前配置的下发状态置为待同步，概览里没有待同步即同步完成。
+    参数同 ``sync_templates``。
+
+    已经成功下发了当前配置的不动：重新同步写的还是同一份配置，同步期间模板应当保持可用，
+    真失败了再由同步改成失败。
+
+    没有下发状态的目标集群在概览里本就算未完成，不再是目标的集群不计入概览、由同步收尾时清理，
+    所以只需改已有的
+    """
+    states = E2BSandboxTemplateSyncState.objects.select_related("template")
+    if cluster_names is not None:
+        states = states.filter(cluster_name__in=cluster_names)
+    if resource_names is not None:
+        states = states.filter(template__resource_name__in=resource_names)
+    stale = [s.pk for s in states if not is_current(s, s.template)]
+    E2BSandboxTemplateSyncState.objects.filter(pk__in=stale).update(
+        status=E2BTemplateSyncStatus.PENDING.value, message=""
+    )
 
 
 def delete_cluster_sync_states(cluster_name: str) -> None:

@@ -86,10 +86,12 @@ class TestTemplateStatuses:
 
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
-    def test_unavailable_after_resync_fails(self, clusters, bk_app):
-        """只看最近一次下发，重新同步失败了也不再可用"""
+    def test_available_during_resync_until_it_fails(self, clusters, bk_app):
+        """运维重新同步期间照常可用；只看最近一次下发，重新同步失败了也不再可用"""
         template = make_custom_template(bk_app, "mine")
         sync.sync_templates(resource_names={template.resource_name})
+
+        records.mark_stale_pending()
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
         clusters.broken_clusters.add(CLUSTER_NAME_FOR_TESTING)

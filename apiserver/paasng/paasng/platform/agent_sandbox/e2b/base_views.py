@@ -41,6 +41,7 @@ from .exceptions import (
     E2BGatewayUnavailable,
     E2BSandboxNotFound,
     E2BTemplateNotFound,
+    E2BTemplateNotReady,
 )
 from .permissions import IsE2BApiKey
 
@@ -54,6 +55,11 @@ logger = logging.getLogger(__name__)
 # 顺序有意义，按从具体到宽泛匹配，子类必须排在基类前面。
 _ERROR_RESPONSES: tuple[tuple[type[E2BError], int, str], ...] = (
     (E2BTemplateNotFound, status.HTTP_404_NOT_FOUND, "Template not found"),
+    (
+        E2BTemplateNotReady,
+        status.HTTP_409_CONFLICT,
+        "Template is not ready yet, check its status in the developer center and retry later",
+    ),
     (E2BSandboxNotFound, status.HTTP_404_NOT_FOUND, "Sandbox not found"),
     (E2BGatewayNotFound, status.HTTP_404_NOT_FOUND, "Sandbox not found"),
     (E2BGatewayTimeout, status.HTTP_408_REQUEST_TIMEOUT, "Sandbox service timed out, please retry"),

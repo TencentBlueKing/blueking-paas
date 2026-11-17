@@ -10,8 +10,8 @@ its own.
 """
 
 from app_spark_agent.replication.client import (
-    AttachmentDownload,
     AttachmentMeta,
+    AttachmentSource,
     AttachmentTooLargeError,
     ControlPlaneClient,
     ControlPlaneError,
@@ -19,8 +19,8 @@ from app_spark_agent.replication.client import (
 from app_spark_agent.replication.replicator import StateReplicator
 
 __all__ = [
-    "AttachmentDownload",
     "AttachmentMeta",
+    "AttachmentSource",
     "AttachmentTooLargeError",
     "ControlPlaneClient",
     "ControlPlaneError",

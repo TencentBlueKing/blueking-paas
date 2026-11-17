@@ -166,20 +166,20 @@ class CheckpointResponse(Schema):
     """检查点已登记。"""
 
 
-class AgentDownloadResponse(Schema):
-    """Runtime 下载一个附件的方式。"""
+class AgentAttachmentSourceResponse(Schema):
+    """Runtime 取一个附件的来源。"""
 
-    url: str = Field(description="下载地址；相对地址相对 Runtime 的会话级 state 根")
+    url: str = Field(description="地址；相对地址相对 Runtime 的会话级 state 根")
     authenticated: bool = Field(description="是否要带 Runtime token；预签名地址自带授权，不能带")
 
 
 class AgentAttachmentResponse(Schema):
-    """会话里的一个附件，以及 Runtime 从哪下载它。"""
+    """会话里的一个附件，以及 Runtime 从哪取它。"""
 
     filename: str = Field(description="上传时的文件名")
     mime_type: str = Field(description="识别出的文件类型")
     size: int = Field(description="字节数")
-    download: AgentDownloadResponse
+    source: AgentAttachmentSourceResponse
 
 
 @router.post(
@@ -284,18 +284,18 @@ async def get_attachment(
     attachment_id: UUID,
     conversation_id: UUID = CONVERSATION_ID,
 ):
-    """告诉 Runtime 一个附件是什么、从哪下载，供它在一轮开始前把附件放进工作区。
+    """告诉 Runtime 一个附件是什么、从哪取，供它在一轮开始前把附件放进工作区。
 
     挂在 state 根下面：Runtime 手里只有这一个会话级根地址和 token，token 的校验这里本来就有。
     """
     conversation = await _authorized_conversation(request, conversation_id)
     attachment = await attachments.aget_attachment(conversation, attachment_id)
-    download = await attachments.abuild_agent_download(attachment)
+    source = await attachments.abuild_agent_attachment_source(attachment)
     return AgentAttachmentResponse(
         filename=attachment.filename,
         mime_type=attachment.mime_type,
         size=attachment.size,
-        download=AgentDownloadResponse(url=download.url, authenticated=download.authenticated),
+        source=AgentAttachmentSourceResponse(url=source.url, authenticated=source.authenticated),
     )
 
 

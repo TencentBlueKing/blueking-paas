@@ -48,7 +48,7 @@ from app_spark_api.utils.urls import reverse_public
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from app_spark_api.agent.conversations.attachment_storage import AgentDownload
+    from app_spark_api.agent.conversations.attachment_storage import AgentAttachmentSource
     from app_spark_api.agent.conversations.models import Conversation
 
 logger = logging.getLogger(__name__)
@@ -208,14 +208,14 @@ def aread_content(attachment: ConversationAttachment) -> bytes:
 
 
 @sync_to_async
-def abuild_agent_download(attachment: ConversationAttachment) -> AgentDownload:
-    """Return where the Runtime downloads an attachment from, as its storage backend decides.
+def abuild_agent_attachment_source(attachment: ConversationAttachment) -> AgentAttachmentSource:
+    """Return where the Runtime gets an attachment, as its storage backend decides.
 
     :raises AttachmentStorageError: If the storage service could not issue a download.
     :raises StorageConfigurationError: If the attachment's backend is not supported.
     """
     # 按这一行记下的后端选，而不是按当前配置：部署切换存储之后，老附件仍在原来的地方。
-    return resolve_attachment_storage(attachment.backend).build_agent_download(attachment)
+    return resolve_attachment_storage(attachment.backend).build_agent_attachment_source(attachment)
 
 
 async def acheck_run_attachments(

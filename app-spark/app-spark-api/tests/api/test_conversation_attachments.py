@@ -363,7 +363,7 @@ async def test_only_the_conversations_current_runtime_reads_its_attachments(
         "filename": "data.csv",
         "mime_type": "text/csv",
         "size": len(CSV_BYTES),
-        "download": {"url": f"attachments/{body['id']}/content", "authenticated": True},
+        "source": {"url": f"attachments/{body['id']}/content", "authenticated": True},
     }
     own = await read(conversation, own_token, f"{body['id']}/content")
     assert (own.status_code, own.content, own["Content-Type"]) == (HTTPStatus.OK, CSV_BYTES, "text/csv")
@@ -393,9 +393,9 @@ async def test_a_bkrepo_attachment_is_downloaded_directly_from_bkrepo(
         build_internal_url(conversation, f"{body['id']}/"), headers={"Authorization": f"Bearer {token}"}
     )
 
-    download = json.loads(meta.content)["download"]
-    assert download["authenticated"] is False
-    assert download["url"].startswith("https://bkrepo.example.com/")
+    source = json.loads(meta.content)["source"]
+    assert source["authenticated"] is False
+    assert source["url"].startswith("https://bkrepo.example.com/")
     assert fake_bkrepo.signed == [("spark-attachments", key, 300)]
 
 

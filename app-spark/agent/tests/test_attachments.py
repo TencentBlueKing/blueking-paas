@@ -32,7 +32,7 @@ from app_spark_agent.attachments import (
     parse_attachment_id,
     sanitize_filename,
 )
-from app_spark_agent.replication import AttachmentDownload, AttachmentMeta, ControlPlaneClient
+from app_spark_agent.replication import AttachmentMeta, AttachmentSource, ControlPlaneClient
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 PNG = BinaryContent(data=PNG_BYTES, media_type="image/png")
@@ -56,8 +56,8 @@ class FakeFetcher:
             raise AttachmentFetchError("gone", retryable=False)
 
         filename, mime_type, data = self.files[attachment_id]
-        download = AttachmentDownload(url="unused", authenticated=False)
-        return AttachmentMeta(filename=filename, mime_type=mime_type, size=len(data), download=download), data
+        source = AttachmentSource(url="unused", authenticated=False)
+        return AttachmentMeta(filename=filename, mime_type=mime_type, size=len(data), source=source), data
 
 
 def make_image_ref(attachment_id: str) -> ImageUrl:
@@ -320,8 +320,8 @@ async def test_the_model_sees_bytes_while_the_run_keeps_the_reference(
 
 
 def make_meta_body(url: str, *, authenticated: bool) -> bytes:
-    download = {"url": url, "authenticated": authenticated}
-    return json.dumps({"filename": "data.csv", "mime_type": "text/csv", "size": 15, "download": download}).encode()
+    source = {"url": url, "authenticated": authenticated}
+    return json.dumps({"filename": "data.csv", "mime_type": "text/csv", "size": 15, "source": source}).encode()
 
 
 @pytest.mark.parametrize(

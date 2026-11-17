@@ -63,8 +63,8 @@ class AttachmentStorageConfig:
 
 
 @attrs.frozen
-class AgentDownload:
-    """Where the Runtime downloads one attachment from.
+class AgentAttachmentSource:
+    """Where the Runtime gets one attachment.
 
     :param url: Absolute, or relative to the Runtime's conversation-scoped state root.
     :param authenticated: Whether the Runtime must send its token. A presigned URL carries its
@@ -87,8 +87,8 @@ class AttachmentStorage(abc.ABC):
         """
 
     @abc.abstractmethod
-    def build_agent_download(self, attachment: ConversationAttachment) -> AgentDownload:
-        """Return where the Runtime downloads this attachment from.
+    def build_agent_attachment_source(self, attachment: ConversationAttachment) -> AgentAttachmentSource:
+        """Return where the Runtime gets this attachment.
 
         :raises AttachmentStorageError: If the storage service could not issue a download.
         """
@@ -101,10 +101,10 @@ class HostTmpPathAttachmentStorage(AttachmentStorage):
         """Return a path under root, one directory per conversation."""
         return {"path": f"{root.rstrip('/')}/{conversation_id}/{attachment_id}{extension}"}
 
-    def build_agent_download(self, attachment: ConversationAttachment) -> AgentDownload:
+    def build_agent_attachment_source(self, attachment: ConversationAttachment) -> AgentAttachmentSource:
         """Return this service's internal content endpoint."""
         # 文件只在本机磁盘上，没有第三方能替它签地址，只能经本服务转出去。
-        return AgentDownload(url=AGENT_CONTENT_PATH.format(attachment_id=attachment.id), authenticated=True)
+        return AgentAttachmentSource(url=AGENT_CONTENT_PATH.format(attachment_id=attachment.id), authenticated=True)
 
 
 class BkRepoAttachmentStorage(AttachmentStorage):
@@ -114,7 +114,7 @@ class BkRepoAttachmentStorage(AttachmentStorage):
         """Return a key in the root repository that keeps the original extension."""
         return {"bucket": root, "key": f"{BK_REPO_KEY_PREFIX}/{conversation_id}/{attachment_id}{extension}"}
 
-    def build_agent_download(self, attachment: ConversationAttachment) -> AgentDownload:
+    def build_agent_attachment_source(self, attachment: ConversationAttachment) -> AgentAttachmentSource:
         """Return a short-lived presigned URL, so the bytes do not pass through this service."""
         config = structure_storage_config(attachment.config, BkRepoConfig)
         try:
@@ -123,7 +123,7 @@ class BkRepoAttachmentStorage(AttachmentStorage):
         except (RequestError, OSError) as exc:
             raise AttachmentStorageError(f"Could not sign a download URL for attachment {attachment.id}") from exc
 
-        return AgentDownload(url=url, authenticated=False)
+        return AgentAttachmentSource(url=url, authenticated=False)
 
 
 ATTACHMENT_STORAGES: dict[StorageBackend, AttachmentStorage] = {

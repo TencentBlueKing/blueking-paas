@@ -40,8 +40,8 @@ ATTACHMENTS_PATH = "attachments"
 
 
 @dataclass(frozen=True)
-class AttachmentDownload:
-    """Where one attachment is downloaded from, as the control plane decides.
+class AttachmentSource:
+    """Where one attachment comes from, as the control plane decides.
 
     :param url: Absolute, or relative to the conversation-scoped base URL.
     :param authenticated: Whether the request carries this Runtime's token.
@@ -53,12 +53,12 @@ class AttachmentDownload:
 
 @dataclass(frozen=True)
 class AttachmentMeta:
-    """What one attachment is, and where to download it."""
+    """What one attachment is, and where it comes from."""
 
     filename: str
     mime_type: str
     size: int
-    download: AttachmentDownload
+    source: AttachmentSource
 
 
 class ControlPlaneError(RuntimeError):
@@ -172,7 +172,7 @@ class ControlPlaneClient:
         await self._send("PUT", CHECKPOINT_PATH, checkpoint)
 
     async def get_attachment(self, attachment_id: str) -> AttachmentMeta:
-        """Return what one of the conversation's attachments is and where to download it.
+        """Return what one of the conversation's attachments is and where it comes from.
 
         :param attachment_id: The attachment's ID, as carried by an app-spark-attachment:// reference.
         :raises ControlPlaneError: If the control plane cannot be reached or refused, with
@@ -189,17 +189,17 @@ class ControlPlaneClient:
 
         try:
             payload = response.json()
-            download = payload["download"]
+            source = payload["source"]
             return AttachmentMeta(
                 filename=str(payload["filename"]),
                 mime_type=str(payload["mime_type"]),
                 size=int(payload["size"]),
-                download=AttachmentDownload(url=str(download["url"]), authenticated=bool(download["authenticated"])),
+                source=AttachmentSource(url=str(source["url"]), authenticated=bool(source["authenticated"])),
             )
         except (ValueError, UnicodeDecodeError, KeyError, TypeError) as exc:
             raise ControlPlaneError(f"unreadable attachment response from {path}: {exc}") from exc
 
-    async def download_attachment(self, download: AttachmentDownload, *, max_bytes: int) -> bytes:
+    async def download_attachment(self, source: AttachmentSource, *, max_bytes: int) -> bytes:
         """Download an attachment from where the control plane said it is.
 
         :param max_bytes: Largest body accepted; a longer one is refused rather than cut short.
@@ -209,9 +209,9 @@ class ControlPlaneClient:
         """
         # 只按 authenticated 选客户端，不认存储后端：带 token 的那个只该发给控制面，
         # 预签名地址自带授权，带上 token 等于把它交给存储服务。
-        client = self._client if download.authenticated else self._anonymous_client
+        client = self._client if source.authenticated else self._anonymous_client
         try:
-            async with client.stream("GET", download.url) as response:
+            async with client.stream("GET", source.url) as response:
                 if response.status_code != HTTPStatus.OK:
                     await response.aread()
                     raise _response_error("an attachment download", response)

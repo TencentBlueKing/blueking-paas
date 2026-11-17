@@ -110,7 +110,7 @@ def build_control_plane_fetcher(client: ControlPlaneClient) -> FetchAttachment:
     async def fetch_once(attachment_id: str) -> tuple[AttachmentMeta, bytes]:
         try:
             meta = await client.get_attachment(attachment_id)
-            return meta, await client.download_attachment(meta.download, max_bytes=MAX_ATTACHMENT_BYTES)
+            return meta, await client.download_attachment(meta.source, max_bytes=MAX_ATTACHMENT_BYTES)
         # 超限是内容本身的问题，再下一次还是这么大。
         except AttachmentTooLargeError as exc:
             raise AttachmentFetchError(str(exc), retryable=False) from exc

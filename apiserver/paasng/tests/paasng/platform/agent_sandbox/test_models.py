@@ -99,10 +99,27 @@ class TestSandboxModel:
             )
 
 
-def test_create_for_agent_sandbox_usage_by_flag():
-    """default -> AGENT_SANDBOX; is_isolated -> AGENT_SANDBOX_ISOLATED."""
-    default_ctx = AllocationContext.create_for_agent_sandbox("tenant-1")
-    assert default_ctx.usage == ClusterUsage.AGENT_SANDBOX
+def test_create_for_agent_sandbox_default_usage():
+    assert AllocationContext.create_for_agent_sandbox("tenant-1").usage == ClusterUsage.AGENT_SANDBOX
 
-    si_ctx = AllocationContext.create_for_agent_sandbox("tenant-1", is_isolated=True)
-    assert si_ctx.usage == ClusterUsage.AGENT_SANDBOX_ISOLATED
+
+@pytest.mark.parametrize(
+    ("workload_type", "expected_usage"),
+    [
+        (SandboxWorkloadType.DEFAULT.value, ClusterUsage.AGENT_SANDBOX),
+        (SandboxWorkloadType.SANDBOX_INSTANCE.value, ClusterUsage.AGENT_SANDBOX_ISOLATED),
+    ],
+)
+def test_new_allocates_cluster_by_workload_type(bk_app, bk_user, workload_type, expected_usage):
+    """SandboxInstance 沙箱使用 AGENT_SANDBOX_ISOLATED，不与 E2B 沙箱共用用途。"""
+    with mock.patch("paasng.platform.agent_sandbox.models.ClusterAllocator") as mock_allocator:
+        mock_allocator.return_value.get_default.return_value.name = "allocated-cluster"
+        sandbox = Sandbox.objects.new(
+            application=bk_app,
+            creator=bk_user.pk,
+            snapshot="python:3.11-alpine",
+            workload_type=workload_type,
+        )
+
+    assert mock_allocator.call_args.args[0].usage == expected_usage
+    assert sandbox.target == "allocated-cluster"

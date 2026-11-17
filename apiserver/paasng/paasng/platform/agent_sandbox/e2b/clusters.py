@@ -19,6 +19,7 @@
 import logging
 
 from paas_wl.infras.cluster.allocator import ClusterAllocator
+from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster, ClusterE2BConfig
 from paasng.platform.agent_sandbox.models import E2BSandbox
@@ -39,8 +40,8 @@ def select_e2b_cluster(tenant_id: str, region: str | None = None) -> Cluster:
     :param region: 归属应用的 region，缺省时由分配上下文取平台默认值
     :raises E2BClusterUnavailable: 没有既被策略选中、又启用了 e2b 配置的集群
     """
-    # e2b 沙箱跑在 SandboxInstance（cube MicroVM）上，用途固定为隔离型
-    ctx = AllocationContext.create_for_agent_sandbox(tenant_id, region, is_isolated=True)
+    # e2b 沙箱用独立的用途，与平台自有的 SandboxInstance 沙箱分开调度
+    ctx = AllocationContext.create_for_agent_sandbox(tenant_id, region, usage=ClusterUsage.AGENT_SANDBOX_E2B)
 
     try:
         candidates = ClusterAllocator(ctx).list()

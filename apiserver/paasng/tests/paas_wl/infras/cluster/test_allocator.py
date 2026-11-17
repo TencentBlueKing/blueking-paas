@@ -49,6 +49,7 @@ class TestClusterAllocator:
         G(Cluster, name="blueking-sz0", tenant_id=random_tenant_id)
         G(Cluster, name="sandbox-cluster", tenant_id=random_tenant_id)
         G(Cluster, name="sandbox-cube-cluster", tenant_id=random_tenant_id)
+        G(Cluster, name="sandbox-e2b-cluster", tenant_id=random_tenant_id)
         G(Cluster, name="ai-agent-cluster", tenant_id=random_tenant_id)
 
     @pytest.fixture
@@ -73,6 +74,10 @@ class TestClusterAllocator:
                 AllocationPrecedencePolicy(
                     matcher={ClusterAllocationPolicyCondType.USAGE_IS: "agent_sandbox"},
                     policy=AllocationPolicy(env_specific=False, clusters=["sandbox-cluster"]),
+                ),
+                AllocationPrecedencePolicy(
+                    matcher={ClusterAllocationPolicyCondType.USAGE_IS: "agent_sandbox_e2b"},
+                    policy=AllocationPolicy(env_specific=False, clusters=["sandbox-e2b-cluster"]),
                 ),
                 AllocationPrecedencePolicy(
                     matcher={ClusterAllocationPolicyCondType.USAGE_IS: "agent_sandbox_isolated"},
@@ -184,6 +189,9 @@ class TestClusterAllocator:
 
         ctx.usage = ClusterUsage.AGENT_SANDBOX_ISOLATED
         assert ClusterAllocator(ctx).get_default().name == "sandbox-cube-cluster"
+
+        ctx.usage = ClusterUsage.AGENT_SANDBOX_E2B
+        assert ClusterAllocator(ctx).get_default().name == "sandbox-e2b-cluster"
 
         ctx.usage = ClusterUsage.AI_AGENT_ISOLATED
         assert ClusterAllocator(ctx).get_default().name == "sandbox-cube-cluster"

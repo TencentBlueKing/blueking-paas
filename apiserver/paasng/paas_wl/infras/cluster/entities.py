@@ -217,17 +217,17 @@ class AllocationContext:
         tenant_id: str,
         region: str | None = None,
         *,
-        is_isolated: bool = False,
+        usage: ClusterUsage = ClusterUsage.AGENT_SANDBOX,
     ) -> "AllocationContext":
         """Create an allocation context for agent sandbox cluster.
 
         :param tenant_id: The tenant ID for the sandbox.
         :param region: Optional region, defaults to settings.DEFAULT_REGION_NAME.
-        :param is_isolated: Whether to allocate an isolated (cube) cluster via
-            ``AGENT_SANDBOX_ISOLATED``.
-        :returns: AllocationContext configured for the matching ClusterUsage.
+        :param usage: The cluster usage, one of ``AGENT_SANDBOX`` (Pod sandbox),
+            ``AGENT_SANDBOX_ISOLATED`` (SandboxInstance sandbox) and ``AGENT_SANDBOX_E2B``
+            (E2B sandbox).
+        :returns: AllocationContext configured for the given ClusterUsage.
         """
-        usage = ClusterUsage.AGENT_SANDBOX_ISOLATED if is_isolated else ClusterUsage.AGENT_SANDBOX
         return cls(
             tenant_id=tenant_id,
             region=region or settings.DEFAULT_REGION_NAME,

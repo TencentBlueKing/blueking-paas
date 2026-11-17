@@ -60,7 +60,7 @@ class TestSelectClusterWithoutConfig:
 
 
 class TestSelectClusterUsage:
-    """验证分配用途固定为 agent_sandbox_isolated。
+    """验证分配用途固定为 agent_sandbox_e2b。
 
     做法是只给某个用途配规则：能选出集群就说明上下文里的 usage 是它，
     比断言构造参数更接近真实的调度行为。
@@ -83,8 +83,8 @@ class TestSelectClusterUsage:
 
         return _apply
 
-    def test_matches_isolated_usage_rule(self, apply_policy_for_usage):
-        apply_policy_for_usage(ClusterUsage.AGENT_SANDBOX_ISOLATED)
+    def test_matches_e2b_usage_rule(self, apply_policy_for_usage):
+        apply_policy_for_usage(ClusterUsage.AGENT_SANDBOX_E2B)
 
         assert select_e2b_cluster(DEFAULT_TENANT_ID).name == CLUSTER_NAME_FOR_TESTING
 

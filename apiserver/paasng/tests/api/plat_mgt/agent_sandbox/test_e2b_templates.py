@@ -174,21 +174,20 @@ class TestSync:
 
     @pytest.mark.usefixtures("e2b_clusters")
     def test_scoped_sync(self, plat_mgt_api_client):
-        template = make_builtin_template("e2b-envd")
-        other = make_builtin_template("e2b-other")
-        for t in (template, other):
-            _record(t, CLUSTER_NAME_FOR_TESTING, E2BTemplateSyncStatus.FAILED)
-            _record(t, OTHER_CLUSTER, E2BTemplateSyncStatus.FAILED)
+        """范围原样交给置待同步与下发任务，范围内外各自如何处理见 records 与 sync 的用例"""
+        make_builtin_template("e2b-envd")
 
-        with mock.patch("paasng.plat_mgt.agent_sandbox.views.sync_e2b_templates_task") as task:
+        with (
+            mock.patch("paasng.plat_mgt.agent_sandbox.views.mark_stale_pending") as mark_stale_pending,
+            mock.patch("paasng.plat_mgt.agent_sandbox.views.sync_e2b_templates_task") as task,
+        ):
             resp = plat_mgt_api_client.post(
                 SYNC_URL, data={"cluster_names": [OTHER_CLUSTER], "resource_names": ["e2b-envd"]}, format="json"
             )
 
         assert resp.status_code == status.HTTP_202_ACCEPTED
+        mark_stale_pending.assert_called_once_with({OTHER_CLUSTER}, {"e2b-envd"})
         task.delay.assert_called_once_with(cluster_names=[OTHER_CLUSTER], resource_names=["e2b-envd"])
-        pending = E2BSandboxTemplateSyncRecord.objects.filter(status=E2BTemplateSyncStatus.PENDING.value)
-        assert [(r.template_id, r.cluster_name) for r in pending] == [(template.pk, OTHER_CLUSTER)]
 
     @pytest.mark.usefixtures("e2b_clusters")
     @pytest.mark.parametrize(

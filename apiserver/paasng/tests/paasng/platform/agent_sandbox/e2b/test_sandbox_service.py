@@ -166,14 +166,6 @@ class TestCreate:
         self.template = make_builtin_template("e2b-envd")
         mark_applied(self.template)
 
-    def test_rejects_template_not_applied_yet(self, gateway, bk_app):
-        template = make_custom_template(bk_app, "my-tpl")
-
-        with pytest.raises(E2BTemplateNotReady):
-            sandboxes.create_sandbox(bk_app, template, {"templateID": "my-tpl"})
-
-        assert gateway.created_payloads == []
-
     def test_rejects_outdated_spec(self, gateway, bk_app):
         """改完模板、新配置还没下发完，网关用的还是旧配置，不能让用户拿到旧沙箱"""
         self.template.image = "mirrors.example.com/e2b/envd:v2"

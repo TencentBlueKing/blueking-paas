@@ -1,7 +1,13 @@
 ### 功能描述
-绑定应用模块与增强服务。`plan_id` / `env_plan_id_map` 可不传，平台会选择默认方案。
+绑定应用模块与增强服务。
 
-推荐流程：先调用 `list_module_services` 拿到目标服务 `uuid`，再调用本接口。绑定后需重新部署，凭证才会注入为环境变量。
+推荐流程：先调用 `list_module_services` 拿到目标服务 `uuid`，再调用 `list_service_possible_plans` 查询可选方案，最后调用本接口：
+
+- `has_multiple_plans` 为 false：`plan_id` / `env_plan_id_map` 都不传，平台使用唯一方案。
+- 返回 `static_plans`：用 `plan_id` 指定其中一个。
+- 返回 `env_specific_plans`：用 `env_plan_id_map` 为每个环境指定该环境列表中的方案；此时传 `plan_id` 会因某个环境没有该方案而失败。
+
+存在多个方案却不指定时，接口返回“获取可用服务方案失败”。绑定后需重新部署，凭证才会注入为环境变量。
 
 ### 请求参数
 
@@ -14,7 +20,7 @@
 | code | string | 是 | 应用 ID |
 | service_id | string | 是 | 增强服务 UUID，来自 `list_module_services` 的 `unbound[].uuid` |
 | module_name | string | 否 | 模块名，不传则使用默认模块 |
-| plan_id | string | 否 | 手动指定方案 ID |
+| plan_id | string | 否 | 所有环境使用的方案 ID |
 | env_plan_id_map | object | 否 | 分环境方案 ID，如 `{"stag": "<plan_id>", "prod": "<plan_id>"}` |
 
 ### 请求示例

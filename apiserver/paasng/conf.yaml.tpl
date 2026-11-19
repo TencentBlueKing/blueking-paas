@@ -152,6 +152,8 @@ BK_CMSI_ENABLED_METHODS: ["send_mail", "send_sms", "send_weixin"]
 
 ## 网关访问 IAM 地址
 # BK_IAM_APIGATEWAY_URL: ''
+## 蓝鲸 ESB 是否可用
+# BK_ESB_ENABLED: false
 ## 蓝鲸 ESB 服务地址
 # BK_COMPONENT_API_URL: ''
 ## 蓝鲸的组件 API 地址，网关 SDK 依赖该配置项（该项值与 BK_COMPONENT_API_URL 一致）

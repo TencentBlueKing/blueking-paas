@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 import Message from '@/common/message';
 import { createStartRunRequest } from '@/common/model-catalog';
 import type {
-  ChatImage,
+  ChatAttachment,
   ChatMessage,
   ChatSendLifecycle,
 } from '@/components/project/interaction/types';
@@ -28,6 +28,7 @@ import type {
 } from '@/http/types';
 import { ApiErrorCode, isApiError } from '@/http/error-codes';
 import RequestError from '@/http/fetch/request-error';
+import { resolveApiUrl } from '@/http/resolve-api-url';
 import type { AgUiApplyContext } from '@/services/agent/ag-ui';
 import {
   appendRunError,
@@ -54,9 +55,11 @@ type VisibilityRecovery = {
   conversationNumber: number;
   runGeneration: number;
   seqBeforeRun: number;
+  terminalRunError: boolean;
 };
 
 const PREPARING_RUNTIME_TEXT = '正在准备运行环境…';
+const RUNTIME_STREAM_ERROR_PREFIX = 'The Agent Runtime stopped responding:';
 /** 回复进行中，历史是分批入库的。两秒补一次，能跟上已经写进来的字，又不会把接口打满。 */
 const CATCH_UP_INTERVAL_MS = 2000;
 /** 追赶接口连续失败这么多次就停，并把输入框放开。成功一次就重新计数。 */
@@ -102,6 +105,10 @@ export const useProjectStore = defineStore('project', () => {
   const previewStartSeq = ref(0);
   const messages = ref<ChatMessage[]>([createWelcomeMessage()]);
   const status = ref<ProjectStatus>('idle');
+  /** 本轮由 Runtime 明确以 RUN_ERROR 结束；预览不应把失败误当成代码更新并重载 iframe。 */
+  const runEndedWithError = ref(false);
+  /** RUN_ERROR 后核对服务端状态期间保持输入框锁定，但不把状态拨回 thinking 触发预览轮询。 */
+  const settlingRunError = ref(false);
   // 首页创建项目时暂存首条需求。只允许目标项目消费一次，避免刷新或切项目后误发。
   const pendingInitialMessage = ref<{
     projectId: string;
@@ -112,7 +119,7 @@ export const useProjectStore = defineStore('project', () => {
   // 取更早一页历史用的游标，null 表示已经翻到会话开头（或者还没拉过第一页）。
   const historyCursor = ref<string | null>(null);
   const loadingEarlier = ref(false);
-  const busy = computed(() => status.value !== 'idle' || entering.value);
+  const busy = computed(() => status.value !== 'idle' || entering.value || settlingRunError.value);
   /**
    * 眼前这一轮能不能停。只剩回写（`replication_pending`）时这一轮已经跑完，没有可停的。
    * 还在等 Runtime 接受时也算能停：先记下，拿到 run ID 再发，见 :func:`stopRun`。
@@ -356,6 +363,8 @@ export const useProjectStore = defineStore('project', () => {
     previewStartGeneration += 1;
     previewStarting.value = false;
     status.value = 'idle';
+    runEndedWithError.value = false;
+    settlingRunError.value = false;
     historyCursor.value = null;
     loadingEarlier.value = false;
     messages.value = [createWelcomeMessage()];
@@ -584,7 +593,11 @@ export const useProjectStore = defineStore('project', () => {
    * @param stillCurrent 这一轮所在的会话是否还在眼前
    * @param seqBeforeRun 发送这一轮之前本地的事件游标；读 SSE 时它不前进，服务端超过它说明这一轮有入库的内容
    */
-  const settleAfterInterruptedRun = async (stillCurrent: () => boolean, seqBeforeRun: number) => {
+  const settleAfterInterruptedRun = async (
+    stillCurrent: () => boolean,
+    seqBeforeRun: number,
+    { terminalRunError = false }: { terminalRunError?: boolean } = {},
+  ) => {
     const targetProjectId = projectId.value;
     const targetNumber = conversationNumber.value;
     const runGeneration = liveRunGeneration;
@@ -599,9 +612,10 @@ export const useProjectStore = defineStore('project', () => {
         conversationNumber: targetNumber,
         runGeneration,
         seqBeforeRun,
+        terminalRunError,
       };
     };
-    status.value = 'thinking';
+    if (!terminalRunError) status.value = 'thinking';
     if (!pageVisible.value) {
       pauseInterruptedRun();
       return;
@@ -639,6 +653,15 @@ export const useProjectStore = defineStore('project', () => {
       return;
     }
 
+    // Runtime 自己发出的 RUN_ERROR 是本轮终态，SSE 已经完整画出了错误。即使事件正在回写或游标增长，
+    // 也只同步状态与水位，不能为了同一条错误清空消息再拉整段历史。
+    if (terminalRunError && !state.running) {
+      applyState(state);
+      status.value = 'idle';
+      return;
+    }
+    // RUN_ERROR 后状态仍说在运行，说明它不是本轮真实终态，按断流恢复，不能漏掉后续事件。
+    if (terminalRunError) runEndedWithError.value = false;
     if (state.running || state.replication_pending || state.ui_event_seq > seqBeforeRun) {
       await bindConversation(state);
       return;
@@ -781,7 +804,14 @@ export const useProjectStore = defineStore('project', () => {
     if (!stillCurrent()) return;
     // SSE 的部分内容已经画过，但事件游标仍停在本轮之前。复用前台中断后的历史重画流程，
     // 不能从旧游标增量追赶，否则恢复可见时会把已画出的回复再追加一遍。
-    void settleAfterInterruptedRun(stillCurrent, recovery.seqBeforeRun).catch(() => undefined);
+    if (recovery.terminalRunError) settlingRunError.value = true;
+    void settleAfterInterruptedRun(stillCurrent, recovery.seqBeforeRun, {
+      terminalRunError: recovery.terminalRunError,
+    })
+      .catch(() => undefined)
+      .finally(() => {
+        settlingRunError.value = false;
+      });
   };
 
   watch(pageVisible, handlePageVisibility);
@@ -1113,28 +1143,39 @@ export const useProjectStore = defineStore('project', () => {
 
   const sendMessage = async (
     text: string,
-    images: ChatImage[] = [],
+    attachments: ChatAttachment[] = [],
     modelId?: string,
     lifecycle?: ChatSendLifecycle,
   ) => {
     const content = text.trim();
-    const readyImages = images.filter(image => (
-      image.status === 'ready' && Boolean(image.attachmentId)
+    const readyAttachments = attachments.filter(attachment => (
+      attachment.status === 'ready' && Boolean(attachment.attachmentId)
     ));
-    const attachmentIds = [...new Set(readyImages
-      .map(image => image.attachmentId)
+    const attachmentIds = [...new Set(readyAttachments
+      .map(attachment => attachment.attachmentId)
       .filter((id): id is string => Boolean(id)))];
+    const restoreRejectedDraft = () => {
+      try {
+        lifecycle?.onRejected?.();
+      } catch (error) {
+        console.error('[project] 恢复被拒绝的草稿失败', error);
+      }
+    };
     if (
       (!content && !attachmentIds.length)
-      || images.length !== readyImages.length
-      || attachmentIds.length !== readyImages.length
+      || attachments.length !== readyAttachments.length
+      || attachmentIds.length !== readyAttachments.length
       || attachmentIds.length > 3
-      || (attachmentIds.length > 0 && !modelCatalogStore.supportsImageInput)
+      || (
+        readyAttachments.some(attachment => attachment.kind === 'image')
+        && !modelCatalogStore.supportsImageInput
+      )
       || busy.value
       || !projectId.value
       || conversationNumber.value == null
       || !isLive.value
     ) {
+      restoreRejectedDraft();
       return;
     }
 
@@ -1147,11 +1188,24 @@ export const useProjectStore = defineStore('project', () => {
       role: 'user',
       blocks: [
         ...(content ? [{ type: 'text' as const, text: content }] : []),
-        ...readyImages.map(image => ({
-          type: 'image' as const,
-          src: image.preview,
-          filename: image.name,
-        })),
+        ...readyAttachments.map(attachment => (
+          attachment.kind === 'image'
+            ? {
+              type: 'image' as const,
+              src: attachment.preview || (
+                attachment.url ? resolveApiUrl(attachment.url) : undefined
+              ),
+              filename: attachment.name,
+              unavailable: !attachment.preview && !attachment.url,
+            }
+            : {
+              type: 'file' as const,
+              href: attachment.url ? resolveApiUrl(attachment.url) : undefined,
+              filename: attachment.name,
+              size: attachment.size,
+              unavailable: !attachment.url,
+            }
+        )),
       ],
     };
     const assistantMessage: ChatMessage = {
@@ -1164,9 +1218,10 @@ export const useProjectStore = defineStore('project', () => {
     const runGeneration = liveRunGeneration;
     // 读 SSE 时游标不前进，所以它一直是「这一轮之前」的位置。
     const seqBeforeRun = uiEventSeq.value;
-    // 只有读到 RUN_FINISHED 才算这一轮完整画出来了。RUN_ERROR 不算：本服务和 Runtime 之间断开时，
-    // 本服务会自己补一个 RUN_ERROR，而这一轮在 Runtime 里还在跑。
+    // RUN_FINISHED 一定完整；RUN_ERROR 还要区分 Runtime 的终态错误和本服务补出的断流错误。
     let sawRunFinished = false;
+    // Runtime 自己发出的 RUN_ERROR 是终态；本服务在 Runtime 连接中断时补的同名事件仍需走断流恢复。
+    let sawTerminalRunError = false;
     // 服务端明确拒绝了这一轮（4xx/5xx 响应）：没有一轮在跑，眼前的报错就是结果，不用去对齐。
     let refused = false;
     const controller = new AbortController();
@@ -1181,6 +1236,7 @@ export const useProjectStore = defineStore('project', () => {
 
     messages.value.push(userMessage, assistantMessage);
     syncApplyCtx();
+    runEndedWithError.value = false;
     status.value = 'thinking';
     runId.value = null;
     awaitingRunStart.value = true;
@@ -1221,11 +1277,6 @@ export const useProjectStore = defineStore('project', () => {
         controller.signal,
       );
       if (!stillCurrent()) return;
-      try {
-        lifecycle?.onAccepted?.();
-      } catch (error) {
-        console.error('[project] 清理已发送草稿失败', error);
-      }
       for await (const event of readSseEvents(response)) {
         // 读到的是上一轮的事件。列表已经换成别的项目或会话，不能再 syncApplyCtx 跟着写过去。
         if (!stillCurrent()) break;
@@ -1242,7 +1293,19 @@ export const useProjectStore = defineStore('project', () => {
             flushPendingStop();
           }
         }
-        if (event.type === 'RUN_FINISHED') sawRunFinished = true;
+        if (event.type === 'RUN_FINISHED') {
+          sawRunFinished = true;
+          runEndedWithError.value = false;
+        }
+        if (event.type === 'RUN_ERROR') {
+          const transportInterrupted = String(event.message || '')
+            .startsWith(RUNTIME_STREAM_ERROR_PREFIX);
+          if (!transportInterrupted) {
+            sawTerminalRunError = true;
+            runEndedWithError.value = true;
+            settlingRunError.value = true;
+          }
+        }
         syncApplyCtx();
         applyResult(applyCtx, applyAgUiEvent(applyCtx, event, { ignoreUser: true }));
       }
@@ -1250,6 +1313,7 @@ export const useProjectStore = defineStore('project', () => {
       // 切走时 abort 会落到这里。那条助手消息已经不在眼前的列表里，错误不能写到新对话上。
       if (!stillCurrent()) return;
       refused = error instanceof RequestError;
+      if (refused) restoreRejectedDraft();
       const modelUnavailable = isApiError(error, ApiErrorCode.MODEL_NOT_AVAILABLE);
       const imageInputUnsupported = isApiError(error, ApiErrorCode.MODEL_IMAGE_INPUT_UNSUPPORTED);
       const attachmentNotFound = isApiError(error, ApiErrorCode.ATTACHMENT_NOT_FOUND);
@@ -1271,8 +1335,8 @@ export const useProjectStore = defineStore('project', () => {
       const textBlock = liveAssistant.blocks.find(block => block.type === 'text');
       let detail = error instanceof Error ? error.message : '发起对话失败';
       if (modelUnavailable) detail = '该模型已不可用，请重新选择后重试。';
-      else if (attachmentNotFound) detail = '图片已不可用，请重新添加后重试。';
-      else if (attachmentAlreadyUsed) detail = '图片已经随另一轮发出，请重新添加后重试。';
+      else if (attachmentNotFound) detail = '附件已不可用，请重新添加后重试。';
+      else if (attachmentAlreadyUsed) detail = '附件已经随另一轮发出，请重新添加后重试。';
       liveAssistant.tone = 'error';
       if (textBlock && !textBlock.text) {
         textBlock.text = detail;
@@ -1304,7 +1368,9 @@ export const useProjectStore = defineStore('project', () => {
         }
         if (!sawRunFinished && !refused) {
           try {
-            await settleAfterInterruptedRun(stillCurrent, seqBeforeRun);
+            await settleAfterInterruptedRun(stillCurrent, seqBeforeRun, {
+              terminalRunError: sawTerminalRunError,
+            });
           } catch {
             // 只有按历史重画失败会到这里，bindConversation 已在对话区留了报错；它也已把状态改对。
           }
@@ -1320,6 +1386,7 @@ export const useProjectStore = defineStore('project', () => {
           }
         }
       }
+      settlingRunError.value = false;
     }
   };
 
@@ -1340,6 +1407,7 @@ export const useProjectStore = defineStore('project', () => {
     entering,
     previewStarting,
     previewStartSeq,
+    runEndedWithError,
     messages,
     status,
     busy,

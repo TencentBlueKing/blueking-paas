@@ -133,6 +133,65 @@ test('SSE 断开时这一轮已经结束，不再补发停止', async () => {
   assert.equal(store.stopping, false);
 });
 
+test('/runs/ 直接拒绝时通知输入框恢复草稿', async () => {
+  handlers.startConversationRun = async () => {
+    throw new RequestError('VALIDATION_ERROR', '请求未通过校验');
+  };
+  let rejected = 0;
+
+  await store.sendMessage('做个番茄钟', [], undefined, {
+    onRejected: () => {
+      rejected += 1;
+    },
+  });
+
+  assert.equal(rejected, 1);
+});
+
+test('SSE 已建立后的 RUN_ERROR 不恢复已发送草稿', async () => {
+  const sse = controlledSse();
+  handlers.startConversationRun = async () => sse.response;
+  const historyCallsBeforeRun = callsOf('listHistory').length;
+  let rejected = 0;
+  const sending = store.sendMessage('做个番茄钟', [], undefined, {
+    onRejected: () => {
+      rejected += 1;
+    },
+  });
+  await settle();
+
+  sse.send({ type: 'RUN_STARTED', runId: RUN });
+  sse.send({ type: 'RUN_ERROR', message: '模型执行失败' });
+  serverState = conversationState({ ui_event_seq: 3, replication_pending: true });
+  sse.close();
+  await sending;
+
+  assert.equal(rejected, 0);
+  assert.equal(store.runEndedWithError, true);
+  assert.equal(store.busy, false);
+  assert.equal(callsOf('listHistory').length, historyCallsBeforeRun);
+});
+
+test('API 补出的 Runtime 断流错误仍按历史恢复', async () => {
+  const sse = controlledSse();
+  handlers.startConversationRun = async () => sse.response;
+  const historyCallsBeforeRun = callsOf('listHistory').length;
+  const sending = store.sendMessage('做个番茄钟');
+  await settle();
+
+  sse.send({ type: 'RUN_STARTED', runId: RUN });
+  sse.send({
+    type: 'RUN_ERROR',
+    message: 'The Agent Runtime stopped responding: connection reset',
+  });
+  serverState = conversationState({ ui_event_seq: 3 });
+  sse.close();
+  await sending;
+
+  assert.equal(store.runEndedWithError, false);
+  assert.equal(callsOf('listHistory').length, historyCallsBeforeRun + 1);
+});
+
 /** 进入一个正在跑的会话：run ID 来自会话状态。 */
 const enterRunningConversation = async () => {
   serverState = conversationState({ running: true, run_id: RUN });

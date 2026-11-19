@@ -38,12 +38,22 @@
           :live="message.id === liveMessageId"
         />
         <figure v-else-if="block.type === 'image'" class="chat-message__image">
-          <img
+          <button
             v-if="block.src"
-            class="chat-message__thumb"
-            :src="block.src"
-            :alt="block.filename || '会话图片'"
+            type="button"
+            class="chat-message__image-trigger"
+            :aria-label="`放大预览 ${block.filename || '会话图片'}`"
+            @click="previewImage = {
+              src: block.src,
+              alt: block.filename || '会话图片',
+            }"
           >
+            <img
+              class="chat-message__thumb"
+              :src="block.src"
+              :alt="block.filename || '会话图片'"
+            >
+          </button>
           <div
             v-else
             class="chat-message__image-unavailable"
@@ -54,6 +64,30 @@
           </div>
           <figcaption v-if="block.filename">{{ block.filename }}</figcaption>
         </figure>
+        <a
+          v-else-if="block.type === 'file' && block.href"
+          class="chat-message__file"
+          :href="block.href"
+          :download="block.filename || ''"
+        >
+          <AppIcon name="file" />
+          <span>
+            <strong>{{ block.filename || '附件' }}</strong>
+            <small v-if="block.size != null">{{ formatAttachmentSize(block.size) }}</small>
+          </span>
+          <AppIcon class="chat-message__file-download" name="download" />
+        </a>
+        <div
+          v-else-if="block.type === 'file'"
+          class="chat-message__file is-unavailable"
+          role="status"
+        >
+          <AppIcon name="file" />
+          <span>
+            <strong>{{ block.filename || '附件' }}</strong>
+            <small>文件已不可用</small>
+          </span>
+        </div>
         <ul v-else-if="block.type === 'summary'" class="chat-message__summary">
           <li v-for="item in block.items" :key="item">
             <Done class="chat-message__icon" />
@@ -78,14 +112,23 @@
         <LiveDot live />
       </p>
     </article>
+    <ImageLightbox
+      :open="Boolean(previewImage)"
+      :src="previewImage?.src || ''"
+      :alt="previewImage?.alt"
+      @close="previewImage = null"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Done } from 'bkui-vue/lib/icon';
+import AppIcon from '@/components/AppIcon.vue';
 import { currentTurnAssistant, messageHasContent } from '@/services/agent/ag-ui';
 import type { ProjectStatus } from '@/store/project';
+import { formatAttachmentSize } from './attachment';
+import ImageLightbox from './ImageLightbox.vue';
 import LiveDot from './LiveDot.vue';
 import ReasoningBlock from './ReasoningBlock.vue';
 import ToolCallBlock from './ToolCallBlock.vue';
@@ -96,6 +139,8 @@ const props = defineProps<{
   messages: ChatMessage[];
   status?: ProjectStatus;
 }>();
+
+const previewImage = ref<{ src: string; alt: string } | null>(null);
 
 const visibleMessages = computed(() => (
   props.messages.filter(message => message.id !== 'welcome')
@@ -308,6 +353,22 @@ const isPending = (message: ChatMessage) => (
   margin: 8px 0 0;
 }
 
+.chat-message__image-trigger {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: zoom-in;
+}
+
+.chat-message__image-trigger:focus-visible {
+  outline: 2px solid var(--accent-focus, #8ea2ff);
+  outline-offset: 2px;
+}
+
 .chat-message__thumb {
   display: block;
   max-width: 100%;
@@ -316,6 +377,11 @@ const isPending = (message: ChatMessage) => (
   background: #f5f7fa;
   border: 1px solid #e4e8ef;
   border-radius: 8px;
+  transition: filter 0.15s ease;
+}
+
+.chat-message__image-trigger:hover .chat-message__thumb {
+  filter: brightness(0.94);
 }
 
 .chat-message__image-unavailable {
@@ -343,6 +409,75 @@ const isPending = (message: ChatMessage) => (
   text-overflow: ellipsis;
 }
 
+.chat-message__file {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 260px;
+  max-width: 100%;
+  min-height: 52px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  color: inherit;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+}
+
+.chat-message__file:hover {
+  border-color: #a9baff;
+}
+
+.chat-message__file > :deep(.app-icon) {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  color: var(--accent, #3d6dff);
+  font-size: 20px;
+}
+
+.chat-message__file span {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-message__file strong,
+.chat-message__file small {
+  display: block;
+}
+
+.chat-message__file strong {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chat-message__file small {
+  color: #7a8494;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.chat-message__file > :deep(.chat-message__file-download) {
+  flex-basis: 16px;
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  color: #7a8494;
+  font-size: 16px;
+}
+
+.chat-message__file.is-unavailable {
+  color: #7a8494;
+  background: #f5f7fa;
+  border-style: dashed;
+}
+
 .chat-message__summary {
   margin: 4px 0 0;
   padding: 0;
@@ -360,5 +495,11 @@ const isPending = (message: ChatMessage) => (
   margin-top: 2px;
   color: #2f5bff;
   font-size: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-message__thumb {
+    transition: none;
+  }
 }
 </style>

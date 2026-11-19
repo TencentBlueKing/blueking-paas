@@ -268,7 +268,7 @@ export const listHistory = (
   http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/history/`, query)
 );
 
-/** 压缩后的单张图片附件。FormData 的 boundary 必须由浏览器生成，不能复用 JSON 请求封装。 */
+/** 原始单个附件。FormData 的 boundary 必须由浏览器生成，不能复用 JSON 请求封装。 */
 export const uploadConversationAttachment = async (
   projectId: string,
   number: number,
@@ -289,7 +289,7 @@ export const uploadConversationAttachment = async (
     body: formData,
     signal,
   });
-  if (!response.ok) throw await createRequestError(response, '图片上传失败');
+  if (!response.ok) throw await createRequestError(response, '文件上传失败');
   return response.json();
 };
 

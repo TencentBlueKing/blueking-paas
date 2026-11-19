@@ -4,6 +4,7 @@ import type {
   ChatReasoning,
   ChatToolCall,
 } from '@/components/project/interaction/types';
+import { isImageAttachmentMimeType } from '@/components/project/interaction/attachment';
 import { resolveApiUrl } from '@/http/resolve-api-url';
 import type { AgUiEvent, UserMessageRecord } from '@/http/types';
 import { describeToolCall } from '@/services/agent/tool-call';
@@ -318,12 +319,22 @@ export const appendUserMessage = (
     role: 'user',
     blocks: [
       ...(text ? [{ type: 'text' as const, text }] : []),
-      ...attachments.map(attachment => ({
-        type: 'image' as const,
-        src: attachment.url ? resolveApiUrl(attachment.url) : undefined,
-        filename: attachment.filename,
-        unavailable: !attachment.url,
-      })),
+      ...attachments.map((attachment): ChatBlock => (
+        isImageAttachmentMimeType(attachment.mime_type)
+          ? {
+            type: 'image',
+            src: attachment.url ? resolveApiUrl(attachment.url) : undefined,
+            filename: attachment.filename,
+            unavailable: !attachment.url,
+          }
+          : {
+            type: 'file',
+            href: attachment.url ? resolveApiUrl(attachment.url) : undefined,
+            filename: attachment.filename,
+            size: attachment.size,
+            unavailable: !attachment.url,
+          }
+      )),
     ],
   };
   ctx.messages.push(message);
@@ -343,13 +354,14 @@ export const createWelcomeMessage = (): ChatMessage => ({
  * 这条消息在界面上有没有看得见的东西。
  *
  * 思考块一建出来就算，哪怕正文一个字都还没有：它的标题「思考中」「已思考」本身就看得见。
- * 图片块只要在就看得见：没有地址时界面会显示「图片已不可用」。
+ * 图片和文件块只要在就看得见：没有地址时界面会显示不可用占位。
  */
 export const messageHasContent = (message: ChatMessage) => (
   Boolean(message.stopped)
   || message.blocks.some(block => (
     (block.type === 'text' && Boolean(block.text))
     || block.type === 'image'
+    || block.type === 'file'
     || (block.type === 'summary' && Boolean(block.items?.length))
     || (block.type === 'tool' && Boolean(block.tool))
     || (block.type === 'reasoning' && Boolean(block.reasoning))

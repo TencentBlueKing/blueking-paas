@@ -3,68 +3,85 @@ import type { Ref } from 'vue';
 import Message from '@/common/message';
 import { uploadConversationAttachment } from '@/http/api';
 import { ApiErrorCode, isApiError } from '@/http/error-codes';
-import type { ChatImage } from './types';
+import type { ChatAttachment } from './types';
 import {
-  compressImage,
-  getImageMimeType,
-  IMAGE_TYPE_ERROR,
-  MAX_IMAGE_COUNT,
-} from './read-image';
+  ATTACHMENT_SIZE_ERROR,
+  detectImageAttachmentMimeType,
+  isAttachmentSizeAllowed,
+  isImageAttachmentMimeType,
+  MAX_ATTACHMENT_COUNT,
+  readAttachmentPreview,
+} from './attachment';
 
 interface AttachmentTarget {
   projectId: Ref<string>;
   conversationNumber: Ref<number | null>;
 }
 
-const createLocalId = () => `image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const createLocalId = () => `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export const useMessageAttachments = ({
   projectId,
   conversationNumber,
 }: AttachmentTarget) => {
-  const images = ref<ChatImage[]>([]);
+  const attachments = ref<ChatAttachment[]>([]);
   let generation = 0;
   let uploadQueue = Promise.resolve();
   const uploadControllers = new Map<string, AbortController>();
 
-  const findImage = (localId: string, targetGeneration: number) => {
+  const findAttachment = (localId: string, targetGeneration: number) => {
     if (targetGeneration !== generation) return null;
-    return images.value.find(image => image.localId === localId) ?? null;
+    return attachments.value.find(attachment => attachment.localId === localId) ?? null;
   };
 
-  const removeImage = (localId: string) => {
+  const removeAttachment = (localId: string) => {
     uploadControllers.get(localId)?.abort();
     uploadControllers.delete(localId);
-    const index = images.value.findIndex(image => image.localId === localId);
-    if (index !== -1) images.value.splice(index, 1);
+    const index = attachments.value.findIndex(attachment => attachment.localId === localId);
+    if (index !== -1) attachments.value.splice(index, 1);
   };
 
   const handleUploadError = (localId: string, targetGeneration: number, error: unknown) => {
-    const image = findImage(localId, targetGeneration);
-    if (!image) return;
+    const attachment = findAttachment(localId, targetGeneration);
+    if (!attachment) return;
 
     if (isApiError(error, ApiErrorCode.ATTACHMENT_TOO_LARGE)) {
-      removeImage(localId);
-      Message({ theme: 'warning', message: '图片超过 5MB，请换一张小一些的' });
-      return;
-    }
-    if (isApiError(error, ApiErrorCode.ATTACHMENT_TYPE_UNSUPPORTED)) {
-      removeImage(localId);
-      Message({ theme: 'warning', message: IMAGE_TYPE_ERROR });
+      removeAttachment(localId);
+      Message({ theme: 'warning', message: ATTACHMENT_SIZE_ERROR });
       return;
     }
 
-    image.status = 'failed';
+    attachment.status = 'failed';
     if (isApiError(error, ApiErrorCode.ATTACHMENT_STORAGE_UNAVAILABLE)) {
-      image.errorMessage = '图片暂时存不了，请稍后重试';
+      attachment.errorMessage = '暂时存不了，可重试';
     } else if (isApiError(error, ApiErrorCode.CONVERSATION_CLOSED)) {
-      image.errorMessage = '会话已结束，不能再添加图片';
+      attachment.errorMessage = '会话已结束，不能再添加附件';
     } else {
-      image.errorMessage = error instanceof Error && error.message
+      attachment.errorMessage = error instanceof Error && error.message
         ? error.message
-        : '图片上传失败，请稍后重试';
+        : '文件上传失败，请稍后重试';
     }
-    Message({ theme: 'warning', message: image.errorMessage });
+    Message({ theme: 'warning', message: attachment.errorMessage });
+  };
+
+  const prepareLocalImagePreview = async (
+    localId: string,
+    targetGeneration: number,
+    file: File,
+  ) => {
+    try {
+      const mimeType = await detectImageAttachmentMimeType(file);
+      if (!mimeType) return;
+      const preview = await readAttachmentPreview(file);
+      const attachment = findAttachment(localId, targetGeneration);
+      // 上传响应已经回来时以响应的 mime_type 为准，不能被稍晚完成的本地识别覆盖。
+      if (!attachment || attachment.status === 'ready') return;
+      attachment.kind = 'image';
+      attachment.mimeType = mimeType;
+      attachment.preview = preview;
+    } catch {
+      // 预渲染失败不影响原文件上传，最终类型与展示仍由接口响应决定。
+    }
   };
 
   const enqueueUpload = (
@@ -72,53 +89,43 @@ export const useMessageAttachments = ({
     targetGeneration: number,
     targetProjectId: string,
     targetNumber: number,
-    compressed: ReturnType<typeof compressImage>,
+    file: File,
   ) => {
-    // 压缩可以并行开始，但立即接住失败，避免后面的图片在等待上传队列时产生未处理拒绝。
-    const settled = compressed.then(
-      (result) => {
-        const image = findImage(localId, targetGeneration);
-        if (image) {
-          image.file = result.file;
-          image.mimeType = result.mimeType;
-          image.preview = result.preview;
-          image.name = result.name;
-        }
-        return { result, error: null as unknown };
-      },
-      (error) => {
-        if (findImage(localId, targetGeneration)) {
-          removeImage(localId);
-          Message({
-            theme: 'warning',
-            message: error instanceof Error ? error.message : '图片处理失败',
-          });
-        }
-        return { result: null, error };
-      },
-    );
     uploadQueue = uploadQueue.then(async () => {
-      const outcome = await settled;
-      if (!outcome.result) return;
-      const { result } = outcome;
-
-      const image = findImage(localId, targetGeneration);
-      if (!image) return;
-      image.status = 'uploading';
-      image.errorMessage = undefined;
+      const attachment = findAttachment(localId, targetGeneration);
+      if (!attachment) return;
+      attachment.status = 'uploading';
+      attachment.errorMessage = undefined;
 
       const controller = new AbortController();
       uploadControllers.set(localId, controller);
       try {
-        const attachment = await uploadConversationAttachment(
+        console.info(
+          `[attachment] 上传文件：${file.name}，大小：${(file.size / 1024).toFixed(2)} KB`,
+        );
+        const uploaded = await uploadConversationAttachment(
           targetProjectId,
           targetNumber,
-          result.file,
+          file,
           controller.signal,
         );
-        const current = findImage(localId, targetGeneration);
+        const current = findAttachment(localId, targetGeneration);
         if (!current) return;
-        current.attachmentId = attachment.id;
+        current.attachmentId = uploaded.id;
+        current.mimeType = uploaded.mime_type;
+        current.kind = isImageAttachmentMimeType(uploaded.mime_type) ? 'image' : 'file';
+        current.name = uploaded.filename;
+        current.size = uploaded.size;
+        current.url = uploaded.url;
+        if (current.kind === 'file') current.preview = '';
+        if (current.kind === 'image') {
+          if (!current.preview) {
+            void readAttachmentPreview(file).then((preview) => {
+              const latest = findAttachment(localId, targetGeneration);
+              if (latest?.attachmentId === uploaded.id) latest.preview = preview;
+            }).catch(() => undefined);
+          }
+        }
         current.status = 'ready';
         current.errorMessage = undefined;
       } catch (error) {
@@ -133,112 +140,141 @@ export const useMessageAttachments = ({
 
   const addFiles = (files: File[]) => {
     if (!files.length || !projectId.value || conversationNumber.value == null) return;
-    const room = MAX_IMAGE_COUNT - images.value.length;
+    const room = MAX_ATTACHMENT_COUNT - attachments.value.length;
     if (room <= 0) {
-      Message({ theme: 'warning', message: `最多上传 ${MAX_IMAGE_COUNT} 张图片` });
+      Message({ theme: 'warning', message: `最多上传 ${MAX_ATTACHMENT_COUNT} 个附件` });
       return;
     }
 
     const selected = files.slice(0, room);
     if (files.length > room) {
-      Message({ theme: 'warning', message: `最多上传 ${MAX_IMAGE_COUNT} 张图片` });
+      Message({ theme: 'warning', message: `最多上传 ${MAX_ATTACHMENT_COUNT} 个附件` });
     }
 
     const targetGeneration = generation;
     const targetProjectId = projectId.value;
     const targetNumber = conversationNumber.value;
-    let hasUnsupported = false;
+    let hasTooLarge = false;
     for (const file of selected) {
-      const mimeType = getImageMimeType(file);
-      if (!mimeType) {
-        hasUnsupported = true;
+      if (!isAttachmentSizeAllowed(file)) {
+        hasTooLarge = true;
         continue;
       }
       const localId = createLocalId();
-      images.value.push({
+      attachments.value.push({
         localId,
         file,
-        mimeType,
+        mimeType: '',
+        kind: 'pending',
         preview: '',
         name: file.name,
-        status: 'processing',
+        size: file.size,
+        status: 'queued',
       });
+      void prepareLocalImagePreview(localId, targetGeneration, file);
       enqueueUpload(
         localId,
         targetGeneration,
         targetProjectId,
         targetNumber,
-        compressImage(file),
+        file,
       );
     }
-    if (hasUnsupported) {
-      Message({ theme: 'warning', message: IMAGE_TYPE_ERROR });
+    if (hasTooLarge) {
+      Message({ theme: 'warning', message: ATTACHMENT_SIZE_ERROR });
     }
   };
 
-  const retryImage = (localId: string) => {
-    const image = images.value.find(item => item.localId === localId);
+  const retryAttachment = (localId: string) => {
+    const attachment = attachments.value.find(item => item.localId === localId);
     if (
-      !image
-      || image.status !== 'failed'
-      || !image.file
+      !attachment
+      || attachment.status !== 'failed'
+      || !attachment.file
       || !projectId.value
       || conversationNumber.value == null
     ) return;
-    image.status = 'uploading';
-    image.errorMessage = undefined;
-    const result = Promise.resolve({
-      file: image.file,
-      mimeType: image.mimeType,
-      preview: image.preview,
-      name: image.name,
-    });
+    attachment.status = 'queued';
+    attachment.errorMessage = undefined;
     enqueueUpload(
       localId,
       generation,
       projectId.value,
       conversationNumber.value,
-      result,
+      attachment.file,
     );
   };
 
-  const removeSubmittedImages = (attachmentIds: string[]) => {
+  const removeSubmittedAttachments = (attachmentIds: string[]) => {
     const submitted = new Set(attachmentIds);
-    images.value = images.value.filter(image => (
-      !image.attachmentId || !submitted.has(image.attachmentId)
-    ));
+    const retained: ChatAttachment[] = [];
+    for (const attachment of attachments.value) {
+      if (!attachment.attachmentId || !submitted.has(attachment.attachmentId)) {
+        retained.push(attachment);
+      }
+    }
+    attachments.value = retained;
   };
 
-  const clearImages = () => {
+  const restoreSubmittedAttachments = (
+    submittedAttachments: ChatAttachment[],
+    originalOrder: string[],
+  ) => {
+    const byLocalId = new Map<string, ChatAttachment>();
+    for (const attachment of submittedAttachments) {
+      byLocalId.set(attachment.localId, attachment);
+    }
+    // 若拒绝响应到达前仍有附件留在草稿中，以当前对象为准。
+    for (const attachment of attachments.value) {
+      byLocalId.set(attachment.localId, attachment);
+    }
+
+    const restored: ChatAttachment[] = [];
+    for (const localId of originalOrder) {
+      const attachment = byLocalId.get(localId);
+      if (!attachment) continue;
+      restored.push(attachment);
+      byLocalId.delete(localId);
+    }
+    // 保留极短时间窗口内可能新增的附件，不因恢复旧草稿而丢失。
+    restored.push(...byLocalId.values());
+    attachments.value = restored;
+  };
+
+  const clearAttachments = () => {
     uploadControllers.forEach(controller => controller.abort());
     uploadControllers.clear();
-    images.value = [];
+    attachments.value = [];
   };
 
   watch([projectId, conversationNumber], () => {
     generation += 1;
     uploadQueue = Promise.resolve();
-    clearImages();
+    clearAttachments();
   });
 
   onScopeDispose(() => {
     generation += 1;
-    clearImages();
+    clearAttachments();
   });
 
   return {
-    images,
-    hasPendingImages: computed(() => images.value.some(image => (
-      image.status === 'processing' || image.status === 'uploading'
+    attachments,
+    attachmentLimitReached: computed(() => attachments.value.length >= MAX_ATTACHMENT_COUNT),
+    hasPendingAttachments: computed(() => attachments.value.some(attachment => (
+      attachment.status === 'queued' || attachment.status === 'uploading'
     ))),
-    hasFailedImages: computed(() => images.value.some(image => image.status === 'failed')),
-    readyImages: computed(() => images.value.filter(image => (
-      image.status === 'ready' && Boolean(image.attachmentId)
+    hasFailedAttachments: computed(() => (
+      attachments.value.some(attachment => attachment.status === 'failed')
+    )),
+    readyAttachments: computed(() => attachments.value.filter(attachment => (
+      attachment.status === 'ready' && Boolean(attachment.attachmentId)
     ))),
     addFiles,
-    retryImage,
-    removeImage,
-    removeSubmittedImages,
-    clearImages,
+    retryAttachment,
+    removeAttachment,
+    removeSubmittedAttachments,
+    restoreSubmittedAttachments,
+    clearAttachments,
   };
 };

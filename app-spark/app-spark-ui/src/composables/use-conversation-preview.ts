@@ -58,6 +58,7 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     messages,
     previewStarting,
     previewStartSeq,
+    runEndedWithError,
   } = storeToRefs(useProjectStore());
 
   const origin = ref('');
@@ -121,6 +122,10 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   const shouldKeepPolling = () => {
     if (!pageVisible.value || !panelOpen.value || conversationKey() === '' || !isLive.value) {
       return false;
+    }
+    // 模型明确报错时没有成功产出可刷新的页面；回写水位变化也不应重新打开预览轮询。
+    if (runEndedWithError.value && status.value === 'idle' && !running.value) {
+      return devServerStatus.value === 'starting';
     }
     if (status.value !== 'idle' || running.value || replicationPending.value) return true;
     return devServerStatus.value === 'starting';
@@ -240,6 +245,7 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     }
     replyMark = next;
     consecutiveFailures = 0;
+    if (runEndedWithError.value) return;
     if (
       timer
       || !pageVisible.value
@@ -256,12 +262,14 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   // 文件是在一轮对话里写的，回到 idle 时通常已经写完。不能指望状态变化来触发：只改文件时进程不
   // 重启，状态一直是 ready；就算重启了，5 秒一拍的轮询也未必赶得上中间那段 starting。
   watch(status, (next, prev) => {
-    if (next === 'idle' && prev !== 'idle') frameKey.value += 1;
+    if (next === 'idle' && prev !== 'idle' && !runEndedWithError.value) {
+      frameKey.value += 1;
+    }
   });
 
   // 连续失败停掉的，要等新回复把计数清零，这里不重新打开。
   // 还没问到第一次结果时也不停，避免把「进来先问一次」取消掉。
-  watch([status, running, replicationPending], () => {
+  watch([status, running, replicationPending, runEndedWithError], () => {
     if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES || pending.value) return;
     if (shouldKeepPolling()) {
       if (!timer) start();

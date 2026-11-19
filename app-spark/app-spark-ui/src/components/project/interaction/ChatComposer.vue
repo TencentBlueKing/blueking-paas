@@ -6,17 +6,40 @@
     @dragover.prevent
     @drop.prevent="handleDrop"
   >
-    <div v-if="images.length" class="chat-composer__previews">
+    <div v-if="attachments.length" class="chat-composer__previews">
       <div
-        v-for="image in images"
-        :key="image.localId"
+        v-for="attachment in attachments"
+        :key="attachment.localId"
         class="chat-composer__preview"
-        :class="`is-${image.status}`"
+        :class="[`is-${attachment.status}`, `is-${attachment.kind}`]"
       >
-        <img v-if="image.preview" :src="image.preview" :alt="image.name || '设计稿'">
-        <div v-else class="chat-composer__preview-placeholder" aria-hidden="true" />
+        <button
+          v-if="attachment.kind === 'image' && attachment.preview"
+          type="button"
+          class="chat-composer__image-trigger"
+          :aria-label="`放大预览 ${attachment.name || '图片附件'}`"
+          @click="previewImage = {
+            src: attachment.preview,
+            alt: attachment.name || '图片附件',
+          }"
+        >
+          <img
+            :src="attachment.preview"
+            :alt="attachment.name || '图片附件'"
+          >
+        </button>
+        <div
+          v-else-if="attachment.kind === 'image'"
+          class="chat-composer__image-placeholder"
+          aria-hidden="true"
+        />
+        <div v-else class="chat-composer__file-preview">
+          <AppIcon name="file" />
+          <span :title="attachment.name">{{ attachment.name }}</span>
+          <small>{{ formatAttachmentSize(attachment.size) }}</small>
+        </div>
         <span
-          v-if="image.status === 'processing' || image.status === 'uploading'"
+          v-if="attachment.status === 'queued' || attachment.status === 'uploading'"
           class="chat-composer__upload-state"
           role="status"
         >
@@ -24,13 +47,13 @@
           上传中
         </span>
         <button
-          v-else-if="image.status === 'failed'"
+          v-else-if="attachment.status === 'failed'"
           type="button"
           class="chat-composer__retry"
           :disabled="disabled"
-          :title="image.errorMessage || '上传失败，点击重试'"
-          aria-label="重试上传图片"
-          @click="retryImage(image.localId)"
+          :title="attachment.errorMessage || '上传失败，点击重试'"
+          aria-label="重试上传附件"
+          @click="retryAttachment(attachment.localId)"
         >
           <AppIcon name="rotate-cw" />
           重试
@@ -39,10 +62,10 @@
           type="button"
           class="chat-composer__remove"
           :disabled="disabled"
-          aria-label="移除图片"
-          @click="removeImage(image.localId)"
+          aria-label="移除附件"
+          @click="removeAttachment(attachment.localId)"
         >
-          <Close />
+          <AppIcon name="x" />
         </button>
       </div>
     </div>
@@ -63,21 +86,30 @@
           ref="fileRef"
           class="chat-composer__file"
           type="file"
-          accept="image/png,image/jpeg,.jpg,.jpeg,image/webp"
           multiple
+          :disabled="disabled || attachmentLimitReached"
           @change="handleFileChange"
         >
-        <button
-          type="button"
-          class="composer__tool"
-          :class="{ 'is-inert': !enableUpload }"
-          :disabled="disabled"
-          :aria-disabled="!enableUpload"
-          :title="enableUpload ? '上传设计稿或截图' : '暂不支持添加附件'"
-          @click="enableUpload && openFile()"
+        <span
+          class="composer__tool-wrap"
+          v-bk-tooltips="{
+            content: attachmentToolHint,
+            placement: 'top',
+            disabled: !attachmentToolHint,
+          }"
         >
-          <AppIcon name="plus-line" />
-        </button>
+          <button
+            type="button"
+            class="composer__tool"
+            :class="{ 'is-inert': !enableUpload || attachmentLimitReached }"
+            :disabled="disabled || attachmentLimitReached"
+            :aria-disabled="!enableUpload || attachmentLimitReached"
+            aria-label="添加附件"
+            @click="openFile"
+          >
+            <AppIcon name="plus-line" />
+          </button>
+        </span>
         <ModelSelector placement="top-start" />
         <span
           class="composer__send-wrap"
@@ -111,18 +143,29 @@
         </span>
       </div>
     </div>
+    <ImageLightbox
+      :open="Boolean(previewImage)"
+      :src="previewImage?.src || ''"
+      :alt="previewImage?.alt"
+      @close="previewImage = null"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
-import { Close } from 'bkui-vue/lib/icon';
 import AppIcon from '@/components/AppIcon.vue';
 import ModelSelector from '@/components/model/ModelSelector.vue';
 import { useModelCatalogStore } from '@/store/model-catalog';
 import { useProjectStore } from '@/store/project';
-import type { ChatImage, ChatSendLifecycle } from './types';
+import {
+  formatAttachmentSize,
+  MAX_ATTACHMENT_COUNT,
+  selectSendableAttachments,
+} from './attachment';
+import ImageLightbox from './ImageLightbox.vue';
+import type { ChatAttachment, ChatSendLifecycle } from './types';
 import { useMessageAttachments } from './use-message-attachments';
 
 const props = defineProps<{
@@ -141,7 +184,7 @@ const emit = defineEmits<{
   (
     e: 'send',
     value: string,
-    images: ChatImage[],
+    attachments: ChatAttachment[],
     modelId?: string,
     lifecycle?: ChatSendLifecycle,
   ): void;
@@ -152,14 +195,16 @@ const modelCatalogStore = useModelCatalogStore();
 const projectStore = useProjectStore();
 const { projectId, conversationNumber } = storeToRefs(projectStore);
 const {
-  images,
-  hasPendingImages,
-  hasFailedImages,
-  readyImages,
+  attachments,
+  attachmentLimitReached,
+  hasPendingAttachments,
+  hasFailedAttachments,
+  readyAttachments,
   addFiles: queueFiles,
-  retryImage,
-  removeImage,
-  removeSubmittedImages,
+  retryAttachment,
+  removeAttachment,
+  removeSubmittedAttachments,
+  restoreSubmittedAttachments,
 } = useMessageAttachments({ projectId, conversationNumber });
 const INPUT_LINE_HEIGHT = 22;
 const INPUT_MIN_HEIGHT = INPUT_LINE_HEIGHT * 2;
@@ -169,6 +214,7 @@ const draft = ref('');
 const fileRef = ref<HTMLInputElement>();
 const inputRef = ref<HTMLTextAreaElement>();
 const rejectedVisionModelId = ref('');
+const previewImage = ref<{ src: string; alt: string } | null>(null);
 
 const resizeInput = () => {
   const el = inputRef.value;
@@ -183,28 +229,38 @@ onMounted(resizeInput);
 const effectiveImageModelId = computed(() => (
   modelCatalogStore.imageInputModel?.id || '__default__'
 ));
-const visionBlocked = computed(() => (
-  images.value.length > 0
-  && (
-    !modelCatalogStore.supportsImageInput
-    || rejectedVisionModelId.value === effectiveImageModelId.value
-  )
+const canSubmitImages = computed(() => (
+  modelCatalogStore.supportsImageInput
+  && rejectedVisionModelId.value !== effectiveImageModelId.value
+));
+const hasBlockedImages = computed(() => (
+  attachments.value.some(attachment => attachment.kind === 'image')
+  && !canSubmitImages.value
+));
+const sendableAttachments = computed(() => (
+  selectSendableAttachments(readyAttachments.value, canSubmitImages.value)
 ));
 const canSend = computed(() => (
-  Boolean(draft.value.trim() || images.value.length)
-  && !hasPendingImages.value
-  && !hasFailedImages.value
-  && !visionBlocked.value
+  Boolean(draft.value.trim() || sendableAttachments.value.length)
+  && !hasPendingAttachments.value
+  && !hasFailedAttachments.value
 ));
 const sendTooltip = computed(() => (
-  visionBlocked.value ? '当前模型不支持图片输入' : ''
+  hasBlockedImages.value && !draft.value.trim() && !sendableAttachments.value.length
+    ? '当前模型不支持图片输入'
+    : ''
 ));
 const placeholder = computed(() => (
   props.placeholder
-  || (enableUpload.value ? '描述你想要的改动，或上传设计稿 / 截图后发送' : '描述你想做的改动')
+  || (enableUpload.value ? '描述你想要的改动，或添加附件后发送' : '描述你想做的改动')
 ));
+const attachmentToolHint = computed(() => {
+  if (!enableUpload.value) return '暂不支持添加附件';
+  if (attachmentLimitReached.value) return `一次最多上传 ${MAX_ATTACHMENT_COUNT} 个附件`;
+  return '';
+});
 const openFile = () => {
-  if (props.disabled) return;
+  if (props.disabled || !enableUpload.value || attachmentLimitReached.value) return;
   fileRef.value?.click();
 };
 
@@ -238,10 +294,12 @@ const handleDrop = (event: DragEvent) => {
 
 const handleSend = () => {
   if (props.disabled || !canSend.value) return;
-  const submittedImages = [...readyImages.value];
-  const attachmentIds = submittedImages
-    .map(image => image.attachmentId)
+  const submittedDraft = draft.value.trim();
+  const submittedAttachments = [...sendableAttachments.value];
+  const attachmentIds = submittedAttachments
+    .map(attachment => attachment.attachmentId)
     .filter((id): id is string => Boolean(id));
+  const originalAttachmentOrder = attachments.value.map(attachment => attachment.localId);
   const submittedProjectId = projectId.value;
   const submittedNumber = conversationNumber.value;
   const submittedImageModelId = effectiveImageModelId.value;
@@ -250,14 +308,14 @@ const handleSend = () => {
     && conversationNumber.value === submittedNumber
   );
   const lifecycle: ChatSendLifecycle = {
-    onAccepted: () => {
+    onRejected: () => {
       if (!stillSameConversation()) return;
-      draft.value = '';
-      removeSubmittedImages(attachmentIds);
+      draft.value = submittedDraft;
+      restoreSubmittedAttachments(submittedAttachments, originalAttachmentOrder);
       void nextTick(resizeInput);
     },
     onAttachmentsInvalid: (invalidIds) => {
-      if (stillSameConversation()) removeSubmittedImages(invalidIds);
+      if (stillSameConversation()) removeSubmittedAttachments(invalidIds);
     },
     onImageInputUnsupported: () => {
       if (stillSameConversation()) {
@@ -265,10 +323,15 @@ const handleSend = () => {
       }
     },
   };
+
+  // 已进入本轮发送范围的内容立即移出草稿；非多模态模型下被排除的图片继续保留。
+  draft.value = '';
+  removeSubmittedAttachments(attachmentIds);
+  void nextTick(resizeInput);
   emit(
     'send',
-    draft.value.trim(),
-    submittedImages,
+    submittedDraft,
+    submittedAttachments,
     modelCatalogStore.requestModelId,
     lifecycle,
   );
@@ -321,26 +384,108 @@ const handleKeydown = (event: KeyboardEvent) => {
   position: relative;
   width: 72px;
   height: 72px;
-  overflow: hidden;
+  overflow: visible;
   background: #f5f7fa;
   border: 1px solid var(--line, #e4e9f1);
   border-radius: 8px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.chat-composer__preview img {
+.chat-composer__preview.is-file,
+.chat-composer__preview.is-pending {
+  width: 150px;
+}
+
+.chat-composer__image-trigger {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  cursor: zoom-in;
+}
+
+.chat-composer__image-trigger:focus-visible {
+  outline: 2px solid var(--accent-focus, #8ea2ff);
+  outline-offset: 2px;
+}
+
+.chat-composer__image-trigger img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: filter 0.15s ease;
+}
+
+.chat-composer__image-trigger:hover img {
+  filter: brightness(0.94);
+}
+
+.chat-composer__preview.is-file:hover,
+.chat-composer__preview.is-pending:hover {
+  background: #eef1f6;
+  border-color: #c9ced8;
+}
+
+.chat-composer__image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #eef1f6;
+  border-radius: inherit;
 }
 
 .chat-composer__preview.is-failed {
   border-color: #ea6f6f;
 }
 
-.chat-composer__preview-placeholder {
+.chat-composer__file-preview {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-rows: 20px 18px;
+  align-content: center;
   width: 100%;
   height: 100%;
-  background: #eef1f6;
+  padding: 8px 24px 8px 10px;
+  color: var(--muted, #5c6573);
+}
+
+.chat-composer__file-preview :deep(.app-icon) {
+  grid-row: 1 / 3;
+  align-self: center;
+  width: 20px;
+  height: 20px;
+  color: var(--accent, #3d6dff);
+  font-size: 20px;
+}
+
+.chat-composer__file-preview span {
+  overflow: hidden;
+  color: var(--ink, #12141a);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chat-composer__file-preview small {
+  color: var(--faint, #88919e);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.chat-composer__preview.is-uploading .chat-composer__file-preview,
+.chat-composer__preview.is-queued .chat-composer__file-preview {
+  padding-bottom: 24px;
+}
+
+.chat-composer__preview.is-pending {
+  width: 100%;
+  max-width: 150px;
 }
 
 .chat-composer__upload-state,
@@ -357,6 +502,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   color: #fff;
   font-size: 11px;
   background: rgba(18, 20, 26, 0.62);
+  border-radius: 0 0 7px 7px;
 }
 
 .chat-composer__upload-state i {
@@ -365,7 +511,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-top-color: #fff;
   border-radius: 50%;
-  animation: image-upload-spin 0.8s linear infinite;
+  animation: attachment-upload-spin 0.8s linear infinite;
 }
 
 .chat-composer__retry {
@@ -382,15 +528,31 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 .chat-composer__remove {
   position: absolute;
-  top: 0;
-  right: 0;
+  z-index: 1;
+  top: -8px;
+  right: -8px;
   display: inline-flex;
-  padding: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
   color: #fff;
-  background: rgba(18, 20, 26, 0.5);
+  background: #c4c6cc;
   border: 0;
-  border-radius: 0 0 0 8px;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(18, 20, 26, 0.16);
   cursor: pointer;
+}
+
+.chat-composer__remove:hover:not(:disabled) {
+  background: #979ba5;
+}
+
+.chat-composer__remove :deep(.app-icon) {
+  width: 12px;
+  height: 12px;
+  font-size: 12px;
 }
 
 .chat-composer__remove:disabled,
@@ -444,6 +606,10 @@ const handleKeydown = (event: KeyboardEvent) => {
   align-items: center;
   justify-content: center;
   border: 0;
+}
+
+.composer__tool-wrap {
+  display: inline-flex;
 }
 
 .composer__tool {
@@ -515,13 +681,18 @@ const handleKeydown = (event: KeyboardEvent) => {
   display: none;
 }
 
-@keyframes image-upload-spin {
+@keyframes attachment-upload-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .chat-composer__preview,
+  .chat-composer__image-trigger img {
+    transition: none;
+  }
+
   .chat-composer__upload-state i {
     animation: none;
   }

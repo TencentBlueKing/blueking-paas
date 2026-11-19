@@ -20,11 +20,9 @@ export const ApiErrorCode = {
   MODEL_NOT_AVAILABLE: 'MODEL_NOT_AVAILABLE',
   /** 当前模型不支持图片输入，本轮不会开始。 */
   MODEL_IMAGE_INPUT_UNSUPPORTED: 'MODEL_IMAGE_INPUT_UNSUPPORTED',
-  /** 压缩后的附件仍超过后端允许的 5MB。 */
+  /** 附件超过后端允许的 5MB。 */
   ATTACHMENT_TOO_LARGE: 'ATTACHMENT_TOO_LARGE',
-  /** 附件文件头不是后端支持的图片类型。 */
-  ATTACHMENT_TYPE_UNSUPPORTED: 'ATTACHMENT_TYPE_UNSUPPORTED',
-  /** 附件存储暂时不可用，可以用同一份压缩图片重试。 */
+  /** 附件存储暂时不可用，可以用同一份原始文件重试。 */
   ATTACHMENT_STORAGE_UNAVAILABLE: 'ATTACHMENT_STORAGE_UNAVAILABLE',
   /** 提交给本轮的附件不属于当前会话或已经不可用。 */
   ATTACHMENT_NOT_FOUND: 'ATTACHMENT_NOT_FOUND',

@@ -728,6 +728,8 @@ BK_IAM_SKIP = settings.get("BK_IAM_SKIP", False)
 # 退出用户组同理，因此在退出的一定时间内，需要先 exclude 掉避免退出后还可以看到应用的问题
 IAM_PERM_EFFECTIVE_TIMEDELTA = settings.get("BK_IAM_PERM_EFFECTIVE_TIMEDELTA", 5 * 60)
 
+# 蓝鲸 ESB 是否可用，用于内置环境变量的配置项（多租户版本未部署 ESB，默认不可用）
+ENABLE_ESB = settings.get("ENABLE_ESB", not ENABLE_MULTI_TENANT_MODE)
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项
 BK_COMPONENT_API_URL = settings.get("BK_COMPONENT_API_URL", "")
 # 蓝鲸的组件 API 地址，网关 SDK 依赖该配置项（该项值与 BK_COMPONENT_API_URL 一致）

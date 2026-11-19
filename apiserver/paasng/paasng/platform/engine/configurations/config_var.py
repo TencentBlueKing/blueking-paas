@@ -329,6 +329,7 @@ def list_vars_builtin_plat_addrs() -> EnvVariableList:
     """List the platform address builtin env vars."""
     # 环境变量中的 bool 值需要转为小写开头字符串，"true" 表示开启，"false" 表示不开启
     multi_tenant_mode = "true" if settings.ENABLE_MULTI_TENANT_MODE else "false"
+    esb_enabled = "true" if settings.ENABLE_ESB else "false"
     system_envs_with_prefix = [
         sys_var("BK_DOMAIN", settings.BK_DOMAIN, _("蓝鲸根域，用于获取登录票据、国际化语言等 cookie 信息")),
         sys_var("URL", settings.BKPAAS_URL, _("蓝鲸PaaS平台访问URL")),
@@ -359,6 +360,8 @@ def list_vars_builtin_plat_addrs() -> EnvVariableList:
         ),
         sys_var("MULTI_TENANT_MODE", multi_tenant_mode, _("是否开启多租户模式")),
         sys_var("DB_TYPE", settings.BKPAAS_DB_TYPE, _("蓝鲸PaaS平台数据库类型")),
+        sys_var("ESB_ENABLED", esb_enabled, _("蓝鲸 ESB 是否可用")),
+        sys_var("ADMIN_USERNAME", settings.ADMIN_USERNAME, _("蓝鲸平台管理员用户名")),
     ]
     # 兼容私有化版本保留的 BK_ 前缀的环境变量
     system_envs_with_prefix.extend(

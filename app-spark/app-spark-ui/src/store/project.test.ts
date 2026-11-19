@@ -151,6 +151,14 @@ test('/runs/ 直接拒绝时通知输入框恢复草稿', async () => {
 test('SSE 已建立后的 RUN_ERROR 不恢复已发送草稿', async () => {
   const sse = controlledSse();
   handlers.startConversationRun = async () => sse.response;
+  let replicationReads = 0;
+  handlers.getConversation = async () => {
+    if (!serverState.replication_pending) return serverState;
+    replicationReads += 1;
+    return replicationReads === 1
+      ? serverState
+      : conversationState({ ui_event_seq: 4 });
+  };
   const historyCallsBeforeRun = callsOf('listHistory').length;
   let rejected = 0;
   const sending = store.sendMessage('做个番茄钟', [], undefined, {
@@ -161,15 +169,43 @@ test('SSE 已建立后的 RUN_ERROR 不恢复已发送草稿', async () => {
   await settle();
 
   sse.send({ type: 'RUN_STARTED', runId: RUN });
-  sse.send({ type: 'RUN_ERROR', message: '模型执行失败' });
+  sse.send({
+    type: 'RUN_ERROR',
+    message: 'status_code: 400, model_name: deepseek-v4-flash, body: model request failed',
+  });
   serverState = conversationState({ ui_event_seq: 3, replication_pending: true });
   sse.close();
   await sending;
 
   assert.equal(rejected, 0);
   assert.equal(store.runEndedWithError, true);
+  assert.equal(store.failedRunMayHaveChangedWorkspace, false);
+  assert.equal(store.failedRunPreviewSyncSeq, 1);
+  assert.equal(store.uiEventSeq, 4);
   assert.equal(store.busy, false);
   assert.equal(callsOf('listHistory').length, historyCallsBeforeRun);
+});
+
+test('修改工作区后才 RUN_ERROR 会要求最终预览重载', async () => {
+  const sse = controlledSse();
+  handlers.startConversationRun = async () => sse.response;
+  const sending = store.sendMessage('改一下首页');
+  await settle();
+
+  sse.send({ type: 'RUN_STARTED', runId: RUN });
+  sse.send({ type: 'TOOL_CALL_START', toolCallId: 'tool-1', toolCallName: 'write_file' });
+  sse.send({ type: 'TOOL_CALL_RESULT', toolCallId: 'tool-1', content: 'ok' });
+  sse.send({
+    type: 'RUN_ERROR',
+    message: 'status_code: 400, model_name: deepseek-v4-flash, body: later model request failed',
+  });
+  serverState = conversationState({ ui_event_seq: 4 });
+  sse.close();
+  await sending;
+
+  assert.equal(store.runEndedWithError, true);
+  assert.equal(store.failedRunMayHaveChangedWorkspace, true);
+  assert.equal(store.failedRunPreviewSyncSeq, 1);
 });
 
 test('API 补出的 Runtime 断流错误仍按历史恢复', async () => {
@@ -189,6 +225,25 @@ test('API 补出的 Runtime 断流错误仍按历史恢复', async () => {
   await sending;
 
   assert.equal(store.runEndedWithError, false);
+  assert.equal(store.failedRunPreviewSyncSeq, 0);
+  assert.equal(callsOf('listHistory').length, historyCallsBeforeRun + 1);
+});
+
+test('无法识别的 RUN_ERROR 保守地按历史恢复', async () => {
+  const sse = controlledSse();
+  handlers.startConversationRun = async () => sse.response;
+  const historyCallsBeforeRun = callsOf('listHistory').length;
+  const sending = store.sendMessage('做个番茄钟');
+  await settle();
+
+  sse.send({ type: 'RUN_STARTED', runId: RUN });
+  sse.send({ type: 'RUN_ERROR', message: 'unknown runtime error' });
+  serverState = conversationState({ ui_event_seq: 3 });
+  sse.close();
+  await sending;
+
+  assert.equal(store.runEndedWithError, false);
+  assert.equal(store.failedRunPreviewSyncSeq, 0);
   assert.equal(callsOf('listHistory').length, historyCallsBeforeRun + 1);
 });
 

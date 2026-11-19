@@ -158,21 +158,18 @@ test('历史附件按后端 MIME 区分图片和下载文件，纯附件消息�
       type: 'image',
       src: 'https://spark.example.com/api-svc/image',
       filename: 'shot.gif',
-      unavailable: false,
     },
     {
       type: 'file',
       href: 'https://spark.example.com/api-svc/svg',
       filename: 'icon.svg',
       size: 256,
-      unavailable: false,
     },
     {
       type: 'file',
       href: undefined,
       filename: 'notes.txt',
       size: 512,
-      unavailable: true,
     },
   ]);
 });

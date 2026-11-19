@@ -61,13 +61,13 @@ test('run payload includes a selected model and omits an unavailable selection',
   );
 });
 
-test('run payload keeps unique attachment ids in draft order', () => {
+test('run payload preserves the validated attachment ids supplied by the store', () => {
   assert.deepEqual(
     createStartRunRequest('', 'vision-auto', ['a', 'a', 'b', 'c', 'd']),
     {
       content: '',
       model_id: 'vision-auto',
-      attachment_ids: ['a', 'b', 'c'],
+      attachment_ids: ['a', 'a', 'b', 'c', 'd'],
     },
   );
 });

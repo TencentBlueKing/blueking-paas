@@ -3,6 +3,7 @@ import type { Ref } from 'vue';
 import Message from '@/common/message';
 import { uploadConversationAttachment } from '@/http/api';
 import { ApiErrorCode, isApiError } from '@/http/error-codes';
+import { resolveApiUrl } from '@/http/resolve-api-url';
 import type { ChatAttachment } from './types';
 import {
   ATTACHMENT_SIZE_ERROR,
@@ -26,6 +27,7 @@ export const useMessageAttachments = ({
 }: AttachmentTarget) => {
   const attachments = ref<ChatAttachment[]>([]);
   let generation = 0;
+  // 产品约定按用户添加顺序串行上传，保持输入框展示与后端落库顺序一致。
   let uploadQueue = Promise.resolve();
   const uploadControllers = new Map<string, AbortController>();
 
@@ -100,9 +102,6 @@ export const useMessageAttachments = ({
       const controller = new AbortController();
       uploadControllers.set(localId, controller);
       try {
-        console.info(
-          `[attachment] 上传文件：${file.name}，大小：${(file.size / 1024).toFixed(2)} KB`,
-        );
         const uploaded = await uploadConversationAttachment(
           targetProjectId,
           targetNumber,
@@ -119,13 +118,19 @@ export const useMessageAttachments = ({
         current.url = uploaded.url;
         if (current.kind === 'file') current.preview = '';
         if (current.kind === 'image') {
-          if (!current.preview) {
+          if (uploaded.url) {
+            // 上传期间用本地预览保证即时反馈；成功后切到服务端地址，避免大块 data URL
+            // 跟着乐观消息在整个会话生命周期里常驻内存。
+            current.preview = resolveApiUrl(uploaded.url);
+          } else if (!current.preview) {
             void readAttachmentPreview(file).then((preview) => {
               const latest = findAttachment(localId, targetGeneration);
               if (latest?.attachmentId === uploaded.id) latest.preview = preview;
             }).catch(() => undefined);
           }
         }
+        // 上传成功后重试只需复用 attachment ID，不再长期持有原始 File。
+        current.file = null;
         current.status = 'ready';
         current.errorMessage = undefined;
       } catch (error) {

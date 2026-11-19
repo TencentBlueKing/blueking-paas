@@ -26,7 +26,6 @@
             class="image-lightbox__image"
             :src="src"
             :alt="alt || '预览图片'"
-            @load="loadFailed = false"
             @error="loadFailed = true"
           >
           <div v-else class="image-lightbox__error" role="status">图片加载失败</div>
@@ -57,6 +56,13 @@ let previousBodyOverflow = '';
 
 const close = () => emit('close');
 
+const restorePageState = () => {
+  document.body.style.overflow = previousBodyOverflow;
+  const target = restoreFocusTo;
+  restoreFocusTo = null;
+  if (target?.isConnected) target.focus();
+};
+
 const handleKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
     event.preventDefault();
@@ -82,14 +88,12 @@ watch(() => props.open, async (open) => {
     await nextTick();
     closeRef.value?.focus();
   } else {
-    document.body.style.overflow = previousBodyOverflow;
-    restoreFocusTo?.focus();
-    restoreFocusTo = null;
+    restorePageState();
   }
 }, { flush: 'post' });
 
 onBeforeUnmount(() => {
-  if (props.open) document.body.style.overflow = previousBodyOverflow;
+  if (props.open) restorePageState();
 });
 </script>
 

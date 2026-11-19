@@ -7,6 +7,8 @@ import type {
   ChatMessage,
   ChatSendLifecycle,
 } from '@/components/project/interaction/types';
+import { MAX_ATTACHMENT_COUNT } from '@/components/project/interaction/attachment';
+import { toAttachmentBlock } from '@/components/project/interaction/message-attachment';
 import { usePageVisibility } from '@/composables/use-page-visibility';
 import {
   closeConversation,
@@ -28,7 +30,6 @@ import type {
 } from '@/http/types';
 import { ApiErrorCode, isApiError } from '@/http/error-codes';
 import RequestError from '@/http/fetch/request-error';
-import { resolveApiUrl } from '@/http/resolve-api-url';
 import type { AgUiApplyContext } from '@/services/agent/ag-ui';
 import {
   appendRunError,
@@ -60,14 +61,30 @@ type VisibilityRecovery = {
 
 const PREPARING_RUNTIME_TEXT = '正在准备运行环境…';
 const RUNTIME_STREAM_ERROR_PREFIX = 'The Agent Runtime stopped responding:';
+// Runtime 暂未提供结构化错误码。只把当前已知的模型请求错误识别为明确终态；
+// 其他 RUN_ERROR 保守地按断流恢复，避免漏掉仍在后台执行并入库的后续事件。
+const STATUS_CODE_RUN_ERROR_PATTERN = /^status_code:\s*\d+\b/;
 /** 回复进行中，历史是分批入库的。两秒补一次，能跟上已经写进来的字，又不会把接口打满。 */
 const CATCH_UP_INTERVAL_MS = 2000;
 /** 追赶接口连续失败这么多次就停，并把输入框放开。成功一次就重新计数。 */
 const MAX_CATCH_UP_FAILURES = 3;
 const INT_RENAMING_POLL_INTERVAL_MS = 2000;
 const INT_RENAMING_MAX_DURATION_MS = 30000;
+const READ_ONLY_WORKSPACE_TOOLS = new Set([
+  'read_file',
+  'list_directory',
+  'file_info',
+  'find_files',
+  'search_files',
+  'check_command',
+  'read_app_log',
+]);
 
 const createId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+const toolMayMutateWorkspace = (name: unknown) => {
+  const normalized = String(name || '');
+  return Boolean(normalized) && !READ_ONLY_WORKSPACE_TOOLS.has(normalized);
+};
 
 export const useProjectStore = defineStore('project', () => {
   const modelCatalogStore = useModelCatalogStore();
@@ -107,6 +124,10 @@ export const useProjectStore = defineStore('project', () => {
   const status = ref<ProjectStatus>('idle');
   /** 本轮由 Runtime 明确以 RUN_ERROR 结束；预览不应把失败误当成代码更新并重载 iframe。 */
   const runEndedWithError = ref(false);
+  /** 失败前有修改型工具真正返回过，最终预览同步后需要重载 iframe。 */
+  const failedRunMayHaveChangedWorkspace = ref(false);
+  /** 普通 RUN_ERROR 完成状态与游标校准后递增，预览据此强制做一次最终状态查询。 */
+  const failedRunPreviewSyncSeq = ref(0);
   /** RUN_ERROR 后核对服务端状态期间保持输入框锁定，但不把状态拨回 thinking 触发预览轮询。 */
   const settlingRunError = ref(false);
   // 首页创建项目时暂存首条需求。只允许目标项目消费一次，避免刷新或切项目后误发。
@@ -364,6 +385,8 @@ export const useProjectStore = defineStore('project', () => {
     previewStarting.value = false;
     status.value = 'idle';
     runEndedWithError.value = false;
+    failedRunMayHaveChangedWorkspace.value = false;
+    failedRunPreviewSyncSeq.value = 0;
     settlingRunError.value = false;
     historyCursor.value = null;
     loadingEarlier.value = false;
@@ -656,6 +679,35 @@ export const useProjectStore = defineStore('project', () => {
     // Runtime 自己发出的 RUN_ERROR 是本轮终态，SSE 已经完整画出了错误。即使事件正在回写或游标增长，
     // 也只同步状态与水位，不能为了同一条错误清空消息再拉整段历史。
     if (terminalRunError && !state.running) {
+      // RUN_ERROR 已经按顺序带完了本轮的 SSE；只等异步回写结束后把本地游标拨到最终水位，
+      // 不重新应用同一批事件，否则回复文本和工具块会重复。
+      let consecutiveFailures = 0;
+      while (state.replication_pending && stillCurrent()) {
+        applyState(state);
+        if (!pageVisible.value) {
+          pauseInterruptedRun();
+          return;
+        }
+        try {
+          state = await getConversation(targetProjectId, targetNumber, { globalError: false });
+          consecutiveFailures = 0;
+        } catch {
+          consecutiveFailures += 1;
+          if (consecutiveFailures >= MAX_CATCH_UP_FAILURES) {
+            status.value = 'idle';
+            Message({ theme: 'error', message: '回复状态同步失败，刷新页面可重试。' });
+            return;
+          }
+        }
+        if (state.running || !state.replication_pending) break;
+        await new Promise(resolve => setTimeout(resolve, CATCH_UP_INTERVAL_MS));
+      }
+      if (state.running) {
+        runEndedWithError.value = false;
+        failedRunMayHaveChangedWorkspace.value = false;
+        await bindConversation(state);
+        return;
+      }
       applyState(state);
       status.value = 'idle';
       return;
@@ -1165,7 +1217,7 @@ export const useProjectStore = defineStore('project', () => {
       (!content && !attachmentIds.length)
       || attachments.length !== readyAttachments.length
       || attachmentIds.length !== readyAttachments.length
-      || attachmentIds.length > 3
+      || attachmentIds.length > MAX_ATTACHMENT_COUNT
       || (
         readyAttachments.some(attachment => attachment.kind === 'image')
         && !modelCatalogStore.supportsImageInput
@@ -1188,24 +1240,13 @@ export const useProjectStore = defineStore('project', () => {
       role: 'user',
       blocks: [
         ...(content ? [{ type: 'text' as const, text: content }] : []),
-        ...readyAttachments.map(attachment => (
-          attachment.kind === 'image'
-            ? {
-              type: 'image' as const,
-              src: attachment.preview || (
-                attachment.url ? resolveApiUrl(attachment.url) : undefined
-              ),
-              filename: attachment.name,
-              unavailable: !attachment.preview && !attachment.url,
-            }
-            : {
-              type: 'file' as const,
-              href: attachment.url ? resolveApiUrl(attachment.url) : undefined,
-              filename: attachment.name,
-              size: attachment.size,
-              unavailable: !attachment.url,
-            }
-        )),
+        ...readyAttachments.map(attachment => toAttachmentBlock({
+          kind: attachment.kind === 'image' ? 'image' : 'file',
+          filename: attachment.name,
+          size: attachment.size,
+          url: attachment.url,
+          preview: attachment.preview,
+        })),
       ],
     };
     const assistantMessage: ChatMessage = {
@@ -1222,6 +1263,8 @@ export const useProjectStore = defineStore('project', () => {
     let sawRunFinished = false;
     // Runtime 自己发出的 RUN_ERROR 是终态；本服务在 Runtime 连接中断时补的同名事件仍需走断流恢复。
     let sawTerminalRunError = false;
+    const mutatingToolCalls = new Set<string>();
+    let workspaceMayHaveChanged = false;
     // 服务端明确拒绝了这一轮（4xx/5xx 响应）：没有一轮在跑，眼前的报错就是结果，不用去对齐。
     let refused = false;
     const controller = new AbortController();
@@ -1237,6 +1280,7 @@ export const useProjectStore = defineStore('project', () => {
     messages.value.push(userMessage, assistantMessage);
     syncApplyCtx();
     runEndedWithError.value = false;
+    failedRunMayHaveChangedWorkspace.value = false;
     status.value = 'thinking';
     runId.value = null;
     awaitingRunStart.value = true;
@@ -1296,13 +1340,26 @@ export const useProjectStore = defineStore('project', () => {
         if (event.type === 'RUN_FINISHED') {
           sawRunFinished = true;
           runEndedWithError.value = false;
+          failedRunMayHaveChangedWorkspace.value = false;
+        }
+        if (event.type === 'TOOL_CALL_START' && toolMayMutateWorkspace(event.toolCallName)) {
+          mutatingToolCalls.add(String(event.toolCallId || ''));
+        }
+        if (
+          event.type === 'TOOL_CALL_RESULT'
+          && mutatingToolCalls.has(String(event.toolCallId || ''))
+        ) {
+          workspaceMayHaveChanged = true;
         }
         if (event.type === 'RUN_ERROR') {
-          const transportInterrupted = String(event.message || '')
-            .startsWith(RUNTIME_STREAM_ERROR_PREFIX);
-          if (!transportInterrupted) {
+          const message = String(event.message || '');
+          const transportInterrupted = message.startsWith(RUNTIME_STREAM_ERROR_PREFIX);
+          const knownTerminalError = !transportInterrupted
+            && STATUS_CODE_RUN_ERROR_PATTERN.test(message);
+          if (knownTerminalError) {
             sawTerminalRunError = true;
             runEndedWithError.value = true;
+            failedRunMayHaveChangedWorkspace.value = workspaceMayHaveChanged;
             settlingRunError.value = true;
           }
         }
@@ -1386,6 +1443,9 @@ export const useProjectStore = defineStore('project', () => {
           }
         }
       }
+      if (sawTerminalRunError && runEndedWithError.value) {
+        failedRunPreviewSyncSeq.value += 1;
+      }
       settlingRunError.value = false;
     }
   };
@@ -1408,6 +1468,8 @@ export const useProjectStore = defineStore('project', () => {
     previewStarting,
     previewStartSeq,
     runEndedWithError,
+    failedRunMayHaveChangedWorkspace,
+    failedRunPreviewSyncSeq,
     messages,
     status,
     busy,

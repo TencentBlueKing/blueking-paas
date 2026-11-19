@@ -5,7 +5,7 @@ import type {
   ChatToolCall,
 } from '@/components/project/interaction/types';
 import { isImageAttachmentMimeType } from '@/components/project/interaction/attachment';
-import { resolveApiUrl } from '@/http/resolve-api-url';
+import { toAttachmentBlock } from '@/components/project/interaction/message-attachment';
 import type { AgUiEvent, UserMessageRecord } from '@/http/types';
 import { describeToolCall } from '@/services/agent/tool-call';
 
@@ -319,22 +319,12 @@ export const appendUserMessage = (
     role: 'user',
     blocks: [
       ...(text ? [{ type: 'text' as const, text }] : []),
-      ...attachments.map((attachment): ChatBlock => (
-        isImageAttachmentMimeType(attachment.mime_type)
-          ? {
-            type: 'image',
-            src: attachment.url ? resolveApiUrl(attachment.url) : undefined,
-            filename: attachment.filename,
-            unavailable: !attachment.url,
-          }
-          : {
-            type: 'file',
-            href: attachment.url ? resolveApiUrl(attachment.url) : undefined,
-            filename: attachment.filename,
-            size: attachment.size,
-            unavailable: !attachment.url,
-          }
-      )),
+      ...attachments.map(attachment => toAttachmentBlock({
+        kind: isImageAttachmentMimeType(attachment.mime_type) ? 'image' : 'file',
+        filename: attachment.filename,
+        size: attachment.size,
+        url: attachment.url,
+      })),
     ],
   };
   ctx.messages.push(message);

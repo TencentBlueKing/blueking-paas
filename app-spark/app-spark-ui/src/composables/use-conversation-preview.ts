@@ -59,6 +59,8 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     previewStarting,
     previewStartSeq,
     runEndedWithError,
+    failedRunMayHaveChangedWorkspace,
+    failedRunPreviewSyncSeq,
   } = storeToRefs(useProjectStore());
 
   const origin = ref('');
@@ -84,6 +86,10 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   let resolved = false;
   /** 最近一条助手回复的正文。变了说明对话框有新内容，失败计数要回到 0。 */
   let replyMark = '';
+  /** 最终状态同步撞上已有请求时，等它结束后立即再问一次，不能等下一拍。 */
+  let finalPullPending = false;
+  /** 失败前工作区可能有改动；最终问到 ready 后重载当前 iframe。 */
+  let refreshFrameAfterFinalPull = false;
 
   const conversationKey = () => (
     projectId.value && conversationNumber.value != null
@@ -165,11 +171,26 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
         return;
       }
       // 同一地址不换 src。远程沙箱重建后 get_host 会变成另一个主机，那时才重载。
+      const originChanged = Boolean(data.origin && data.origin !== origin.value);
       if (data.origin && data.origin !== origin.value) {
         origin.value = data.origin;
         direct.value = data.direct;
       }
       devServerStatus.value = asDevServerStatus(data.dev_server_status);
+      if (
+        refreshFrameAfterFinalPull
+        && devServerStatus.value === 'ready'
+        && data.origin
+      ) {
+        // 地址变化本身就会让 iframe 导航；同地址才需要靠 key 强制读取失败前写入的新内容。
+        if (!originChanged) frameKey.value += 1;
+        refreshFrameAfterFinalPull = false;
+      } else if (
+        refreshFrameAfterFinalPull
+        && devServerStatus.value !== 'starting'
+      ) {
+        refreshFrameAfterFinalPull = false;
+      }
       pending.value = false;
       resolved = true;
       consecutiveFailures = 0;
@@ -196,6 +217,10 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
       stop();
     } finally {
       if (inFlightGeneration === gen) inFlightGeneration = -1;
+      if (finalPullPending && gen === generation) {
+        finalPullPending = false;
+        void pull();
+      }
     }
   };
 
@@ -210,6 +235,8 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
       pending.value = true;
       resolved = false;
       consecutiveFailures = 0;
+      finalPullPending = false;
+      refreshFrameAfterFinalPull = false;
     }
 
     stop();
@@ -282,6 +309,23 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   // 回来时应用已在 starting，shouldKeepPolling 会一直问到它出结果。
   watch(previewStartSeq, () => {
     if (!panelOpen.value || conversationKey() === '' || !isLive.value) return;
+    start();
+  });
+
+  // 普通 RUN_ERROR 不重拉对话历史，但必须最后确认一次应用状态。失败前有修改型工具返回过时，
+  // 同地址的 iframe 也要在确认 ready 后重载；没有改动则只更新状态，避免无意义闪烁。
+  watch(failedRunPreviewSyncSeq, () => {
+    refreshFrameAfterFinalPull = refreshFrameAfterFinalPull
+      || failedRunMayHaveChangedWorkspace.value;
+    if (
+      !pageVisible.value
+      || !panelOpen.value
+      || conversationKey() === ''
+      || !isLive.value
+    ) {
+      return;
+    }
+    if (inFlightGeneration === generation) finalPullPending = true;
     start();
   });
 

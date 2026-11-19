@@ -34,11 +34,8 @@ export const createStartRunRequest = (
   content: string,
   modelId?: string,
   attachmentIds: string[] = [],
-): StartRunRequest => {
-  const uniqueAttachmentIds = [...new Set(attachmentIds.filter(Boolean))].slice(0, 3);
-  return {
-    content,
-    ...(modelId ? { model_id: modelId } : {}),
-    ...(uniqueAttachmentIds.length ? { attachment_ids: uniqueAttachmentIds } : {}),
-  };
-};
+): StartRunRequest => ({
+  content,
+  ...(modelId ? { model_id: modelId } : {}),
+  ...(attachmentIds.length ? { attachment_ids: attachmentIds } : {}),
+});

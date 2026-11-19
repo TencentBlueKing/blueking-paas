@@ -65,7 +65,6 @@ export interface ChatBlock {
   href?: string;
   filename?: string;
   size?: number;
-  unavailable?: boolean;
   tool?: ChatToolCall;
   reasoning?: ChatReasoning;
 }

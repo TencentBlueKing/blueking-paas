@@ -186,16 +186,16 @@ class TestBuiltInEnvVars:
             assert config_vars["BKPAAS_MULTI_TENANT_MODE"] == "false"
             assert config_vars["BKPAAS_ESB_ENABLED"] == "true"
 
-    @pytest.mark.parametrize(("enable_esb", "expected"), [(True, "true"), (False, "false")])
-    def test_esb_enabled(self, bk_stag_env, settings, enable_esb, expected):
-        settings.ENABLE_ESB = enable_esb
+    @pytest.mark.parametrize(("esb_enabled", "expected"), [(True, "true"), (False, "false")])
+    def test_esb_enabled(self, bk_stag_env, settings, esb_enabled, expected):
+        settings.ESB_ENABLED = esb_enabled
         config_vars = get_builtin_env_variables(bk_stag_env.engine_app).kv_map
         assert config_vars["BKPAAS_ESB_ENABLED"] == expected
 
     def test_admin_username(self, bk_stag_env, settings):
-        settings.ADMIN_USERNAME = "bk-admin"
+        settings.ADMIN_USERNAME = "custom-admin"
         config_vars = get_builtin_env_variables(bk_stag_env.engine_app).kv_map
-        assert config_vars["BKPAAS_ADMIN_USERNAME"] == "bk-admin"
+        assert config_vars["BKPAAS_ADMIN_USERNAME"] == "custom-admin"
 
     def test_builtin_env_keys(self, bk_stag_env):
         config_vars = get_builtin_env_variables(bk_stag_env.engine_app).kv_map

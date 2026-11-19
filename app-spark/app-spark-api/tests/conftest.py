@@ -26,7 +26,11 @@ from django.urls import get_script_prefix, set_script_prefix
 from app_spark_api.core.projects.models import Project
 from tests.helpers import create_user
 from tests.infras.forgejo.fake import FakeForgejo, repo_server_config
+from tests.infras.llm.support import live_llm
 from tests.repository.storage.fake_bkrepo import BKREPO_CONFIG, SOURCE_PACKAGES_BUCKET, FakeBkRepoServer
+
+# pytest 只认 conftest 自己命名空间里的 fixture，导入它就是为了注册。
+__all__ = ["live_llm"]
 
 if os.environ.get("APP_SPARK_FORGEJO_LIVE") != "1":
     collect_ignore = ["api/live_forgejo"]

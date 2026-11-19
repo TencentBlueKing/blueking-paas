@@ -43,3 +43,12 @@ class ModelSource(StrEnum):
     BKAIDEV = "bkaidev"
     # 直连模型厂商，用 AGENT_DIRECT_MODEL_CONFIG 里固定的 api_key。
     DIRECT = "direct"
+
+
+class PreviewStartOutcome(StrEnum):
+    """What the Runtime did with a request to start the workspace application for preview."""
+
+    # 已在拉起，或本来就在跑。是否起来了不在这里等，看 /health 的 dev_server_status。
+    STARTING = "starting"
+    # 工作区里还没有能启动的项目，比如项目刚建、模型还没写出代码。不是失败：等模型写完，它自己会拉起。
+    NO_PROJECT = "no_project"

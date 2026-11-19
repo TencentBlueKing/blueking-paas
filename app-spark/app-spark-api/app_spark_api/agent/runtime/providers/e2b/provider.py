@@ -397,6 +397,19 @@ class E2BProvider(AgentRuntimeProvider):
             await claim.retire(sandbox, reason="unhealthy")
             return False
 
+        # 模型变量是启动时注入的，复用时不会重注。模型没就绪的沙箱留着，每一轮都是 503，配置修好也
+        # 不会自愈；换一个，新沙箱按现在的配置注入，仍不就绪就在启动那一步把原因报出来。
+        # 模型没就绪时不可能有一轮在跑，不用像下面那样等 running 落下。
+        if not health.model_ready:
+            logger.warning(
+                "The Agent in E2B sandbox %s of conversation %s has no usable model (MODEL=%s); replacing the sandbox",
+                claim.record.sandbox_id,
+                claim.record.conversation_id,
+                health.model,
+            )
+            await claim.retire(sandbox, reason="model_unready")
+            return False
+
         # 满 max_lifetime 才换，而且只在没有一轮在跑时换：进行中的对话（比如另一个标签页发起的）
         # 不能被打断。它在跑时这一轮随后会因 Runtime 忙被拒，年龄留到下一轮再看。
         # 已知窗口：running 读出来是 false 之后、SIGTERM 送到之前，另一个 worker 可能刚好让 Agent

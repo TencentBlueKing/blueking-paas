@@ -113,16 +113,17 @@ class ReconcileResult:
 
 
 def reconcile_all(dry_run: bool = False) -> ReconcileResult:
-    """对所有已启用 e2b 的集群做一轮对账。
+    """对所有登记了 e2b 配置的集群做一轮对账。
 
     遍历的是集群配置而不是本地记录涉及的集群：孤儿实例在本地没有任何记录，
-    只从记录出发就永远发现不了它们。
+    只从记录出发就永远发现不了它们。已停用的集群也要对账，存量沙箱靠它收敛。
 
     :param dry_run: 只计算不写入，用于上线前确认清理范围
     """
     return ReconcileResult(
         clusters={
-            cluster_name: reconcile_cluster(cluster_name, dry_run=dry_run) for cluster_name in _enabled_cluster_names()
+            cluster_name: reconcile_cluster(cluster_name, dry_run=dry_run)
+            for cluster_name in _registered_cluster_names()
         }
     )
 
@@ -184,8 +185,8 @@ def archive_terminated_sandboxes(retention_days: int | None = None, dry_run: boo
     return total
 
 
-def _enabled_cluster_names() -> list[str]:
-    return list(ClusterE2BConfig.objects.filter(enabled=True).values_list("cluster__name", flat=True))
+def _registered_cluster_names() -> list[str]:
+    return list(ClusterE2BConfig.objects.values_list("cluster__name", flat=True))
 
 
 def _converge_local_states(cluster_name: str, gateway_states: dict[str, str | None], dry_run: bool) -> int:

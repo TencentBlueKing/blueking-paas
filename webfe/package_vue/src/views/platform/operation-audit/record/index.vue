@@ -399,11 +399,6 @@ export default {
       &:hover .clear-action {
         display: block;
       }
-      .bk-date-picker-rel {
-        .icon-wrapper {
-          left: 0 !important;
-        }
-      }
     }
   }
   .table-wrapper {

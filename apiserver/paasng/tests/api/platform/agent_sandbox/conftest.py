@@ -45,11 +45,11 @@ def _mock_verified_app_permission() -> Iterator[None]:
     """
     with (
         mock.patch(
-            "paasng.platform.agent_sandbox.views.IsAPIGWVerifiedApp.has_permission",
+            "paasng.platform.agent_sandbox.views.api.IsAPIGWVerifiedApp.has_permission",
             return_value=True,
         ),
         mock.patch(
-            "paasng.platform.agent_sandbox.views.IsAPIGWVerifiedApp.has_object_permission",
+            "paasng.platform.agent_sandbox.views.api.IsAPIGWVerifiedApp.has_object_permission",
             return_value=True,
         ),
     ):
@@ -63,7 +63,7 @@ def _mock_unverified_app_permission() -> Iterator[None]:
     Use this to test scenarios where the request app is not verified.
     """
     with mock.patch(
-        "paasng.platform.agent_sandbox.views.IsAPIGWVerifiedApp.has_permission",
+        "paasng.platform.agent_sandbox.views.api.IsAPIGWVerifiedApp.has_permission",
         return_value=False,
     ):
         yield
@@ -77,11 +77,11 @@ def _mock_app_mismatch_permission() -> Iterator[None]:
     """
     with (
         mock.patch(
-            "paasng.platform.agent_sandbox.views.IsAPIGWVerifiedApp.has_permission",
+            "paasng.platform.agent_sandbox.views.api.IsAPIGWVerifiedApp.has_permission",
             return_value=True,
         ),
         mock.patch(
-            "paasng.platform.agent_sandbox.views.IsAPIGWVerifiedApp.has_object_permission",
+            "paasng.platform.agent_sandbox.views.api.IsAPIGWVerifiedApp.has_object_permission",
             return_value=False,
         ),
     ):
@@ -156,7 +156,7 @@ def sandbox_id(
 
     with (
         mock.patch(
-            "paasng.platform.agent_sandbox.views.get_sandbox_client",
+            "paasng.platform.agent_sandbox.views.api.get_sandbox_client",
             return_value=sandbox_client,
         ),
         mock.patch.object(sandbox_client, "daemon_client", patched_daemon_client),
@@ -186,7 +186,7 @@ def stub_resident_client():
     client = StubResidentDaemonClient()
     with (
         mock.patch(
-            "paasng.platform.agent_sandbox.views.get_resident_daemon_client",
+            "paasng.platform.agent_sandbox.views.api.get_resident_daemon_client",
             return_value=client,
         ),
         mock.patch(

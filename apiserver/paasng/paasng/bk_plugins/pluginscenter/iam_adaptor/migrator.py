@@ -63,6 +63,9 @@ class IAMMigrator:
         self.migration_data = deepcopy(migration_data)
 
     def migrate(self):
+        if settings.BK_PLUGINS_IAM_SKIP:
+            return
+
         app_code = settings.IAM_APP_CODE
         app_secret = settings.IAM_APP_SECRET
 

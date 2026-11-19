@@ -21,6 +21,7 @@
 """
 
 import logging
+import ssl
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -28,6 +29,8 @@ from typing import Any
 
 import requests
 from django.conf import settings
+from requests.adapters import HTTPAdapter
+from requests.utils import DEFAULT_CA_BUNDLE_PATH
 
 from .constants import (
     ANNOTATION_MAX_CHARS,
@@ -90,6 +93,20 @@ class CredentialInfo:
     auth: ServiceAccountAuth
 
 
+@dataclass(frozen=True)
+class KMSTLSConfig:
+    """访问 KMS 管理接口的 TLS 配置，均为 PEM 文件路径。同时提供客户端证书与私钥时启用双向认证
+
+    :param ca_file: 校验服务端证书的 CA，为空时使用 requests 默认的 CA 集合
+    :param check_hostname: 关闭后仍校验证书链，但同一 CA 签发的任意证书都能冒充 KMS
+    """
+
+    ca_file: str = ""
+    cert_file: str = ""
+    key_file: str = ""
+    check_hostname: bool = True
+
+
 class KMSClient:
     """KMS 管理接口客户端。不做自动重试：业务错误抛出 KMSAPIError，其他通信问题抛出 KMSRequestError"""
 
@@ -99,6 +116,7 @@ class KMSClient:
         username: str,
         tenant_id: str,
         timeout: float,
+        tls: KMSTLSConfig | None = None,
     ):
         if not base_url:
             raise KMSConfigError("KMS_API_BASE_URL is not configured")
@@ -111,6 +129,10 @@ class KMSClient:
         self._timeout = timeout
         self._session = requests.Session()
         self._session.headers.update({KMS_USERNAME_HEADER: username, KMS_TENANT_ID_HEADER: tenant_id})
+        if tls is not None:
+            if not self._base_url.lower().startswith("https://"):
+                raise KMSConfigError("KMS_API_BASE_URL must use https when KMS TLS is configured")
+            self._session.mount("https://", _SSLContextAdapter(_build_ssl_context(tls), tls.check_hostname))
 
     def get_crypto_info(self) -> CryptoInfo:
         """获取服务端下发的加密算法与公钥。公钥可能变化，调用方不应长期缓存结果"""
@@ -233,14 +255,66 @@ def make_kms_client(tenant_id: str) -> KMSClient:
     """按 Django settings 构造 KMS 客户端
 
     :param tenant_id: 请求头 X-Bk-Tenant-Id 的取值，由调用方依据已授权的模块环境传入
-    :raises KMSConfigError: KMS_API_BASE_URL 或 KMS_API_USERNAME 未配置
+    :raises KMSConfigError: KMS_API_BASE_URL 或 KMS_API_USERNAME 未配置，或 TLS 配置无效
     """
+    tls = None
+    if settings.KMS_API_TLS_CA_FILE or settings.KMS_API_TLS_CERT_FILE or settings.KMS_API_TLS_KEY_FILE:
+        tls = KMSTLSConfig(
+            ca_file=settings.KMS_API_TLS_CA_FILE,
+            cert_file=settings.KMS_API_TLS_CERT_FILE,
+            key_file=settings.KMS_API_TLS_KEY_FILE,
+            check_hostname=bool(settings.KMS_API_TLS_CHECK_HOSTNAME),
+        )
     return KMSClient(
         base_url=settings.KMS_API_BASE_URL,
         username=settings.KMS_API_USERNAME,
         tenant_id=tenant_id,
         timeout=float(settings.KMS_API_TIMEOUT_SECONDS),
+        tls=tls,
     )
+
+
+class _SSLContextAdapter(HTTPAdapter):
+    """HTTPS 连接只使用给定的 SSLContext，忽略请求的 verify/cert 参数及 REQUESTS_CA_BUNDLE 等环境变量"""
+
+    def __init__(self, ssl_context: ssl.SSLContext, check_hostname: bool):
+        # 父类构造时即调用 init_poolmanager
+        self._ssl_context = ssl_context
+        self._check_hostname = check_hostname
+        super().__init__()
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ssl_context
+        if not self._check_hostname:
+            kwargs["assert_hostname"] = False
+        super().init_poolmanager(*args, **kwargs)
+
+    def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):
+        return super().send(request, stream=stream, timeout=timeout, verify=True, cert=None, proxies=proxies)
+
+
+def _build_ssl_context(tls: KMSTLSConfig) -> ssl.SSLContext:
+    """不使用 ssl.create_default_context：Python 3.13 起它默认开启 VERIFY_X509_STRICT，
+    会拒绝缺少 Key Usage 扩展的 CA，与 requests 的默认行为不一致
+    """
+    if bool(tls.cert_file) != bool(tls.key_file):
+        raise KMSConfigError("KMS TLS client certificate and private key must be configured together")
+
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    # 主机名交给 urllib3 校验：urllib3 以 IP 访问时不传 server_hostname，SSLContext 自行校验会直接报错
+    context.check_hostname = False
+    try:
+        context.load_verify_locations(cafile=tls.ca_file or DEFAULT_CA_BUNDLE_PATH)
+        if tls.cert_file:
+            context.load_cert_chain(tls.cert_file, tls.key_file, password=_reject_encrypted_key)
+    except OSError as e:
+        raise KMSConfigError(f"unable to load KMS TLS files: {e}") from e
+    return context
+
+
+def _reject_encrypted_key() -> str:
+    """未提供此回调时，OpenSSL 会在终端上交互式询问私钥密码"""
+    raise KMSConfigError("KMS TLS private key must not be encrypted")
 
 
 def _validate_length(field: str, value: str, max_chars: int) -> None:

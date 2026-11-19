@@ -208,7 +208,11 @@ def test_a_malformed_record_is_refused(runtime: RuntimeCaller) -> None:
     response = runtime.post("messages", [{"seq": 0, "run_id": "a", "timestamp": TIMESTAMP}])
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
-    assert json.loads(response.content)["code"] == "VALIDATION_ERROR"
+    body = json.loads(response.content)
+    assert body["code"] == "VALIDATION_ERROR"
+    # Located inside the list as sent, without the view's parameter name.
+    assert [error["loc"] for error in body["data"]] == [["body", "records", 0, "seq"]]
+    assert body["detail"] == "Request validation failed: body.records[0].seq: Input should be greater than 0"
 
 
 def test_a_context_document_is_archived_as_it_arrived(runtime: RuntimeCaller) -> None:

@@ -51,7 +51,7 @@ def sys_api_client_without_perm(bk_user):
 
 
 class TestAgentSandboxAPIPermissionViewSetGrantPermissions:
-    """Test cases for AgentSandboxAPIPermissionViewSet.grant_permissions API."""
+    """Test cases for SysAgentSandboxAPIPermissionViewSet.grant_permissions API."""
 
     @pytest.fixture()
     def grant_url(self) -> str:
@@ -59,7 +59,7 @@ class TestAgentSandboxAPIPermissionViewSetGrantPermissions:
 
         :returns: The URL string.
         """
-        return reverse("agent_sandbox.permissions.grant")
+        return reverse("sys.api.agent_sandbox.permissions.grant")
 
     def test_grant_permissions_success(
         self,
@@ -73,7 +73,7 @@ class TestAgentSandboxAPIPermissionViewSetGrantPermissions:
         :param grant_url: The grant URL fixture.
         :param bk_ai_agent_app: The AI agent application fixture.
         """
-        with mock.patch("paasng.platform.agent_sandbox.views.ApiGatewayClient") as mock_client_class:
+        with mock.patch("paasng.platform.agent_sandbox.views.sys_api.ApiGatewayClient") as mock_client_class:
             mock_client = mock.MagicMock()
             mock_client.grant_apigw_permissions.return_value = ""
             mock_client_class.return_value = mock_client
@@ -141,7 +141,7 @@ class TestAgentSandboxAPIPermissionViewSetGrantPermissions:
         :param grant_url: The grant URL fixture.
         :param bk_ai_agent_app: The AI agent application fixture.
         """
-        with mock.patch("paasng.platform.agent_sandbox.views.ApiGatewayClient") as mock_client_class:
+        with mock.patch("paasng.platform.agent_sandbox.views.sys_api.ApiGatewayClient") as mock_client_class:
             mock_client = mock.MagicMock()
             mock_client.grant_apigw_permissions.side_effect = ApiGatewayServiceError(
                 "grant apigw permissions error: API error"

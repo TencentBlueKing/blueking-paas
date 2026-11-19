@@ -35,6 +35,7 @@ from django.utils import timezone
 from app_spark_api.agent.conversations import services, state
 from app_spark_api.agent.conversations.entities import MAX_RUN_CONTENT_LENGTH
 from app_spark_api.agent.conversations.history import DEFAULT_PAGE_RUNS, MAX_PAGE_RUNS
+from app_spark_api.agent.conversations.lifecycle import start
 from app_spark_api.agent.conversations.models import (
     Conversation,
     ConversationUserMessage,
@@ -334,7 +335,7 @@ async def test_a_conversation_closed_while_its_runtime_comes_up_does_not_keep_it
     async def record_terminate(conversation_id: str) -> None:
         terminated.append(conversation_id)
 
-    monkeypatch.setattr(services, "open_client", close_it_behind_our_back)
+    monkeypatch.setattr(start, "open_client", close_it_behind_our_back)
     monkeypatch.setattr(get_agent_runtime_provider(), "terminate", record_terminate)
     epoch_before = conversation.state_epoch
 

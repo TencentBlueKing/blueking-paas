@@ -34,24 +34,24 @@ def test_list_processes_for_isolated_ai_agent(api_client, bk_cnative_app, bk_sta
 
     with (
         mock.patch(
-            "paas_wl.bk_app.processes.views.list_cnative_module_processes_specs",
+            "paas_wl.bk_app.processes.views.api.list_cnative_module_processes_specs",
             return_value={"default": []},
         ),
         mock.patch(
-            "paas_wl.bk_app.processes.views.ProcInstByEnvListWatcher.list_instances_only",
+            "paas_wl.bk_app.processes.views.api.ProcInstByEnvListWatcher.list_instances_only",
             return_value=processes_info,
         ) as mocked_list_instances,
-        mock.patch("paas_wl.bk_app.processes.views.ProcInstByEnvListWatcher.list") as mocked_list_deployments,
+        mock.patch("paas_wl.bk_app.processes.views.api.ProcInstByEnvListWatcher.list") as mocked_list_deployments,
         mock.patch(
-            "paas_wl.bk_app.processes.views.get_builtin_addr_preferred",
+            "paas_wl.bk_app.processes.views.api.get_builtin_addr_preferred",
             return_value=(False, None),
         ),
         mock.patch(
-            "paas_wl.bk_app.processes.views.get_env_deployed_version_info",
+            "paas_wl.bk_app.processes.views.api.get_env_deployed_version_info",
             return_value=("buildpack", None),
         ),
         mock.patch(
-            "paas_wl.bk_app.processes.views.CNativeListAndWatchProcsViewSet.get_repo_url",
+            "paas_wl.bk_app.processes.views.api.CNativeListAndWatchProcsViewSet.get_repo_url",
             return_value=None,
         ),
     ):

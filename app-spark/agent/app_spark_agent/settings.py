@@ -72,8 +72,9 @@ PORT = env.int("PORT", DEFAULT_AGENT_PORT)
 # 用户应用约定端口。拉起时注入 APP_SPARK_AGENT_APP_PORT；不是 8000 也不拒绝启动。
 APP_PORT = env.int("APP_PORT", DEFAULT_APP_PORT)
 
-# 新项目的模板：模型调 init_project 时，workspace 里 pyproject.toml 与 uv.lock 都不存在才按它
-# 写进去（只改项目名），之后它们就是用户项目的一部分，随代码保存和下载。
+# 新项目的模板：模型调 init_project 时，workspace 里没有 pyproject.toml 才按它写出 pyproject.toml
+# 与 uv.lock（只改项目名），只剩一个 uv.lock 时连它一起重写。之后它们就是用户项目的一部分，随代码
+# 保存和下载。
 APP_TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "app-template"
 
 DEFAULT_PACKAGE_INDEX_URL = "https://mirrors.cloud.tencent.com/pypi/simple"
@@ -150,7 +151,7 @@ _GATEWAY_PROFILE = merge_profile(OpenAIProvider.model_profile("") or {}, _TOOL_A
 # -----------------------------------------------------------------------
 
 # 本会话约定应用日志。位于 workspace / state 之外；日志工具只读这一条，不接受路径参数。
-# 后续会把用户应用 stdout/stderr 接到同一文件。缺省与容器数据盘对齐。
+# launch 把用户应用的 stdout/stderr 和 uv sync 的输出都追加到这个文件。缺省与容器数据盘对齐。
 DEFAULT_APP_LOG_PATH = "/data/app.log"
 APP_LOG_PATH = env.path("APP_LOG_PATH", Path(DEFAULT_APP_LOG_PATH))
 

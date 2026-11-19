@@ -39,7 +39,11 @@ def make_request(user):
 
 async def test_aget_project_or_404_returns_a_project_the_caller_owns(bk_user):
     await Project.objects.acreate(
-        id="spark-demo", name="Spark Demo", creator=bk_user, owner=bk_user, tenant_id=get_tenant(bk_user).id
+        id="spark-demo",
+        name="Spark Demo",
+        creator=bk_user,
+        owner=bk_user,
+        tenant_id=get_tenant(bk_user).id,
     )
 
     project = await aget_project_or_404(make_request(bk_user), "spark-demo")
@@ -50,10 +54,19 @@ async def test_aget_project_or_404_returns_a_project_the_caller_owns(bk_user):
 async def test_aget_project_or_404_hides_projects_the_caller_cannot_reach(bk_user):
     tenant_id = get_tenant(bk_user).id
     await Project.objects.acreate(
-        id="other-owner", name="Theirs", creator=bk_user, owner=create_user().pk, tenant_id=tenant_id
+        id="other-owner",
+        name="Theirs",
+        creator=bk_user,
+        owner=create_user().pk,
+        tenant_id=tenant_id,
     )
     await Project.objects.acreate(
-        id="deleted-demo", name=None, creator=bk_user, owner=bk_user, tenant_id=tenant_id, is_deleted=True
+        id="deleted-demo",
+        name="Deleted Demo",
+        creator=bk_user,
+        owner=bk_user,
+        tenant_id=tenant_id,
+        is_deleted=True,
     )
 
     for project_id in ("missing-demo", "other-owner", "deleted-demo"):

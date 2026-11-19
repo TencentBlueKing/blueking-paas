@@ -38,6 +38,12 @@ class UserSLZ(serializers.Serializer):
     username = serializers.CharField(help_text="用户名，内部版是rtx")
 
 
+class UserProfileOutputSLZ(serializers.Serializer):
+    username = serializers.CharField(help_text="用户名")
+    tenant_id = serializers.CharField(help_text="用户所属租户 ID")
+    role = serializers.IntegerField(help_text="用户在开发者中心的角色")
+
+
 class VerificationCodeSLZ(serializers.Serializer):
     verification_code = VerificationCodeField()
 

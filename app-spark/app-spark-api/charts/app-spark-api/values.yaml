@@ -123,13 +123,25 @@ externalRabbitmq:
 # 仅允许在初次部署时设置，部署后不要切换。
 enableMultiTenantMode: false
 loginFull: ""
-# 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、换 access_token 等）都用这一对；appSecret 不进 Runtime。
-appCode: ""
+# 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、开发者中心等）都用这一对；appSecret 不进 Runtime。
+# 开发者中心网关按 bk-app-spark 预授权了发布要用的资源，换成别的 appCode 要自己去网关申请。
+appCode: "bk-app-spark"
 appSecret: ""
+# 用于签发用户态 AccessToken。注意 AccessToken 会进入用户沙箱，因此需要确保该应用权限可控。
+# 目前该应用只应包含 AIDEV 相关的大模型调用权限，agent.modelSource 为 bkaidev 时必填
+# userAccessTokenAppCode: ""
+# userAccessTokenAppSecret: ""
 # 网关 API 访问地址模板，须含 {api_name}。bkaidev 的 LLM 基址从这里拼。
 # bkApiUrlTmpl: "https://bkapi.example.com/api/{api_name}/"
-# 调用网关时的环境名（stage）。
+# 调用网关时的环境名（stage），各网关没有单独配置时都用它。
 # apigwEnvironment: prod
+# 各网关单独的环境名，例如 bkaidev 用 prod、开发者中心用 stag；不填时用 apigwEnvironment。
+# bkaidevApigwEnvironment: prod
+# bkpaasApigwEnvironment: stag
+# 开发者中心在 API 网关上的网关名，与 bkApiUrlTmpl 拼出系统 API 地址；发布和建项目时注册用户都用它。不同版本不一样，默认 bkpaas3。
+# bkpaasApigwName: bkpaas3
+# 开发者中心前端站点地址，只用来拼发布结果里的开发者中心页面链接；不填时不返回这些链接。
+# bkpaasUrl: ""
 bkAuth:
   # 同时决定换票 backend：bk_token 直连 SSM，其余直连 auth api。
   backendType: bk_token

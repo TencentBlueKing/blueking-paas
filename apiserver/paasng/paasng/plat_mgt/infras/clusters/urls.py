@@ -76,6 +76,12 @@ urlpatterns = [
         views.ClusterComponentViewSet.as_view({"get": "diff_version"}),
         name="plat_mgt.infras.cluster.component.diff_version",
     ),
+    # 集群 e2b 沙箱配置
+    path(
+        "api/plat_mgt/infras/clusters/<str:cluster_name>/e2b_config/",
+        views.ClusterE2BConfigViewSet.as_view({"get": "retrieve", "put": "upsert", "delete": "destroy"}),
+        name="plat_mgt.infras.cluster.e2b_config",
+    ),
     # 集群分配策略相关
     path(
         "api/plat_mgt/infras/cluster_allocation_policy_condition_types/",

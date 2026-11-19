@@ -22,8 +22,10 @@ from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
+from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs.credentials import validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
+from paas_wl.bk_app.cnative.specs.models import AppModelRevision
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
@@ -48,6 +50,11 @@ from paasng.platform.engine.workflow import DeployProcedure, DeployStep
 from paasng.utils.i18n.celery import I18nTask
 
 logger = logging.getLogger(__name__)
+
+
+def _get_revision_proc_names(revision_id: int) -> set[str]:
+    revision = AppModelRevision.objects.get(pk=revision_id)
+    return {proc["name"] for proc in revision.json_value.get("spec", {}).get("processes", [])}
 
 
 @shared_task(base=I18nTask)
@@ -125,7 +132,25 @@ class ImageReleaseMgr(DeployStep):
         if not last_deployment:
             raise DeployShouldAbortError("failed to get processes")
 
+        if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE.value:
+            self._ensure_processes_exist_in_build(build_id)
+
         self.deployment.update_fields(processes=last_deployment.processes)
+
+    def _ensure_processes_exist_in_build(self, build_id: str):
+        """本次发布的进程取自模块当前配置，必须都能在所选镜像构建时的进程里找到，否则容器无法启动"""
+        build = Build.objects.filter(pk=build_id).first()
+        if not (build and build.bkapp_revision_id and self.deployment.bkapp_revision_id):
+            return
+
+        built_procs = _get_revision_proc_names(build.bkapp_revision_id)
+        missing = sorted(_get_revision_proc_names(self.deployment.bkapp_revision_id) - built_procs)
+        if missing:
+            raise DeployShouldAbortError(
+                _("进程 {names} 在所选镜像中不存在，镜像构建后进程配置已变更，请重新构建后再部署").format(
+                    names=", ".join(missing)
+                )
+            )
 
     def _handle_smart_app_description(self) -> DeployHandleResult:
         """Handle the description files for Smart app. Set the implicit_needed flag for process services at the end."""

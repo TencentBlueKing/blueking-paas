@@ -1,49 +1,73 @@
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { defineStore } from 'pinia';
 import Message from '@/common/message';
 import { createStartRunRequest } from '@/common/model-catalog';
 import type { ChatImage, ChatMessage } from '@/components/project/interaction/types';
+import { usePageVisibility } from '@/composables/use-page-visibility';
 import {
   closeConversation,
   createConversation,
   getConversation,
+  getProjectIntRenaming,
   listConversations,
   listHistory,
   listUiEvents,
+  startConversationPreview,
   startConversationRun,
+  stopConversationRun,
 } from '@/http/api';
 import type {
   ConversationHistoryRecord,
   ConversationResponse,
+  ProjectIntRenamingResponse,
   RuntimeStateResponse,
 } from '@/http/types';
 import { ApiErrorCode, isApiError } from '@/http/error-codes';
 import RequestError from '@/http/fetch/request-error';
 import type { AgUiApplyContext } from '@/services/agent/ag-ui';
 import {
+  appendRunError,
   appendUserMessage,
   applyAgUiEvent,
   createApplyContext,
   createWelcomeMessage,
+  currentTurnAssistant,
   getRecordSeq,
   hasConversationContent,
+  markRunStopped,
   readSseEvents,
 } from '@/services/agent/ag-ui';
 import { useModelCatalogStore } from '@/store/model-catalog';
 
 export type ProjectStatus = 'idle' | 'thinking' | 'streaming';
+export type ProjectIntRenamingStatus = 'idle' | ProjectIntRenamingResponse['status'];
+
+type VisibilityRecovery = {
+  kind: 'incremental';
+} | {
+  kind: 'interrupted-run';
+  projectId: string;
+  conversationNumber: number;
+  runGeneration: number;
+  seqBeforeRun: number;
+};
 
 const PREPARING_RUNTIME_TEXT = '正在准备运行环境…';
 /** 回复进行中，历史是分批入库的。两秒补一次，能跟上已经写进来的字，又不会把接口打满。 */
 const CATCH_UP_INTERVAL_MS = 2000;
 /** 追赶接口连续失败这么多次就停，并把输入框放开。成功一次就重新计数。 */
 const MAX_CATCH_UP_FAILURES = 3;
+const INT_RENAMING_POLL_INTERVAL_MS = 2000;
+const INT_RENAMING_MAX_DURATION_MS = 30000;
 
 const createId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 export const useProjectStore = defineStore('project', () => {
   const modelCatalogStore = useModelCatalogStore();
+  const pageVisible = usePageVisibility();
   const projectId = ref('');
+  const projectName = ref('');
+  const intRenamingStatus = ref<ProjectIntRenamingStatus>('idle');
   const conversationNumber = ref<number | null>(null);
   const conversationId = ref('');
   const isLive = ref(true);
@@ -52,15 +76,32 @@ export const useProjectStore = defineStore('project', () => {
   const liveNumber = ref<number | null>(null);
   const uiEventSeq = ref(0);
   const running = ref(false);
+  /** 正在跑的那一轮的 ID，停止时要点名它。直播时取自 RUN_STARTED，其余时候取自会话状态。 */
+  const runId = ref<string | null>(null);
+  /** 本页发出的这一轮还没被 Runtime 接受（多半在准备运行环境），这时还没有 run ID 可点名。 */
+  const awaitingRunStart = ref(false);
+  /** 已经请求停止，等这一轮收尾。回到空闲就清掉，见下面对 status 的 watch。 */
+  const stopping = ref(false);
+  /**
+   * 按停止时这一轮还没有 run ID（还没被 Runtime 接受），停止请求还没发出去。哪条路先拿到 run ID
+   * 就由哪条路补发：直播的 RUN_STARTED，或者 SSE 中断后按会话状态恢复时的 applyState。
+   * 回到空闲就清掉：要么这一轮已经结束，要么换了会话。
+   */
+  let pendingStop: { projectId: string; number: number } | null = null;
   const replicationPending = ref(false);
   // 下一轮能不能直接用现有运行环境；不能时，发消息后要先等运行环境准备好。
   const runtimeReady = ref(false);
   const entering = ref(false);
+  /** 进入会话时发出的「拉起预览」请求还没回来。要先拉 Runtime、恢复工作区，可能要几十秒。 */
+  const previewStarting = ref(false);
+  /** 每回来一次「拉起预览」就加一。预览面板据此重新问状态：之前那次可能在 Runtime 起来前就问完停了。 */
+  const previewStartSeq = ref(0);
   const messages = ref<ChatMessage[]>([createWelcomeMessage()]);
   const status = ref<ProjectStatus>('idle');
   // 首页创建项目时暂存首条需求。只允许目标项目消费一次，避免刷新或切项目后误发。
   const pendingInitialMessage = ref<{
     projectId: string;
+    conversationNumber: number;
     content: string;
     modelId?: string;
   } | null>(null);
@@ -68,6 +109,17 @@ export const useProjectStore = defineStore('project', () => {
   const historyCursor = ref<string | null>(null);
   const loadingEarlier = ref(false);
   const busy = computed(() => status.value !== 'idle' || entering.value);
+  /**
+   * 眼前这一轮能不能停。只剩回写（`replication_pending`）时这一轮已经跑完，没有可停的。
+   * 还在等 Runtime 接受时也算能停：先记下，拿到 run ID 再发，见 :func:`stopRun`。
+   */
+  const canStop = computed(() => (
+    status.value !== 'idle'
+    && !entering.value
+    && isLive.value
+    && !stopping.value
+    && (runId.value != null || awaitingRunStart.value)
+  ));
   /** 还有更早的历史可以往前翻。 */
   const hasEarlierHistory = computed(() => historyCursor.value !== null);
   /** 正在翻看归档：会话已经结束，只能读，发不出新的一轮对话。 */
@@ -79,7 +131,21 @@ export const useProjectStore = defineStore('project', () => {
 
   const applyCtx = createApplyContext(messages.value);
 
+  // 停下的一轮和正常结束的一轮走同一条收尾路线，最后都回到空闲；切走、重置也都会先回到空闲。
+  // 用 sync：同一个 tick 里 idle 之后紧接着又进了下一轮时，不能漏掉这一次。
+  watch(status, (value) => {
+    if (value === 'idle') {
+      stopping.value = false;
+      pendingStop = null;
+    }
+  }, { flush: 'sync' });
+
   let enterToken = 0;
+  // 只认最后一次「拉起预览」：换了会话再回来的旧请求，不能把新会话的标记清掉。
+  let previewStartGeneration = 0;
+  // 还没返回的那次「拉起预览」请求。和代数分开记：切走再回来时界面已经不认它，但它在后端还在
+  // 拉 Runtime，发消息照样要等它。
+  let previewStartInFlight: { projectId: string; number: number; done: Promise<void> } | null = null;
   // 正在读的那一轮 SSE。切项目、换会话都会把消息列表换掉，不中断的话后续事件会写进新列表。
   // 后端这一轮不靠这条连接：abort、刷新页面、网络中断都只让当前页面停止读取，这一轮在 Runtime 里
   // 照常跑完；切回来靠轮询补已入库的内容。
@@ -88,9 +154,22 @@ export const useProjectStore = defineStore('project', () => {
   // 切进一个正在回复的会话时，靠轮询把已经入库的新内容补上。离开或这一轮落定后必须停。
   let catchUpTimer: ReturnType<typeof setTimeout> | null = null;
   let catchUpGeneration = 0;
+  // 从定时器等待开始，到状态及事件请求全部结束为止都算活跃，避免请求在途时因 timer 为空而漏记恢复。
+  let catchUpActive = false;
+  // 普通追赶可以从当前游标继续；中断的 SSE 必须按历史重画，否则会把已经展示的增量再追加一次。
+  let visibilityRecovery: VisibilityRecovery | null = null;
+  let intRenamingGeneration = 0;
+
+  const pauseIncrementalCatchUp = () => {
+    // 中断 SSE 的全量恢复优先级更高，不能被普通追赶覆盖。
+    if (visibilityRecovery?.kind !== 'interrupted-run') {
+      visibilityRecovery = { kind: 'incremental' };
+    }
+  };
 
   const stopCatchUp = () => {
     catchUpGeneration += 1;
+    catchUpActive = false;
     if (catchUpTimer != null) {
       clearTimeout(catchUpTimer);
       catchUpTimer = null;
@@ -101,23 +180,35 @@ export const useProjectStore = defineStore('project', () => {
     liveRunGeneration += 1;
     liveRunAbort?.abort();
     liveRunAbort = null;
+    awaitingRunStart.value = false;
   };
 
   const syncApplyCtx = () => {
     applyCtx.messages = messages.value;
   };
 
-  /** 换了一段要渲染的消息，事件里那些认 id 的索引（消息、工具调用）得跟着清掉。 */
+  /** 换了一段要渲染的消息，事件里那些认 id 的索引（消息、工具调用、思考）得跟着清掉。 */
   const resetApplyCtx = () => {
     applyCtx.messages = messages.value;
     applyCtx.byId = new Map();
     applyCtx.toolCalls = new Map();
+    applyCtx.reasonings = new Map();
   };
 
-  const queueInitialMessage = (id: string, content: string, modelId?: string) => {
+  const queueInitialMessage = (
+    id: string,
+    number: number,
+    content: string,
+    modelId?: string,
+  ) => {
     const text = content.trim();
-    pendingInitialMessage.value = id && text
-      ? { projectId: id, content: text, modelId }
+    pendingInitialMessage.value = id && Number.isInteger(number) && number > 0 && text
+      ? {
+        projectId: id,
+        conversationNumber: number,
+        content: text,
+        modelId,
+      }
       : null;
   };
 
@@ -127,13 +218,103 @@ export const useProjectStore = defineStore('project', () => {
     return pending?.projectId === id ? pending : null;
   };
 
+  const setProjectName = (id: string, name: string) => {
+    if (id === projectId.value && name) projectName.value = name;
+  };
+
+  /**
+   * 仅在「从第一句话创建项目」后调用。任务结束或 30 秒后静默停止；
+   * 用户已手动改名时，页面上的名称不再是占位项目 ID，因此不会被 AI 结果覆盖。
+   */
+  const pollProjectIntRenaming = async (id: string) => {
+    const generation = intRenamingGeneration;
+    const deadline = Date.now() + INT_RENAMING_MAX_DURATION_MS;
+    intRenamingStatus.value = 'pending';
+    while (Date.now() < deadline) {
+      if (generation !== intRenamingGeneration || projectId.value !== id) return;
+      let result: ProjectIntRenamingResponse;
+      try {
+        result = await getProjectIntRenaming(id);
+      } catch {
+        if (generation === intRenamingGeneration && projectId.value === id) {
+          intRenamingStatus.value = 'idle';
+        }
+        return;
+      }
+      if (generation !== intRenamingGeneration || projectId.value !== id) return;
+      if (result.status === 'completed') {
+        if (
+          result.name
+          && (!projectName.value || projectName.value === id || projectName.value === result.name)
+        ) {
+          projectName.value = result.name;
+          intRenamingStatus.value = 'completed';
+        } else {
+          intRenamingStatus.value = 'idle';
+        }
+        return;
+      }
+      if (result.status === 'failed') {
+        intRenamingStatus.value = 'failed';
+        return;
+      }
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        intRenamingStatus.value = 'idle';
+        return;
+      }
+      await new Promise(resolve => setTimeout(
+        resolve,
+        Math.min(INT_RENAMING_POLL_INTERVAL_MS, remaining),
+      ));
+    }
+    if (generation === intRenamingGeneration && projectId.value === id) {
+      intRenamingStatus.value = 'idle';
+    }
+  };
+
+  /**
+   * 请求停止给定的一轮。失败时把按钮放开，好让用户再试；这一轮已经结束则不算失败。
+   */
+  const requestStop = async (targetRunId: string) => {
+    const targetProjectId = projectId.value;
+    const targetNumber = conversationNumber.value;
+    if (!targetProjectId || targetNumber == null) return;
+    const stillThisRun = () => (
+      projectId.value === targetProjectId
+      && conversationNumber.value === targetNumber
+      && runId.value === targetRunId
+    );
+    try {
+      await stopConversationRun(targetProjectId, targetNumber, targetRunId);
+    } catch (error) {
+      // 已经跑完了，要的本来就是它不再跑。收尾照常交给 SSE 或轮询。
+      if (isApiError(error, ApiErrorCode.RUN_NOT_RUNNING) || !stillThisRun()) return;
+      stopping.value = false;
+      Message({ theme: 'error', message: error instanceof Error ? error.message : '停止失败' });
+    }
+  };
+
+  /** 有待补发的停止、并且已经知道这一轮的 run ID 时，把停止请求发出去。 */
+  const flushPendingStop = () => {
+    const pending = pendingStop;
+    if (!pending || !runId.value) return;
+    pendingStop = null;
+    // 换过会话的话，记下的停止属于上一段会话，眼前这一轮不是用户要停的那一轮。
+    if (pending.projectId !== projectId.value || pending.number !== conversationNumber.value) return;
+    void requestStop(runId.value);
+  };
+
   const applyState = (state: RuntimeStateResponse, options?: { syncEventSeq?: boolean }) => {
     conversationNumber.value = state.number;
     conversationId.value = state.conversation_id;
     isLive.value = state.is_live;
     running.value = state.running;
+    runId.value = state.run_id ?? null;
     replicationPending.value = state.replication_pending;
     runtimeReady.value = state.runtime_ready;
+    // 直播的 SSE 在 RUN_STARTED 之前断了，按停止时没能点名的那一轮要靠这里拿到的 run ID 补发。
+    flushPendingStop();
     // 顺手校准「哪个会话是活跃的」。反过来那一支同样重要：我们记着的那个会话被读出来是已结束
     // 的，说明它在别处（另一个标签页、后端回收）被归档了，这里必须忘掉它，否则「返回当前会话」
     // 会指向一个只读的归档。
@@ -150,28 +331,32 @@ export const useProjectStore = defineStore('project', () => {
 
   const reset = () => {
     stopCatchUp();
+    visibilityRecovery = null;
     cancelLiveRun();
+    intRenamingGeneration += 1;
     enterToken += 1;
     projectId.value = '';
+    projectName.value = '';
+    intRenamingStatus.value = 'idle';
     conversationNumber.value = null;
     conversationId.value = '';
     isLive.value = true;
     liveNumber.value = null;
     uiEventSeq.value = 0;
     running.value = false;
+    runId.value = null;
+    awaitingRunStart.value = false;
     replicationPending.value = false;
     runtimeReady.value = false;
     entering.value = false;
+    previewStartGeneration += 1;
+    previewStarting.value = false;
     status.value = 'idle';
     historyCursor.value = null;
     loadingEarlier.value = false;
     messages.value = [createWelcomeMessage()];
     resetApplyCtx();
   };
-
-  const latestAssistant = (ctx: AgUiApplyContext) => (
-    [...ctx.messages].reverse().find(item => item.role === 'assistant')
-  );
 
   /**
    * 把一条事件的作用落到界面上。
@@ -183,7 +368,7 @@ export const useProjectStore = defineStore('project', () => {
    * 由会话状态里的 `running` 说，见 :func:`bindConversation`。
    *
    * `ctx` 必须显式传：回放更早的一页历史用的是一个独立的 ctx（见 `replayHistoryPage`），而
-   * `progress` / `errorText` 都是接在「这一段的最后一条助手消息」上的，认错 ctx 就会把更早那一页
+   * `progress` / `errorText` 都是接在「这一段最后一轮的助手消息」上的，认错 ctx 就会把更早那一页
    * 的进度文字写到当前这一轮的气泡里。
    */
   const applyResult = (
@@ -192,19 +377,12 @@ export const useProjectStore = defineStore('project', () => {
     { trackStatus = true }: { trackStatus?: boolean } = {},
   ) => {
     if (trackStatus && result.status) status.value = result.status;
-    const assistant = latestAssistant(ctx);
+    const assistant = currentTurnAssistant(ctx.messages);
     if (assistant && result.progress !== undefined) {
       assistant.progress = result.progress;
     }
-    if (result.errorText && assistant) {
-      const textBlock = assistant.blocks.find(block => block.type === 'text');
-      if (textBlock && !textBlock.text) {
-        textBlock.text = result.errorText;
-      } else if (!assistant.blocks.some(block => block.type === 'text' && block.text === result.errorText)) {
-        assistant.blocks.push({ type: 'text', text: result.errorText });
-      }
-      assistant.progress = '';
-    }
+    if (result.errorText) appendRunError(ctx, result.errorText);
+    if (result.stopped) markRunStopped(ctx);
   };
 
   const advanceUiEventSeq = (seq: number | null | undefined) => {
@@ -405,11 +583,25 @@ export const useProjectStore = defineStore('project', () => {
   const settleAfterInterruptedRun = async (stillCurrent: () => boolean, seqBeforeRun: number) => {
     const targetProjectId = projectId.value;
     const targetNumber = conversationNumber.value;
+    const runGeneration = liveRunGeneration;
     if (!targetProjectId || targetNumber == null) {
       status.value = 'idle';
       return;
     }
+    const pauseInterruptedRun = () => {
+      visibilityRecovery = {
+        kind: 'interrupted-run',
+        projectId: targetProjectId,
+        conversationNumber: targetNumber,
+        runGeneration,
+        seqBeforeRun,
+      };
+    };
     status.value = 'thinking';
+    if (!pageVisible.value) {
+      pauseInterruptedRun();
+      return;
+    }
 
     let state: RuntimeStateResponse | null = null;
     for (let attempt = 1; attempt <= MAX_CATCH_UP_FAILURES; attempt++) {
@@ -418,6 +610,10 @@ export const useProjectStore = defineStore('project', () => {
         break;
       } catch {
         if (!stillCurrent()) return;
+        if (!pageVisible.value) {
+          pauseInterruptedRun();
+          return;
+        }
         if (attempt === MAX_CATCH_UP_FAILURES) {
           status.value = 'idle';
           Message({ theme: 'error', message: '回复同步失败，刷新页面可重试。' });
@@ -425,10 +621,19 @@ export const useProjectStore = defineStore('project', () => {
         }
         await new Promise(resolve => setTimeout(resolve, CATCH_UP_INTERVAL_MS));
         if (!stillCurrent()) return;
+        if (!pageVisible.value) {
+          pauseInterruptedRun();
+          return;
+        }
       }
     }
     // 问的路上切走了：状态属于上一段会话。
     if (!state || !stillCurrent()) return;
+    if (!pageVisible.value) {
+      applyState(state, { syncEventSeq: false });
+      pauseInterruptedRun();
+      return;
+    }
 
     if (state.running || state.replication_pending || state.ui_event_seq > seqBeforeRun) {
       await bindConversation(state);
@@ -468,23 +673,32 @@ export const useProjectStore = defineStore('project', () => {
    * 停的条件是这轮已经落定，并且本地序号已经追上这次问到的水位。只看到落定还不够：
    * 紧接着的增量请求失败时，最后一批还在库里，下一拍还要再试。
    * 连续失败达到上限就停，并把输入框放开。状态接口正常返回且仍在跑时，继续问。
-   * 离开这个会话也会停，不在后台追别的项目。
+   * 离开这个会话或页面进入后台也会停；恢复可见时先按最新状态追一次，不在后台追别的项目。
    */
-  const scheduleCatchUp = (lockComposer: boolean) => {
+  const scheduleCatchUp = (
+    lockComposer: boolean,
+    { immediate = false, force = false }: { immediate?: boolean; force?: boolean } = {},
+  ) => {
     stopCatchUp();
     if (liveRunAbort) return;
     if (!projectId.value || conversationNumber.value == null) return;
-    if (!running.value && !replicationPending.value) return;
+    if (!force && !running.value && !replicationPending.value) return;
+    if (!pageVisible.value) {
+      pauseIncrementalCatchUp();
+      return;
+    }
 
     const generation = catchUpGeneration;
     const targetProjectId = projectId.value;
     const targetNumber = conversationNumber.value;
     let consecutiveFailures = 0;
+    catchUpActive = true;
     if (lockComposer) status.value = 'thinking';
 
     const still = () => (
       generation === catchUpGeneration
       && !liveRunAbort
+      && pageVisible.value
       && projectId.value === targetProjectId
       && conversationNumber.value === targetNumber
     );
@@ -502,11 +716,15 @@ export const useProjectStore = defineStore('project', () => {
         const stalled = outcome.settled && !caughtUp && uiEventSeq.value === seqBefore;
         const done = outcome.settled && (caughtUp || stalled);
         if (lockComposer) status.value = done ? 'idle' : 'thinking';
-        if (done) return;
+        if (done) {
+          catchUpActive = false;
+          return;
+        }
       } catch {
         if (!still()) return;
         consecutiveFailures += 1;
         if (consecutiveFailures >= MAX_CATCH_UP_FAILURES) {
+          catchUpActive = false;
           status.value = 'idle';
           Message({ theme: 'error', message: '回复同步失败，刷新页面可重试。' });
           return;
@@ -518,10 +736,51 @@ export const useProjectStore = defineStore('project', () => {
       }, CATCH_UP_INTERVAL_MS);
     };
 
-    catchUpTimer = setTimeout(() => {
-      void tick();
-    }, CATCH_UP_INTERVAL_MS);
+    if (immediate) void tick();
+    else {
+      catchUpTimer = setTimeout(() => {
+        void tick();
+      }, CATCH_UP_INTERVAL_MS);
+    }
   };
+
+  const handlePageVisibility = (visible: boolean) => {
+    if (!visible) {
+      if (
+        !liveRunAbort
+        && (
+          catchUpActive
+          || catchUpTimer != null
+          || running.value
+          || replicationPending.value
+        )
+      ) {
+        pauseIncrementalCatchUp();
+      }
+      stopCatchUp();
+      return;
+    }
+    const recovery = visibilityRecovery;
+    visibilityRecovery = null;
+    if (!recovery) return;
+    if (recovery.kind === 'incremental') {
+      // 后台期间状态可能已经结束，先立即按服务端最新状态追一次，再决定是否继续每 2 秒补齐。
+      scheduleCatchUp(true, { immediate: true, force: true });
+      return;
+    }
+
+    const stillCurrent = () => (
+      liveRunGeneration === recovery.runGeneration
+      && projectId.value === recovery.projectId
+      && conversationNumber.value === recovery.conversationNumber
+    );
+    if (!stillCurrent()) return;
+    // SSE 的部分内容已经画过，但事件游标仍停在本轮之前。复用前台中断后的历史重画流程，
+    // 不能从旧游标增量追赶，否则恢复可见时会把已画出的回复再追加一遍。
+    void settleAfterInterruptedRun(stillCurrent, recovery.seqBeforeRun).catch(() => undefined);
+  };
+
+  watch(pageVisible, handlePageVisibility);
 
   /**
    * 历史没拉回来时摆进对话区的那一条。
@@ -571,6 +830,46 @@ export const useProjectStore = defineStore('project', () => {
     if (historyLoaded && stillBound()) scheduleCatchUp(true);
   };
 
+  /**
+   * 进入一个活跃会话时，在后台把它的工作区应用拉起来，不等。
+   *
+   * 查看会话不会拉 Runtime，没有一轮对话模型也不会去启动应用，进入一个已有代码的项目时预览就会
+   * 一直空着。和拉历史并行发：要先拉 Runtime、恢复工作区，比拉历史慢得多。应用已在跑后端不会动它，
+   * 每次进入都发也安全。失败只记日志，预览面板照常按状态显示，不影响对话。
+   *
+   * 对话要等它：两者都会去拉同一个 Runtime，E2B 多 worker 下后到的那个会被 AGENT_WORKSPACE_BUSY
+   * 拒掉，见 sendMessage。
+   */
+  const startPreviewInBackground = (state: RuntimeStateResponse) => {
+    if (!state.is_live || !projectId.value) return;
+    const id = projectId.value;
+    previewStartGeneration += 1;
+    const generation = previewStartGeneration;
+    const stillHere = () => (
+      generation === previewStartGeneration
+      && projectId.value === id
+      && conversationNumber.value === state.number
+    );
+    previewStarting.value = true;
+    const done = startConversationPreview(id, state.number)
+      .then(() => {
+        if (!stillHere()) return;
+        // 后端已经把 Runtime 拉起来了，下一轮不用再等准备运行环境。
+        runtimeReady.value = true;
+      })
+      .catch((error) => {
+        if (!stillHere()) return;
+        console.warn('[project] 拉起预览失败', error);
+      })
+      .finally(() => {
+        if (previewStartInFlight?.done === done) previewStartInFlight = null;
+        if (generation !== previewStartGeneration) return;
+        previewStarting.value = false;
+        previewStartSeq.value += 1;
+      });
+    previewStartInFlight = { projectId: id, number: state.number, done };
+  };
+
   /** 项目里还活着的那个会话，一个都没有则返回 null。 */
   const findLiveConversation = async (id: string): Promise<ConversationResponse | null> => {
     const listed = await listConversations(id, {
@@ -614,6 +913,7 @@ export const useProjectStore = defineStore('project', () => {
       liveNumber.value = null;
     }
     running.value = false;
+    runId.value = null;
     replicationPending.value = false;
     runtimeReady.value = false;
     uiEventSeq.value = 0;
@@ -632,18 +932,28 @@ export const useProjectStore = defineStore('project', () => {
     }
   };
 
-  const enterProject = async (id: string) => {
+  const enterProject = async (id: string, preferredNumber?: number) => {
     reset();
     const token = enterToken;
     projectId.value = id;
     entering.value = true;
     try {
+      if (preferredNumber != null) {
+        const state = await getConversation(id, preferredNumber);
+        if (token !== enterToken) return;
+        await bindConversation(state);
+        return;
+      }
       const live = await findLiveConversation(id);
       if (token !== enterToken) return;
       if (!live) {
         const state = await startNewConversation(id);
         if (token !== enterToken) return;
-        await bindConversation(state);
+        // 项目可能是旧的：没有活跃会话时新建一个，workspace 里照样是之前写好的代码。
+        // bindConversation 先把会话编号定下来，这里不 await 它的历史，才能和拉历史并行。
+        const bound = bindConversation(state);
+        startPreviewInBackground(state);
+        await bound;
         return;
       }
       let state: RuntimeStateResponse;
@@ -656,7 +966,9 @@ export const useProjectStore = defineStore('project', () => {
         return;
       }
       if (token !== enterToken) return;
-      await bindConversation(state);
+      const bound = bindConversation(state);
+      startPreviewInBackground(state);
+      await bound;
     } finally {
       if (token === enterToken) entering.value = false;
     }
@@ -674,7 +986,10 @@ export const useProjectStore = defineStore('project', () => {
     try {
       const state = await getConversation(project, number);
       if (token !== enterToken || projectId.value !== project) return;
-      await bindConversation(state);
+      // 归档只读，不拉；回到活跃会话时拉，它的 Runtime 可能在翻归档期间被空闲回收了。
+      const bound = bindConversation(state);
+      startPreviewInBackground(state);
+      await bound;
     } finally {
       if (token === enterToken) entering.value = false;
     }
@@ -733,7 +1048,9 @@ export const useProjectStore = defineStore('project', () => {
       if (!stillHere()) return;
       const created = await createConversation(id);
       if (!stillHere()) return;
-      await bindConversation(created);
+      const bound = bindConversation(created);
+      startPreviewInBackground(created);
+      await bound;
     } catch (error) {
       if (!stillHere()) return;
       await recoverConversationView(id, viewedNumber);
@@ -770,6 +1087,24 @@ export const useProjectStore = defineStore('project', () => {
       page,
       page_size: pageSize,
     });
+  };
+
+  /**
+   * 停下眼前正在跑的那一轮。
+   *
+   * 只发请求，不改 status：被停下的一轮照常收尾，直播的 SSE 以 RUN_FINISHED 结束，补历史的轮询
+   * 看到 `running` 变回 false，界面沿原路回到空闲。这一轮还没被 Runtime 接受时没有 run ID，只先
+   * 记下，拿到 run ID 时补发，见 `pendingStop`；不能 abort 本页的请求代替，那只会让本页不再读，
+   * Runtime 照样会接下这一轮。
+   */
+  const stopRun = async () => {
+    if (!canStop.value) return;
+    stopping.value = true;
+    if (runId.value) {
+      await requestStop(runId.value);
+    } else if (projectId.value && conversationNumber.value != null) {
+      pendingStop = { projectId: projectId.value, number: conversationNumber.value };
+    }
   };
 
   // TODO: 项目对话暂不上传图片，后续再接入
@@ -817,6 +1152,8 @@ export const useProjectStore = defineStore('project', () => {
     messages.value.push(userMessage, assistantMessage);
     syncApplyCtx();
     status.value = 'thinking';
+    runId.value = null;
+    awaitingRunStart.value = true;
 
     // 经响应式代理改 progress：直接改 assistantMessage 这个原始对象，界面不会跟着变。
     const liveAssistant = messages.value[messages.value.length - 1];
@@ -839,6 +1176,14 @@ export const useProjectStore = defineStore('project', () => {
       .catch(() => undefined);
 
     try {
+      // 「拉起预览」还在拉这个会话的 Runtime 时先等它回来，失败也照常发。两边同时拉，跨 worker 时
+      // 后到的这一轮会被 AGENT_WORKSPACE_BUSY 拒掉。它回来时 Runtime 已经起来并恢复好，这一轮
+      // 本来也要做这些，几乎不多等。
+      const pendingPreview = previewStartInFlight;
+      if (pendingPreview?.projectId === runProjectId && pendingPreview.number === runNumber) {
+        await pendingPreview.done;
+        if (!stillCurrent()) return;
+      }
       const response = await startConversationRun(
         runProjectId,
         runNumber,
@@ -853,6 +1198,14 @@ export const useProjectStore = defineStore('project', () => {
           preparingOver = true;
           // 开始输出，运行环境已就绪。只清自己设的那句，事件带来的进度留给 applyResult。
           if (liveAssistant.progress === PREPARING_RUNTIME_TEXT) liveAssistant.progress = '';
+        }
+        if (event.type === 'RUN_STARTED' && awaitingRunStart.value) {
+          awaitingRunStart.value = false;
+          if (typeof event.runId === 'string' && event.runId) {
+            runId.value = event.runId;
+            // 准备运行环境期间就按了停止。
+            flushPendingStop();
+          }
         }
         if (event.type === 'RUN_FINISHED') sawRunFinished = true;
         syncApplyCtx();
@@ -881,9 +1234,11 @@ export const useProjectStore = defineStore('project', () => {
       preparingOver = true;
       if (liveRunAbort === controller) liveRunAbort = null;
       if (stillCurrent()) {
+        awaitingRunStart.value = false;
         assistantMessage.progress = '';
         const textBlock = assistantMessage.blocks.find(block => block.type === 'text');
-        if (textBlock && !textBlock.text) {
+        // 被停下的一轮自己会标「已停止」，不用再补这一句。
+        if (textBlock && !textBlock.text && !assistantMessage.stopped) {
           textBlock.text = '本轮对话已结束。';
         }
         if (!sawRunFinished && !refused) {
@@ -909,14 +1264,21 @@ export const useProjectStore = defineStore('project', () => {
 
   return {
     projectId,
+    projectName,
+    intRenamingStatus,
     conversationNumber,
     conversationId,
     isLive,
     liveNumber,
     uiEventSeq,
     running,
+    runId,
+    stopping,
+    canStop,
     replicationPending,
     entering,
+    previewStarting,
+    previewStartSeq,
     messages,
     status,
     busy,
@@ -934,6 +1296,9 @@ export const useProjectStore = defineStore('project', () => {
     fetchArchivedConversations,
     queueInitialMessage,
     consumeInitialMessage,
+    setProjectName,
+    pollProjectIntRenaming,
     sendMessage,
+    stopRun,
   };
 });

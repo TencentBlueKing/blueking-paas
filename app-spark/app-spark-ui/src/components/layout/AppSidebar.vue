@@ -4,27 +4,31 @@
     aria-label="主导航"
   >
     <router-link
+      v-bk-tooltips="{ content: '首页', placement: 'right', disabled: !collapsed }"
       class="app-sidebar__item"
       :to="{ name: 'home' }"
-      :title="collapsed ? '首页' : undefined"
     >
       <AppIcon name="home" />
       <span class="app-sidebar__label">首页</span>
     </router-link>
     <router-link
+      v-bk-tooltips="{ content: '项目列表', placement: 'right', disabled: !collapsed }"
       class="app-sidebar__item"
       :to="{ name: 'projects' }"
-      :title="collapsed ? '项目列表' : undefined"
     >
       <AppIcon name="list" />
       <span class="app-sidebar__label">项目列表</span>
     </router-link>
     <button
+      v-bk-tooltips="{
+        content: collapsed ? '展开侧边栏' : '收起侧边栏',
+        placement: 'right',
+        disabled: !collapsed,
+      }"
       type="button"
       class="app-sidebar__toggle"
       :aria-expanded="!collapsed"
       :aria-label="collapsed ? '展开侧边栏' : '收起侧边栏'"
-      :title="collapsed ? '展开' : undefined"
       @click="toggle"
     >
       <AppIcon :name="collapsed ? 'panel-left-open' : 'panel-left-close'" />
@@ -38,16 +42,21 @@ import { ref } from 'vue';
 import AppIcon from '@/components/AppIcon.vue';
 
 const STORAGE_KEY = 'app-spark:sidebar';
-const collapsed = ref(false);
+const ROOT_CLASS = 'is-sidebar-collapsed';
+const root = document.documentElement;
+const collapsed = ref(root.classList.contains(ROOT_CLASS));
 
 try {
-  collapsed.value = localStorage.getItem(STORAGE_KEY) === 'collapsed';
+  collapsed.value = collapsed.value || localStorage.getItem(STORAGE_KEY) === 'collapsed';
+  root.classList.toggle(ROOT_CLASS, collapsed.value);
 } catch {
   collapsed.value = false;
+  root.classList.remove(ROOT_CLASS);
 }
 
 const toggle = () => {
   collapsed.value = !collapsed.value;
+  root.classList.toggle(ROOT_CLASS, collapsed.value);
   try {
     localStorage.setItem(STORAGE_KEY, collapsed.value ? 'collapsed' : 'expanded');
   } catch {
@@ -67,6 +76,7 @@ const toggle = () => {
   overflow: hidden;
   background: #fff;
   border-right: 1px solid var(--line);
+  transition: flex-basis 200ms ease, width 200ms ease;
 }
 
 .app-sidebar.is-collapsed {
@@ -92,7 +102,7 @@ const toggle = () => {
   border: 0;
   border-radius: 10px;
   cursor: pointer;
-  transition: color 120ms ease, background-color 120ms ease;
+  transition: color 120ms ease, background-color 120ms ease, gap 200ms ease;
 }
 
 .app-sidebar__item :deep(.app-icon),
@@ -136,13 +146,10 @@ const toggle = () => {
   font-size: 13px;
 }
 
-.app-sidebar__item:focus-visible {
+.app-sidebar__item:focus-visible,
+.app-sidebar__toggle:focus-visible {
   outline: 2px solid var(--accent-focus);
   outline-offset: 2px;
-}
-
-.app-sidebar__toggle:focus-visible {
-  outline: none;
 }
 
 @media (max-width: 760px) {
@@ -152,6 +159,7 @@ const toggle = () => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .app-sidebar,
   .app-sidebar__item,
   .app-sidebar__toggle,
   .app-sidebar__label {

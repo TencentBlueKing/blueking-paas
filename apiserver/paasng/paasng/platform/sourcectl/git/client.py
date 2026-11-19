@@ -138,10 +138,50 @@ class GitCloneCommand(GitCommand):
         return [user_info + "@"]
 
 
+class GitFetchCommand(GitCommand):
+    def __init__(
+        self,
+        git_filepath: str,
+        repository: MutableURL,
+        refspecs: List[str],
+        args: Optional[List[str]] = None,
+        cwd: str = "",
+        envs: Optional[Dict] = None,
+    ):
+        """
+        Name
+               git-fetch - Download objects and refs from another repository
+        SYNOPSIS
+               git fetch [<options>] [--] <repository> [<refspec>...]
+        """
+        super().__init__(git_filepath=git_filepath, command="fetch", args=args, cwd=cwd, envs=envs)
+        self.repository = repository
+        self.refspecs = refspecs
+
+    def to_cmd(self, obscure: bool = False) -> List[str]:
+        cmd = super().to_cmd(obscure=obscure)
+        cmd.append("--")
+        cmd.extend([str(self.repository.obscure()) if obscure else str(self.repository), *self.refspecs])
+        return cmd
+
+    def get_sensitive_texts(self) -> List[str]:
+        """Get sensitive texts in the current command, the texts must not be displayed
+        to the user or written to the logs.
+        """
+        netloc = self.repository.netloc
+        if not netloc:
+            return []
+
+        user_info, have_info, _ = netloc.rpartition("@")
+        if not have_info:
+            return []
+        # Consider the user info as sensitive because it contains password
+        return [user_info + "@"]
+
+
 class GitClient:
     """Git 客户端"""
 
-    COMMIT_INFO_REGEX = re.compile(r"(?P<ts>(\d+))/(?P<msg>[\S\s]*)", re.MULTILINE)
     META_GIT_DIR = ".git"
     _git_filepath = "git"
     _default_timeout = 600
@@ -186,18 +226,28 @@ class GitClient:
         )
         return self.run(command)
 
-    def clone_no_blob(self, url: Union[str, MutableURL], path: Path) -> str:
-        """克隆仓库，但忽略所有的文件内容，仅下载 trees, commit 元信息。速度比普通 clone 更快。
+    def fetch_ref_tips(self, url: Union[str, MutableURL], path: Path) -> str:
+        """拉取远端所有分支与标签指向的提交，仅下载 commit 与 tag 对象，不下载 tree 与 blob。速度比 clone 更快。
 
         :param url: 仓库地址
-        :param path: 存储路径
-        :return: 返回 clone 命令执行结果
+        :param path: 已初始化的 Git 仓库路径
+        :return: 返回 fetch 命令执行结果
         """
-        args = ["--filter=blob:none", "--no-checkout"]
-        command = GitCloneCommand(
+        # 在执行 Git 操作前校验 URL 安全性，防止历史脏数据绕过
+        url_str = str(url)
+        try:
+            validate_repo_url(url_str)
+        except ValueError as e:
+            raise GitURLValidationError(str(e))
+
+        # Store branches in "refs/remotes/origin/" as same as cloning, so they can be parsed by `parse_ref`
+        refspecs = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
+        # "--depth=1" skips all ancestor commits, "--filter=tree:0" skips all trees and blobs
+        args = ["--depth=1", "--filter=tree:0", "--no-tags"]
+        command = GitFetchCommand(
             git_filepath=self._git_filepath,
-            repository=MutableURL(url),
-            target_directory=".",
+            repository=MutableURL(url_str),
+            refspecs=refspecs,
             args=args,
             cwd=str(path),
         )
@@ -246,33 +296,51 @@ class GitClient:
         return self.run(command)
 
     def list_refs(self, path: Path) -> Generator[Ref, None, None]:
-        """获取所有分支和标签。
+        """获取所有分支和标签。附注标签使用其指向的提交，未指向提交的引用会被忽略。
 
         :param path: Git 仓库所在的路径。
         """
-        command = GitCommand(git_filepath=self._git_filepath, command="show-ref", cwd=str(path))
-        output = self.run(command)
-        for line in output.splitlines():
-            if not line:
-                continue
-
-            commit_id, ref = line.strip().split(None)
+        # Fields starting with "*" are the object which the annotated tag points to, empty for other refs
+        fields = [
+            "%(refname)",
+            "%(objectname)",
+            "%(committerdate:unix)",
+            "%(contents)",
+            "%(*objectname)",
+            "%(*committerdate:unix)",
+            "%(*contents)",
+        ]
+        # Every field ends with NUL, which is not allowed in commit messages by git
+        command = GitCommand(
+            git_filepath=self._git_filepath,
+            command="for-each-ref",
+            args=["--format=" + "".join(f"{field}%00" for field in fields)],
+            cwd=str(path),
+        )
+        values = self.run(command).split("\0")
+        # The text after the last NUL is the trailing newline, ignore it
+        for i in range(0, len(values) - len(fields) + 1, len(fields)):
+            ref, commit_id, commit_ts, message, peeled_id, peeled_ts, peeled_message = values[i : i + len(fields)]
+            # Each record ends with a newline, and the warnings in stderr(merged into stdout) may be
+            # printed before the output, so the ref name is always on the last line.
+            ref = ref.rsplit("\n", 1)[-1]
             parsed_obj = self.parse_ref(ref)
             if not parsed_obj:
                 continue
 
-            try:
-                commit_info = self._get_commit_info(path, commit_id)
-            except GitCommandExecutionError:
-                logger.warning("failed to get commit info from %s", commit_id)
+            if peeled_ts:
+                commit_id, commit_ts, message = peeled_id, peeled_ts, peeled_message
+            elif not commit_ts:
+                logger.warning("ref %s does not point to a commit, skip it", ref)
                 continue
 
             yield Ref(
                 commit_id=commit_id,
                 type=parsed_obj[0],
                 name=parsed_obj[1],
-                commit_time=commit_info["time"],
-                message=commit_info["message"],
+                commit_time=datetime.fromtimestamp(int(commit_ts)),
+                # Keep the trailing newline as the output of "git show --format=%B" used before
+                message=message + "\n",
             )
 
     def clean_meta_info(self, path: Path):
@@ -315,21 +383,6 @@ class GitClient:
         """推送 git 提交记录到远程仓库"""
         command = GitCommand(git_filepath=self._git_filepath, command="push", cwd=str(path), envs=envs)
         return self.run(command)
-
-    def _get_commit_info(self, path: Path, commit_id: str) -> dict:
-        """获取 commit 详情"""
-        command = GitCommand(
-            git_filepath=self._git_filepath,
-            command="show",
-            args=["-s", "--format=%ct/%B", commit_id],
-            cwd=str(path),
-        )
-        output = self.run(command)
-        matched = re.match(self.COMMIT_INFO_REGEX, output)
-        if not matched:
-            raise GitCommandExecutionError(f"无法解析 commit 信息：{output}")
-
-        return {"time": datetime.fromtimestamp(int(matched.groupdict()["ts"])), "message": matched.groupdict()["msg"]}
 
     @staticmethod
     def parse_ref(ref: str) -> Optional[Tuple[str, str]]:

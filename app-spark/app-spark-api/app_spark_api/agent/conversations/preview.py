@@ -41,7 +41,7 @@ from urllib.parse import quote, urljoin, urlsplit
 import httpx2
 from django.http import StreamingHttpResponse
 
-from app_spark_api.error_codes import error_codes
+from app_spark_api.utils.api_errors.error_codes import error_codes
 from app_spark_api.utils.urls import reverse_public
 
 if TYPE_CHECKING:

@@ -28,7 +28,7 @@ After editing Python files, run `uv run ruff format {filename}` and `uv run mypy
 
 ## User project dependencies
 
-* Each workspace owns its `pyproject.toml` and `uv.lock`. The model creates them from `app-template/` with the `init_project` tool when it starts writing code; nothing is written at run start, so a chat-only turn leaves no commit. Every launch runs `uv sync` into `<workspace>/.venv`. See README "项目依赖".
+* Each workspace owns its `pyproject.toml` and `uv.lock`. The model creates them from `app-template/` with the `init_project` tool when it starts writing code; nothing is written at run start, so a chat-only turn leaves no commit. Every launch runs `uv sync` into `<workspace>/.venv`. See docs/user_app_arch.md "项目依赖".
 * Changing the template's dependencies means editing `app-template/pyproject.toml`, running `make lock-app-template`, and updating the package list in `settings.INSTRUCTIONS`. `tests/test_project_env.py` enforces all three.
 
 ## Running tests

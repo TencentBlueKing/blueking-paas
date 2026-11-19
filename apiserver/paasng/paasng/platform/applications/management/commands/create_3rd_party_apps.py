@@ -19,8 +19,10 @@ import base64
 import logging
 import os
 from dataclasses import dataclass
+from typing import Optional
 
 import yaml
+from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
@@ -67,7 +69,8 @@ class Simple3rdAppDesc:
     introduction_en: str
     source_tp_url: str
     region: str = "default"
-    creator: str = settings.ADMIN_USERNAME
+    # 编码后的用户 ID，未指定时使用平台内置管理员（settings.ADMIN_USERNAME）
+    creator: Optional[str] = None
 
 
 class Command(BaseCommand):
@@ -101,6 +104,8 @@ class Command(BaseCommand):
         env_init_codes = os.getenv("PAAS_THIRD_APP_INIT_CODES", "")
         env_init_code_list = env_init_codes.split(",") if env_init_codes else []
 
+        # 按用户名编码，多租户下各租户的内置管理员 ID 不同，暂不区分
+        default_creator = user_id_encoder.encode(settings.USER_TYPE, settings.ADMIN_USERNAME)
         with open(source, "r") as f:
             apps = yaml.safe_load(f)
             for app in apps:
@@ -121,6 +126,9 @@ class Command(BaseCommand):
                 if (not override) and legacy_app:
                     logger.info("app(code:%s) exists in PaaS2.0, skip create", desc.code)
                     continue
+
+                if not desc.creator:
+                    desc.creator = default_creator
 
                 logger.info("going to create App according to desc: %s", f"{desc.name} - {desc.code}")
                 already_in_paas2 = bool(legacy_app)

@@ -1,7 +1,13 @@
 ### Function Description
-Bind an addon service to an application module. `plan_id` / `env_plan_id_map` are optional; the platform picks a default plan when omitted.
+Bind an addon service to an application module.
 
-Recommended flow: call `list_module_services` to get the service `uuid`, then call this API. Redeploy after binding so credentials are injected as environment variables.
+Recommended flow: call `list_module_services` to get the service `uuid`, call `list_service_possible_plans` for the plans, then call this API:
+
+- `has_multiple_plans` is false: omit `plan_id` / `env_plan_id_map`; the platform uses the only plan.
+- `static_plans` returned: pass one of them as `plan_id`.
+- `env_specific_plans` returned: pass `env_plan_id_map` with a plan from each environment's own list; `plan_id` fails when an environment lacks that plan.
+
+Omitting the plan while multiple plans exist fails with "unable to get available service plans". Redeploy after binding so credentials are injected as environment variables.
 
 ### Request Parameters
 
@@ -14,7 +20,7 @@ None.
 | code | string | Yes | Application ID |
 | service_id | string | Yes | Addon service UUID from `list_module_services` `unbound[].uuid` |
 | module_name | string | No | Module name; defaults to the application's default module |
-| plan_id | string | No | Explicit plan ID |
+| plan_id | string | No | Plan ID used by all environments |
 | env_plan_id_map | object | No | Per-environment plan IDs, e.g. `{"stag": "<plan_id>", "prod": "<plan_id>"}` |
 
 ### Request Example

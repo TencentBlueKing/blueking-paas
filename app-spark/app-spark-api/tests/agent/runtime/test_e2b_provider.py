@@ -287,22 +287,19 @@ def agent_health(monkeypatch) -> SimpleNamespace:
 
     healthy answers the probes made while an Agent starts. A reused Agent is read apart from
     that: its next reuse_failures reads go unanswered, and running says whether it holds a
-    turn.
+    turn. model_ready is what every answer, at start or on reuse, says about the model.
     """
     state = SimpleNamespace(
-        healthy=True, probes=0, probing=asyncio.Event(), reuse_failures=0, running=False, reuse_reads=0
+        healthy=True,
+        probes=0,
+        probing=asyncio.Event(),
+        reuse_failures=0,
+        running=False,
+        reuse_reads=0,
+        model_ready=True,
     )
 
-    async def probe(_handle: AgentRuntimeHandle, **_opts: object) -> bool:
-        state.probes += 1
-        state.probing.set()
-        return state.healthy
-
-    async def read(_handle: AgentRuntimeHandle, **_opts: object) -> RuntimeHealth | None:
-        state.reuse_reads += 1
-        if state.reuse_failures > 0:
-            state.reuse_failures -= 1
-            return None
+    def make_health() -> RuntimeHealth:
         return RuntimeHealth(
             model="fake:write-file",
             conversation_id=None,
@@ -310,7 +307,20 @@ def agent_health(monkeypatch) -> SimpleNamespace:
             log_seq=0,
             ui_event_seq=0,
             running=state.running,
+            model_ready=state.model_ready,
         )
+
+    async def probe(_handle: AgentRuntimeHandle, **_opts: object) -> RuntimeHealth | None:
+        state.probes += 1
+        state.probing.set()
+        return make_health() if state.healthy else None
+
+    async def read(_handle: AgentRuntimeHandle, **_opts: object) -> RuntimeHealth | None:
+        state.reuse_reads += 1
+        if state.reuse_failures > 0:
+            state.reuse_failures -= 1
+            return None
+        return make_health()
 
     # 探测函数和间隔在 health / constants 上按名字查找，补丁要打在使用处。
     monkeypatch.setattr(e2b_module.health, "probe_agent_health", probe)
@@ -1030,6 +1040,46 @@ async def test_an_agent_whose_process_is_gone_is_replaced_without_waiting(e2b, p
     assert agent_health.reuse_reads == 1
     old = await E2BSandboxRecord.objects.aget(sandbox_id="sbx-1")
     assert old.stop_reason == "unhealthy"
+
+
+async def test_an_agent_started_without_a_usable_model_fails_the_start(e2b, provider, agent_health):
+    """模型没就绪也会回 /health。启动这一步就要拦下并说明注入了什么，不能把沙箱交出去等第一轮 503。"""
+    project_id, conversation_id = ids()
+    agent_health.model_ready = False
+
+    async def resolve_keyless_access() -> ModelAccess:
+        return DirectModelAccess(model="deepseek:deepseek-v4-flash")
+
+    with pytest.raises(AgentProvisionError, match="without a usable model") as exc_info:
+        await provider.ensure(
+            project_id=project_id, conversation_id=conversation_id, model_access=resolve_keyless_access
+        )
+
+    assert "MODEL=fake:write-file" in str(exc_info.value)
+    assert "['APP_SPARK_AGENT_MODEL']" in str(exc_info.value)
+    assert e2b.sandboxes["sbx-1"].killed
+    record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
+    assert (record.active_conversation_id, record.agent_pid, record.stop_reason) == (None, None, "failed")
+
+
+async def test_a_reused_agent_without_a_usable_model_is_replaced(e2b, provider, agent_health):
+    """模型变量只在启动时注入。复用到一台没就绪的沙箱就换掉，新沙箱按现在的配置重新注入。"""
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    agent_health.model_ready = False
+
+    # 配置已经修好：新沙箱里的 Agent 是就绪的。
+    async def fix_the_model(_call: int) -> None:
+        agent_health.model_ready = True
+
+    e2b.on_create = fix_the_model
+
+    replacement = await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+
+    assert replacement.base_url.endswith("sbx-2.sandbox.example")
+    assert e2b.sandboxes["sbx-1"].events == ["stop", "kill"]
+    old = await E2BSandboxRecord.objects.aget(sandbox_id="sbx-1")
+    assert (old.active_conversation_id, old.stop_reason) == (None, "model_unready")
 
 
 # --- 最长存活期 ------------------------------------------------------------------------------

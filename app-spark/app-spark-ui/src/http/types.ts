@@ -29,10 +29,8 @@ export interface AnonymousUserResponse {
 
 export type UserInfoResponse = AuthenticatedUserResponse | AnonymousUserResponse;
 
-export interface ProjectCreateRequest {
-  /** 全局唯一，2-20 个字符，小写字母开头，仅含小写字母、数字与连字符 */
-  id: string;
-  /** 同租户内唯一，1-20 个字符 */
+export interface ProjectRenameRequest {
+  /** 不要求唯一，1-20 个字符 */
   name: string;
 }
 
@@ -43,7 +41,88 @@ export interface ProjectResponse {
   updated_at: string;
 }
 
+export interface ProjectFromPromptRequest {
+  content: string;
+}
+
+export interface ProjectFromPromptResponse {
+  project: ProjectResponse;
+  conversation: ConversationResponse;
+}
+
+export interface ProjectIntRenamingResponse {
+  status: 'pending' | 'completed' | 'failed';
+  name: string | null;
+  completed_at: string | null;
+  error_at: string | null;
+  error_msg: string;
+}
+
 export type PagedProjectResponse = PagedResponse<ProjectResponse>;
+
+export interface PublicationOnlineVersion {
+  version_id: string;
+  url: string;
+  published_at: string | null;
+}
+
+export type PublicationTaskStage = 'binding' | 'packaging' | 'uploading' | 'deploying';
+
+export interface PublicationTask {
+  kind: 'deployment';
+  version_id: string;
+  is_update: boolean;
+  stage: PublicationTaskStage;
+  started_at: string;
+}
+
+export interface PublicationFailure {
+  kind: 'deployment';
+  version_id: string;
+  is_update: boolean;
+  error: string;
+  failed_at: string | null;
+  detail_url: string | null;
+}
+
+export interface PublicationUnseenResult {
+  kind: 'deployment';
+  status: 'successful' | 'failed';
+}
+
+export interface PublicationDevCenterLinks {
+  logs: string;
+  deployments: string;
+  env_vars: string;
+  members: string;
+}
+
+export interface PublicationResponse {
+  online: PublicationOnlineVersion | null;
+  task: PublicationTask | null;
+  last_failure: PublicationFailure | null;
+  unseen_result: PublicationUnseenResult | null;
+  app_code: string | null;
+  default_app_name: string | null;
+  /** 当前接口契约字段；部分已部署环境仍返回旧字段 bkpaas_links。 */
+  dev_center_links?: PublicationDevCenterLinks | null;
+  bkpaas_links?: PublicationDevCenterLinks | null;
+  latest_version_id: string | null;
+}
+
+export interface PublicationDeploymentRequest {
+  app_name?: string;
+}
+
+/** 首次发布时某个蓝鲸应用名能否使用。 */
+export interface PublicationAppNameValidationRet {
+  /** 按开发者中心规则过滤、截断后实际会用的名称；什么也不剩时为空字符串。 */
+  name: string;
+  is_available: boolean;
+  /** 开发者中心的错误码。`unique` 表示已被占用；其余原样传来。能用时为 null。 */
+  problem: string | null;
+  message: string | null;
+}
 
 /** Agent 提交代码时用的机器身份，不是终端用户。 */
 export interface GitCommitIdentity {
@@ -136,6 +215,19 @@ export interface PreviewResponse {
   origin: string;
   direct: boolean;
   dev_server_status: DevServerStatus | null;
+}
+
+/** POST .../conversations/{number}/preview/start/ */
+export interface PreviewStartResponse {
+  /**
+   * starting：已在拉起，或本来就在跑；no_project：工作区里还没有可启动的项目，不是错误。
+   */
+  outcome: 'starting' | 'no_project';
+}
+
+/** POST .../conversations/{number}/runs/{run_id}/stop/，202：停止请求已交给 Runtime */
+export interface RunStopResponse {
+  run_id: string;
 }
 
 export type ModelCatalogSource = 'bkaidev' | 'direct';

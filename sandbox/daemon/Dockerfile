@@ -15,7 +15,8 @@ RUN go mod download
 COPY . .
 
 # make build 会同时生成 swagger 文档并产出 build/daemon
-RUN make build
+ARG VERSION
+RUN make build VERSION="${VERSION:-$(git describe --always)}"
 
 # -------------- runner container --------------
 FROM alpine:3.22

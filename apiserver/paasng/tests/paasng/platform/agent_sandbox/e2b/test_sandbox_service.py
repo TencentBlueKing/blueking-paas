@@ -83,6 +83,7 @@ class FakeGateway:
         self.created_payloads = []
         self.killed = []
         self.timeouts = []
+        self.connects = []
 
     def __call__(self, config):
         self.configs.append(config)
@@ -124,6 +125,11 @@ class FakeGateway:
         self.timeouts.append((sandbox_id, timeout))
         self._maybe_raise("set_timeout")
 
+    def connect_sandbox(self, sandbox_id, timeout):
+        self.connects.append((sandbox_id, timeout))
+        self._maybe_raise("connect_sandbox")
+        return dict(self.get_response)
+
     def _maybe_raise(self, method: str):
         if exc := self.errors.get(method):
             raise exc
@@ -158,6 +164,15 @@ class TestCreate:
         assert record.template_id == "e2b-envd"
         assert record.status == E2BSandboxStatus.RUNNING.value
         assert record.expired_at is not None
+
+    @pytest.mark.parametrize("backfilled", ["", "other-tpl"])
+    def test_records_sent_template_id_regardless_of_backfill(self, gateway, bk_app, backfilled):
+        """响应里的 templateID 是网关按实例标签回填的，回填不上或不一致时都以平台发出的为准"""
+        gateway.create_response = _create_response(templateID=backfilled)
+
+        sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd"})
+
+        assert E2BSandbox.objects.get(sandbox_id=SANDBOX_ID).template_id == "e2b-envd"
 
     def test_rewrites_data_plane_address(self, gateway, bk_app):
         """集群内域名换成对外地址，SDK 拿它拼数据面 URL。"""
@@ -345,3 +360,39 @@ class TestSetTimeout:
         sandboxes.set_sandbox_timeout(bk_app, SANDBOX_ID, 600)
 
         assert gateway.timeouts == [(SANDBOX_ID, 600)]
+
+
+class TestConnect:
+    def test_forwards_timeout_and_rewrites_address(self, gateway, bk_app):
+        """SDK 拿响应里的 domain 与令牌重建数据面连接，两者都必须是可用的新值。"""
+        _record(bk_app)
+        gateway.get_response = _create_response(envdAccessToken="refreshed-token")
+
+        resp = sandboxes.connect_sandbox(bk_app, SANDBOX_ID, 600)
+
+        assert gateway.connects == [(SANDBOX_ID, 600)]
+        assert resp["domain"] == DATA_PLANE_ADDRESS
+        assert resp["envdAccessToken"] == "refreshed-token"
+
+    def test_other_application_is_not_found(self, gateway, bk_app, bk_app_full):
+        """归属不对的与不存在的不作区分，也不能续到别人的沙箱。"""
+        _record(bk_app_full)
+
+        with pytest.raises(E2BSandboxNotFound):
+            sandboxes.connect_sandbox(bk_app, SANDBOX_ID, 600)
+
+        assert gateway.connects == []
+
+    def test_terminated_sandbox_is_not_found(self, gateway, bk_app):
+        _record(bk_app, status=E2BSandboxStatus.TERMINATED.value)
+
+        with pytest.raises(E2BSandboxNotFound):
+            sandboxes.connect_sandbox(bk_app, SANDBOX_ID, 600)
+
+    def test_gateway_404_becomes_not_found(self, gateway, bk_app):
+        """SDK 靠 404 判断沙箱已被回收，需要重新创建。"""
+        _record(bk_app)
+        gateway.fail("connect_sandbox", E2BGatewayNotFound("gone"))
+
+        with pytest.raises(E2BSandboxNotFound):
+            sandboxes.connect_sandbox(bk_app, SANDBOX_ID, 600)

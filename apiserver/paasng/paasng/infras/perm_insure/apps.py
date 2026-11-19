@@ -22,5 +22,6 @@ class PermInsureConfig(AppConfig):
     name = "paasng.infras.perm_insure"
 
     def ready(self):
-        # Register the Django check function
+        # Register the Django check functions
+        from .sys_api_layout import check_sys_api_view_layout  # noqa: F401
         from .views_perm import check_views_perm_configured  # noqa: F401

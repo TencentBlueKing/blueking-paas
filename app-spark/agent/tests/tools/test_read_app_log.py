@@ -6,14 +6,13 @@
 from pathlib import Path
 
 import pytest
-from pydantic_ai.exceptions import ModelRetry
-from pydantic_ai_harness import FileSystem
 from pytest import MonkeyPatch
 
 from app_spark_agent import settings
 from app_spark_agent.agent import create_agent
 from app_spark_agent.masking import SECRET_PLACEHOLDER
 from app_spark_agent.tools.read_app_log import NO_LOG_MESSAGE, READ_ERROR_PREFIX, AppLogReader
+from tests.support.file_tools import read_file_result
 from tests.test_agent import function_tools
 
 
@@ -136,11 +135,5 @@ def test_the_log_tool_cannot_see_state_and_file_tools_cannot_see_the_log(
     assert result.content == "app-ok"
     assert marker not in result.content
 
-    filesystem = next(item for item in agent.root_capability.capabilities if isinstance(item, FileSystem))
-    toolset = filesystem.get_toolset()
-    inner = getattr(toolset, "wrapped", toolset)
-    while hasattr(inner, "wrapped"):
-        inner = inner.wrapped
     for outside in (f"../{log_path.name}", str(log_path), f"../{state.name}/context.json"):
-        with pytest.raises((PermissionError, ModelRetry), match="outside"):
-            inner._resolve_path(outside)
+        assert "outside" in read_file_result(agent, outside)

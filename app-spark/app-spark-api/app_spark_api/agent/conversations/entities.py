@@ -127,6 +127,17 @@ class PreviewResponse(Schema):
     )
 
 
+class PreviewStartResponse(Schema):
+    """拉起预览的请求已经交给 Runtime；应用是否起来了不在这里等。"""
+
+    outcome: str = Field(
+        description=(
+            "starting：已在拉起，或本来就在跑，之后看预览接口的 dev_server_status；"
+            "no_project：工作区里还没有可启动的项目，模型写出代码后会自己拉起，不是错误"
+        ),
+    )
+
+
 class RunStopResponse(Schema):
     """停止请求已经交给 Runtime，这一轮正在收尾。"""
 

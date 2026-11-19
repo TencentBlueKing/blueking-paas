@@ -16,8 +16,9 @@
 
 """模型侧的 launch：进程内直调监督器，不走 HTTP、不碰任何凭据。
 
-只有 agent 第一时间知道代码什么时候真的能跑，所以拉起这件事交给模型自己的 launch_app 工具，
-不另开控制面接口。成功落一条 app.launched 到 ui_events，控制面 drain 这条就知道端口在听。
+只有 agent 第一时间知道代码什么时候真的能跑，所以拉起、重启加载新代码交给模型自己的 launch_app
+工具。控制面的 POST /preview/start 只管把还没起的应用起来（比如用户重新打开旧项目），从不重启。
+成功落一条 app.launched 到 ui_events，控制面 drain 这条就知道端口在听。
 
 工具不交出任何可打开的地址：浏览器该访问哪个 origin 由控制面签发，沙箱里推不出来。
 """
@@ -95,7 +96,7 @@ class LaunchTool:
         # 先计数：被拒的那次不算，真正发起了就算，哪怕接下来失败。
         self._used += 1
         try:
-            result = await self._supervisor.launch()
+            result = await self._supervisor.restart()
         except AppLaunchError as exc:
             # 不往上抛。抛出去会中断整轮，而模型本可以读日志、改代码再试一次。
             return LaunchToolResult(status="failed", detail=str(exc))

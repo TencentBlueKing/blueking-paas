@@ -18,18 +18,21 @@
 
 import socket
 import sys
+import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import httpx2
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app_spark_agent import settings
-from app_spark_agent.app_supervisor import LAUNCH_EVENT_RUN_ID
+from app_spark_agent.app_supervisor import LAUNCH_EVENT_RUN_ID, project_env
 from app_spark_agent.app_supervisor import supervisor as supervisor_mod
+from app_spark_agent.server.runtime import ConversationRuntime
 from app_spark_agent.tools import MAX_LAUNCHES_PER_RUN, LaunchToolResult
 from tests.api.support import ApiFactory, drain_channel, run_turn
 from tests.support.fake_models import named_tool_model
@@ -54,8 +57,12 @@ def unused_port() -> int:
         return int(sock.getsockname()[1])
 
 
+def runtime_of(client: TestClient) -> ConversationRuntime:
+    return cast(ConversationRuntime, cast(FastAPI, client.app).state.conversation_runtime)
+
+
 def workspace_of(client: TestClient) -> Path:
-    return Path(client.app.state.conversation_runtime.app_supervisor.workspace)
+    return runtime_of(client).app_supervisor.workspace
 
 
 def write_minimal_app(workspace: Path) -> None:
@@ -86,7 +93,7 @@ class ModelLauncher:
             assert self.client is not None
 
             # 调生产的 as_tool()，不复刻那层包装；这里只负责把结果记下来。
-            launch_tool = self.client.app.state.conversation_runtime.launch_tool
+            launch_tool = runtime_of(self.client).launch_tool
             result = await launch_tool.as_tool()()
             self.results.append(result)
             return result
@@ -212,3 +219,75 @@ def test_the_model_cannot_retry_launching_all_turn(make_api: ApiFactory, launch_
     assert [result.status for result in launcher.results] == ["failed"] * MAX_LAUNCHES_PER_RUN + ["refused"]
     assert api.get("/health").json()["dev_server_status"] == "stopped"
     assert launched_events(api) == []
+
+
+def wait_for_launched(client: TestClient, timeout: float = 20.0) -> list[dict[str, Any]]:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if records := launched_records(client):
+            return records
+        time.sleep(0.05)
+    raise AssertionError("app.launched was never recorded")
+
+
+def test_the_control_plane_starts_an_existing_project(make_api: ApiFactory, launch_port: int) -> None:
+    """用户重新打开旧项目：不必等模型一轮，控制面直接把预览起来。"""
+    api = make_api()
+    workspace = workspace_of(api)
+    write_minimal_app(workspace)
+    (workspace / "pyproject.toml").write_text("# the project\n")
+
+    assert api.post("/preview/start").status_code == 202
+
+    # 后台启动的结果走控制面已经在 drain 的那两条：/health 和 app.launched。
+    records = wait_for_launched(api)
+    assert len(records) == 1
+    assert records[0]["run_id"] == LAUNCH_EVENT_RUN_ID
+    assert records[0]["event"]["value"]["dev_server_status"] == "ready"
+    assert api.get("/health").json()["dev_server_status"] == "ready"
+    assert httpx2.get(f"http://127.0.0.1:{launch_port}/").json()["port"] == str(launch_port)
+
+    # 再打一次不重启：同一个进程原样留着，也不再落一条 app.launched。
+    supervisor = runtime_of(api).app_supervisor
+    child = supervisor._process._child
+    assert api.post("/preview/start").status_code == 202
+    time.sleep(0.2)
+    assert supervisor._process._child is child
+    assert len(launched_records(api)) == 1
+
+
+def test_starting_a_workspace_without_a_project_is_refused(
+    make_api: ApiFactory, launch_port: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 这一条要的正是项目检查本身，把 autouse 换掉的那个放回来。
+    monkeypatch.setattr(supervisor_mod, "require_project", project_env.require_project)
+    api = make_api()
+
+    response = api.post("/preview/start")
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "no_project"
+    assert api.get("/health").json()["dev_server_status"] == "not_started"
+
+
+def test_starting_on_a_foreign_port_is_refused(make_api: ApiFactory, launch_port: int) -> None:
+    api = make_api()
+    (workspace_of(api) / "pyproject.toml").write_text("# the project\n")
+    occupant = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    occupant.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    occupant.bind(("127.0.0.1", launch_port))
+    occupant.listen(1)
+    try:
+        response = api.post("/preview/start")
+
+        assert response.status_code == 409
+        assert response.json()["detail"]["code"] == "port_taken"
+        assert launched_events(api) == []
+    finally:
+        occupant.close()
+
+
+def test_starting_the_preview_requires_the_bearer(make_api: ApiFactory) -> None:
+    api = make_api()
+
+    assert api.post("/preview/start", headers={"Authorization": "Bearer wrong"}).status_code == 401

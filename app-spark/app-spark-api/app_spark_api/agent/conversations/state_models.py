@@ -209,7 +209,7 @@ class ConversationCheckpoint(TimestampedModel):
     completed = models.BooleanField(verbose_name="该 run 是否完整结束", default=True)
     # 提交到达远端那一刻，两条频道各自存到了哪。记的是**当时的位置**，供排查「这个检查点落后
     # 了多少」用；冷恢复给新 Runtime 的游标不取自这里，取的是恢复那一刻的真实位置——频道只增不
-    # 删，从一个旧位置续写只会撞上已经存在的序号。理由见 services._resume_if_cold。
+    # 删，从一个旧位置续写只会撞上已经存在的序号。理由见 lifecycle.utils.resume_if_cold。
     log_seq = models.PositiveIntegerField(verbose_name="原始记录游标", default=0)
     ui_event_seq = models.PositiveIntegerField(verbose_name="AG-UI 事件游标", default=0)
     state_epoch = models.PositiveIntegerField(verbose_name="写入时的状态回写代次", default=1)

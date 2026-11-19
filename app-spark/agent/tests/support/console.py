@@ -19,8 +19,7 @@ INDENT = "    "
 
 # The event stream is AG-UI, so its field names are camelCase -- unlike everything the Runtime
 # itself emits. See ``README.md``.
-THINKING_DELTAS = frozenset({"THINKING_TEXT_MESSAGE_CONTENT", "REASONING_MESSAGE_CONTENT"})
-MESSAGE_ENDS = frozenset({"TEXT_MESSAGE_END", "THINKING_TEXT_MESSAGE_END", "REASONING_MESSAGE_END"})
+MESSAGE_ENDS = frozenset({"TEXT_MESSAGE_END", "REASONING_MESSAGE_END"})
 
 
 def write(text: str) -> None:
@@ -80,7 +79,7 @@ class StreamPrinter:
         kind = str(event.get("type"))
         if kind == "TEXT_MESSAGE_CONTENT":
             self._grow("model", str(event["delta"]))
-        elif kind in THINKING_DELTAS:
+        elif kind == "REASONING_MESSAGE_CONTENT":
             self._grow("think", str(event["delta"]))
         elif kind in MESSAGE_ENDS:
             self.close()

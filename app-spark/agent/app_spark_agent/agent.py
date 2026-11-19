@@ -8,7 +8,7 @@ from typing import Any, Protocol, cast
 import httpx2
 from openai import AsyncOpenAI, DefaultAsyncHttpxClient
 from pydantic_ai import Agent
-from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.capabilities import AbstractCapability, LocalWorkspace
 from pydantic_ai.messages import ModelMessage, ToolCallPart
 from pydantic_ai.models import Model, infer_model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
@@ -219,9 +219,11 @@ def create_agent(
 ) -> Agent[None, str]:
     """Create the coding agent scoped to workspace.
 
-    The harness file tools enforce a workspace root and protect common secrets. Shell commands
-    are useful for development but are not an operating-system sandbox, so this runtime must only
-    be used with trusted users and workspaces. The application log tool reads one path outside
+    The harness file tools bound paths to workspace and mark .git and common secret files
+    read-only as guardrails, while Shell runs unrestricted commands with Runtime and provider
+    credentials stripped from env. Neither capability is an operating-system sandbox: isolation
+    comes from running this process inside a per-session sandbox container (direct host execution
+    is for local development and tests only). The application log tool reads one path outside
     both workspace and state_dir.
 
     :param workspace: Existing directory the agent may inspect and modify.
@@ -251,12 +253,19 @@ def create_agent(
     ]
 
     capabilities: list[AbstractCapability[object]] = [
-        FileSystem(root_dir=workspace_path),
+        # 文件工具、shell、RepoContext 都经 ctx.workspace 访问，工作目录只能设在这里：它们自己的
+        # cwd / workspace_dir 已被 harness 弃用并忽略，留着也不生效。FileSystem 的边界默认就是它。
+        LocalWorkspace(workspace_path),
+        FileSystem(),
         Shell(
-            cwd=workspace_path,
             # 模型可能会触发 uv 相关命令操作依赖源，传入 uv 相关环境变量比如 INDEX_URL 等
-            # 以保持一致性。
+            # 以保持一致性。env 放在 Shell 而不是 LocalWorkspace 上：denied_env_patterns
+            # 只过滤 Shell.env。
             env=uv_environ(os.environ),
+            # harness 默认按命令首词拦 rm、rmdir、dd、shutdown 等，模型正常删文件都会被拒；
+            # 而首词黑名单 `/bin/rm` 或 `python -c` 就能绕过，本来也不构成安全边界。真正的隔离
+            # 由容器沙箱负责（本机直跑仅限本地开发与测试），这里直接关掉整份默认黑名单。
+            denied_commands=(),
             denied_env_patterns=(
                 *LLM_API_KEY_ENV_PATTERNS,
                 "APP_SPARK_AGENT_*",
@@ -265,7 +274,6 @@ def create_agent(
         # 只有 workspace 这一个 repo。「怎么写应用」在 settings.INSTRUCTIONS 里无条件生效，
         # 不再拿第二个 RepoContext 指向本包安装目录。
         RepoContext(
-            workspace_dir=workspace_path,
             filenames=("AGENTS.md",),
             nested_traversal=True,
         ),

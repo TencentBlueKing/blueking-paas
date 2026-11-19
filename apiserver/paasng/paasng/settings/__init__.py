@@ -1501,6 +1501,10 @@ PLUGIN_REPO_CONF = settings.get("PLUGIN_REPO_CONF")
 # 插件开发中心在权限中心注册的系统 ID
 IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get("IAM_PLUGINS_CENTER_SYSTEM_ID", default="bk_plugins")
 
+# 是否跳过插件开发中心的权限模型注册（执行 migrate 时推送到权限中心 V3）。
+# 与 BK_IAM_SKIP 不同，只影响插件开发中心，不影响开发者中心自身的权限模型注册
+BK_PLUGINS_IAM_SKIP = settings.get("BK_PLUGINS_IAM_SKIP", False)
+
 # 是否在开发者中心应用列表中展示插件应用
 DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 
@@ -1530,6 +1534,9 @@ RABBITMQ_MONITOR_CONF = settings.get("RABBITMQ_MONITOR_CONF", {})
 BKREPO_MONITOR_CONF = settings.get("BKREPO_MONITOR_CONF", {})
 # Gcs_mysql 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'gcs_mysql'}
 GCS_MYSQL_MONITOR_CONF = settings.get("GCS_MYSQL_MONITOR_CONF", {})
+# Redis 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'bk_paas_redis'}
+# service_name 为 svc-redis 注册的服务名, 不能填平台自带的旧版本地 Redis 服务 'redis'
+REDIS_MONITOR_CONF = settings.get("REDIS_MONITOR_CONF", {})
 # 蓝鲸监控网关的环境
 BK_MONITOR_APIGW_SERVICE_STAGE = settings.get("BK_MONITOR_APIGW_SERVICE_STAGE", "stage")
 
@@ -1589,6 +1596,14 @@ KMS_API_BASE_URL = settings.get("KMS_API_BASE_URL", "")
 # 调用 KMS 管理接口时携带的 X-Bk-Username
 KMS_API_USERNAME = settings.get("KMS_API_USERNAME", "admin")
 KMS_API_TIMEOUT_SECONDS = settings.get("KMS_API_TIMEOUT_SECONDS", default=10, cast="@float")
+# 访问 KMS 管理接口的 TLS 文件路径（PEM），任一项非空即启用，此时 KMS_API_BASE_URL 须为 https。
+# CA 为空时使用 requests 默认的 CA 集合；同时配置客户端证书与私钥则启用双向认证，私钥不能加密
+KMS_API_TLS_CA_FILE = settings.get("KMS_API_TLS_CA_FILE", "")
+KMS_API_TLS_CERT_FILE = settings.get("KMS_API_TLS_CERT_FILE", "")
+KMS_API_TLS_KEY_FILE = settings.get("KMS_API_TLS_KEY_FILE", "")
+# 是否校验 KMS 服务端证书中的域名，仅在启用 TLS 时生效。关闭后同一 CA 签发的任意证书都能冒充 KMS。
+# 现有 KMS 服务端证书没有有效 SAN，因此默认关闭
+KMS_API_TLS_CHECK_HOSTNAME = settings.get("KMS_API_TLS_CHECK_HOSTNAME", False)
 
 # 预建的 KMS scope：数字 ID 用于 KMS 请求，名称用于 OpenBao 路径与 role
 KMS_SAAS_SCOPE_ID = settings.get("KMS_SAAS_SCOPE_ID", default=0, cast="@int")
@@ -1716,6 +1731,9 @@ FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_CNATIV
 FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN = settings.get("FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN", False)
 # 是否显示沙箱
 FE_FEATURE_SETTINGS_DEV_SANDBOX = settings.get("FE_FEATURE_SETTINGS_DEV_SANDBOX", False)
+# 是否在应用左侧导航展示 Agent 沙箱。feature flag 未启用时不展示。
+# 与上面的 DEV_SANDBOX（沙箱开发）不是同一个开关。
+FE_FEATURE_SETTINGS_AGENT_SANDBOX = settings.get("FE_FEATURE_SETTINGS_AGENT_SANDBOX", False)
 
 # ---------------------------------------------
 # Agent Sandbox 网关权限授权配置
@@ -1806,6 +1824,14 @@ AGENT_SANDBOX_E2B_ORPHAN_CLEANUP_ENABLED = settings.get("AGENT_SANDBOX_E2B_ORPHA
 AGENT_SANDBOX_E2B_ORPHAN_SAFETY_WINDOW_MINUTES = settings.get("AGENT_SANDBOX_E2B_ORPHAN_SAFETY_WINDOW_MINUTES", 10)
 # 已终止记录的保留天数，超过则从主表删除
 AGENT_SANDBOX_E2B_TERMINATED_RETENTION_DAYS = settings.get("AGENT_SANDBOX_E2B_TERMINATED_RETENTION_DAYS", 30)
+
+# ---------------------------------------------
+# e2b 沙箱模板
+# ---------------------------------------------
+# 单个应用可创建的自定义模板数量上限
+AGENT_SANDBOX_E2B_MAX_CUSTOM_TEMPLATES_PER_APP = settings.get("AGENT_SANDBOX_E2B_MAX_CUSTOM_TEMPLATES_PER_APP", 30)
+# 模板系统盘所在 PVC 的存储类，须在所有启用 e2b 的集群中存在
+AGENT_SANDBOX_E2B_TEMPLATE_STORAGE_CLASS = settings.get("AGENT_SANDBOX_E2B_TEMPLATE_STORAGE_CLASS", "cbs")
 
 # 是否展示应用可用性保障
 FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL", False)

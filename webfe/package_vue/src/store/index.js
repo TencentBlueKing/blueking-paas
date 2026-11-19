@@ -53,6 +53,7 @@ import persistentStorage from './modules/persistent-storage';
 import authenticationInfo from './modules/authentication-info';
 import migration from './modules/migration';
 import sandbox from './modules/sandbox';
+import agentSandbox from './modules/agent-sandbox';
 import tool from './modules/tool';
 import tenant from './modules/tenant';
 import tenantOperations from './modules/tenant-operations';
@@ -486,6 +487,7 @@ export default new Vuex.Store({
     authenticationInfo,
     migration,
     sandbox,
+    agentSandbox,
     tool,
     tenant,
     tenantOperations,

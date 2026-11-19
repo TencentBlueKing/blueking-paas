@@ -245,9 +245,6 @@ export default {
       margin-bottom: 16px;
       /deep/ .record-date-picker-cls {
         width: 300px;
-        .icon-wrapper {
-          left: 0 !important;
-        }
         .bk-date-picker-rel .clear-action {
           display: block;
         }

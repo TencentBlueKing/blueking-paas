@@ -47,7 +47,9 @@ def test_the_stored_stream_stays_a_valid_ag_ui_sequence(make_api: ApiFactory) ->
     types = [event["type"] for event in stored]
     assert types[0] == "RUN_STARTED"
     assert types[-1] == "RUN_FINISHED"
-    assert types.count("TEXT_MESSAGE_START") == types.count("TEXT_MESSAGE_END") == 1
+    # pydantic-ai opens and closes an empty message to parent a tool call no text preceded, so
+    # the tool-calling response and the final answer are one message each.
+    assert types.count("TEXT_MESSAGE_START") == types.count("TEXT_MESSAGE_END") == 2
     assert types.count("TOOL_CALL_START") == types.count("TOOL_CALL_END") == 1
 
 

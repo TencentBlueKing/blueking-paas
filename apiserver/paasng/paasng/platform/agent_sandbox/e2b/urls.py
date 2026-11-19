@@ -88,4 +88,9 @@ urlpatterns = [
         E2BSandboxViewSet.as_view({"post": "set_timeout"}),
         name="agent_sandbox.e2b.sandboxes.timeout",
     ),
+    path(
+        E2B_PROTOCOL_PREFIX + "sandboxes/<str:sandbox_id>/connect",
+        E2BSandboxViewSet.as_view({"post": "connect"}),
+        name="agent_sandbox.e2b.sandboxes.connect",
+    ),
 ]

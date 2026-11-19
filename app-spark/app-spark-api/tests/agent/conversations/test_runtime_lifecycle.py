@@ -20,109 +20,22 @@ Only turns count as activity, so the end of every turn renews the Runtime; looki
 conversation must neither renew nor rebuild one, and has to say truthfully when there is none.
 """
 
-import asyncio
-from typing import TYPE_CHECKING, Any
-
 import attrs
 import pytest
 
 from app_spark_api.agent.conversations import services
 from app_spark_api.agent.conversations.exceptions import RunNotFoundError, RunNotInProgressError
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
-from app_spark_api.agent.model_catalog import services as model_catalog_services
-from app_spark_api.agent.runtime import AgentRuntimeHandle, AgentUnavailableError, RuntimeHealth
+from app_spark_api.agent.runtime import AgentUnavailableError
 from app_spark_api.core.projects.models import Project
-from app_spark_api.infras.bkaidev import GatewayModel
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+from tests.agent.conversations.support import HEALTH, FakeClient, FakeProvider, FakeRun, install_fake_provider
 
 pytestmark = pytest.mark.django_db
-
-HANDLE = AgentRuntimeHandle(conversation_id="c", base_url="http://127.0.0.1:1", runtime_token="t")
-HEALTH = RuntimeHealth(
-    model="fake:write-file",
-    conversation_id=None,
-    context_version=0,
-    log_seq=0,
-    ui_event_seq=0,
-    running=True,
-    dev_server_status="ready",
-)
-
-
-class FakeProvider:
-    """A provider that starts nothing and records how it was used."""
-
-    def __init__(self) -> None:
-        self.handle: AgentRuntimeHandle | None = HANDLE
-        self.replacing = False
-        self.extended: list[str] = []
-        self.extend_error: Exception | None = None
-
-    async def peek(self, conversation_id: str) -> AgentRuntimeHandle | None:
-        return self.handle
-
-    async def needs_replacement(self, conversation_id: str) -> bool:
-        return self.replacing
-
-    async def extend_lifetime(self, conversation_id: str) -> None:
-        if self.extend_error is not None:
-            raise self.extend_error
-        self.extended.append(conversation_id)
-
-
-class FakeClient:
-    """Stands in for AgentRuntimeClient; the class attributes decide how /health answers."""
-
-    health_error: Exception | None = None
-    answer: RuntimeHealth = HEALTH
-    # What POST /runs/{id}/stop answers, and the run ids it was asked to stop.
-    stop_accepted: bool = True
-    stopped: list[str] = []
-
-    def __init__(self, handle: AgentRuntimeHandle, **_kwargs: Any) -> None:
-        self.handle = handle
-
-    async def health(self) -> RuntimeHealth:
-        if self.health_error is not None:
-            raise self.health_error
-        return self.answer
-
-    async def stop_run(self, run_id: str) -> bool:
-        self.stopped.append(run_id)
-        return self.stop_accepted
-
-
-class FakeRun:
-    """The part of AgentRun that stream_run touches."""
-
-    run_id = "run-1"
-
-    def __init__(self, chunks: list[bytes], error: Exception | None = None, pause: float = 0) -> None:
-        self.chunks = chunks
-        self.error = error
-        # How long the Agent stays silent before each chunk, like a long tool call.
-        self.pause = pause
-
-    async def aiter_bytes(self) -> AsyncIterator[bytes]:
-        for chunk in self.chunks:
-            await asyncio.sleep(self.pause)
-            yield chunk
-        if self.error is not None:
-            raise self.error
 
 
 @pytest.fixture
 def provider(monkeypatch) -> FakeProvider:
-    fake = FakeProvider()
-    monkeypatch.setattr(services, "get_agent_runtime_provider", lambda: fake)
-    monkeypatch.setattr(services, "AgentRuntimeClient", FakeClient)
-    monkeypatch.setattr(FakeClient, "health_error", None)
-    monkeypatch.setattr(FakeClient, "answer", HEALTH)
-    monkeypatch.setattr(FakeClient, "stop_accepted", True)
-    monkeypatch.setattr(FakeClient, "stopped", [])
-    return fake
+    return install_fake_provider(monkeypatch)
 
 
 @pytest.fixture
@@ -219,82 +132,6 @@ async def test_a_stop_is_handed_to_the_runtime_running_the_turn(provider, conver
     await services.stop_run(conversation, "run-1")
 
     assert FakeClient.stopped == ["run-1"]
-
-
-@STOP_TESTS
-async def test_a_turn_can_be_stopped_as_soon_as_its_runtime_has_it(provider, conversation, monkeypatch):
-    """/health 报出 run_id 的那一刻前端就可能拿它来停，所以 Runtime 收到这一轮之前，归属就得已经落库。"""
-    owned_when_started: list[bool] = []
-
-    class StartingClient(FakeClient):
-        async def start_run(
-            self,
-            *,
-            content: str,
-            context_version: int,
-            run_id: str,
-            model_id: str | None = None,
-        ) -> FakeRun:
-            owned = ConversationUserMessage.objects.filter(conversation=conversation, run_id=run_id)
-            owned_when_started.append(await owned.aexists())
-            run = FakeRun([])
-            run.run_id = run_id
-            return run
-
-    async def open_client(_conversation: Conversation, **_kwargs: Any) -> StartingClient:
-        return StartingClient(HANDLE)
-
-    async def already_warm(_conversation: Conversation, _client: Any, health: RuntimeHealth) -> RuntimeHealth:
-        return health
-
-    monkeypatch.setattr(services, "open_client", open_client)
-    monkeypatch.setattr(services, "_resume_if_cold", already_warm)
-
-    run = await services.start_run(conversation, content="hi")
-
-    assert owned_when_started == [True]
-    await services.stop_run(conversation, run.run_id)
-    assert FakeClient.stopped == [run.run_id]
-
-
-@STOP_TESTS
-async def test_a_turn_that_names_a_model_reaches_the_runtime(provider, conversation, settings, monkeypatch):
-    """用户选的模型要原样交给 Runtime。"""
-    settings.AGENT_MODEL_SOURCE = "bkaidev"
-    settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "hy3", "available_models": ["hy3"]}
-    seen: list[str | None] = []
-
-    async def fetch_gateway_models(*_args: Any, **_kwargs: Any) -> list[GatewayModel]:
-        return [GatewayModel(id="hy3")]
-
-    monkeypatch.setattr(model_catalog_services, "_fetch_gateway_models", fetch_gateway_models)
-
-    class StartingClient(FakeClient):
-        async def start_run(
-            self,
-            *,
-            content: str,
-            context_version: int,
-            run_id: str,
-            model_id: str | None = None,
-        ) -> FakeRun:
-            seen.append(model_id)
-            run = FakeRun([])
-            run.run_id = run_id
-            return run
-
-    async def open_client(_conversation: Conversation, **_kwargs: Any) -> StartingClient:
-        return StartingClient(HANDLE)
-
-    async def already_warm(_conversation: Conversation, _client: Any, health: RuntimeHealth) -> RuntimeHealth:
-        return health
-
-    monkeypatch.setattr(services, "open_client", open_client)
-    monkeypatch.setattr(services, "_resume_if_cold", already_warm)
-
-    await services.start_run(conversation, content="hi", model_id="hy3")
-
-    assert seen == ["hy3"]
 
 
 @STOP_TESTS

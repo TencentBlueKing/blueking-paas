@@ -43,6 +43,12 @@ class TestClientPermChecker:
         assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.MANAGE_AI_AGENT_PROCESS) is True
         assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.MANAGE_AI_AGENT_PROCESS) is False
         assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.MANAGE_AI_AGENT_PROCESS) is False
+        # 云 API 管理（查询网关 / MCP Server 与接口、申请权限）只给 AIDEV 与 AppSpark
+        assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.MANAGE_CLOUD_API) is True
+        assert perm_checker.role_can_do(ClientRole.APP_SPARK, ClientAction.MANAGE_CLOUD_API) is True
+        assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.MANAGE_CLOUD_API) is False
+        assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.MANAGE_CLOUD_API) is False
+        assert perm_checker.role_can_do(ClientRole.NOBODY, ClientAction.MANAGE_CLOUD_API) is False
 
     @pytest.mark.parametrize(
         ("action", "expected"),
@@ -50,6 +56,7 @@ class TestClientPermChecker:
             (ClientAction.UPLOAD_SOURCE_PACKAGE, True),
             (ClientAction.DEPLOY_APPLICATIONS, True),
             (ClientAction.CREATE_APP_SPARK_APP, True),
+            (ClientAction.VALIDATE_APP_BASIC_INFO, True),
             # 不继承基础管理角色，也拿不到 AIDEV 的专用动作
             (ClientAction.READ_APPLICATIONS, False),
             (ClientAction.CREATE_AI_AGENT_APP, False),
@@ -59,3 +66,18 @@ class TestClientPermChecker:
     )
     def test_app_spark_perms(self, action: ClientAction, expected: bool):
         assert ClientPermChecker().role_can_do(ClientRole.APP_SPARK, action) is expected
+
+    @pytest.mark.parametrize(
+        ("role", "expected"),
+        [
+            (ClientRole.NOBODY, False),
+            (ClientRole.BASIC_READER, False),
+            (ClientRole.LIGHT_APP_MAINTAINER, False),
+            (ClientRole.BASIC_MAINTAINER, True),
+            (ClientRole.LESSCODE, True),
+            (ClientRole.AIDEV, True),
+            (ClientRole.APP_SPARK, True),
+        ],
+    )
+    def test_validate_app_basic_info_perms(self, role: ClientRole, expected: bool):
+        assert ClientPermChecker().role_can_do(role, ClientAction.VALIDATE_APP_BASIC_INFO) is expected

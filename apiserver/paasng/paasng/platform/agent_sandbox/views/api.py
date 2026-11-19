@@ -1,0 +1,635 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+import functools
+import logging
+from datetime import timedelta
+from pathlib import PurePosixPath
+from urllib.parse import urlencode, urlparse
+
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.utils.translation import gettext as _
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from paasng.platform.agent_sandbox.artifact import (
+    archive_volume_file,
+    build_download_url,
+    build_preview_url,
+    delete_volume_artifact,
+)
+from paasng.platform.agent_sandbox.constants import SandboxDeleteSource, SandboxOperation
+from paasng.platform.agent_sandbox.exceptions import (
+    SandboxActiveCountLimitExceeded,
+    SandboxAlreadyExists,
+    SandboxArchiveFailed,
+    SandboxCreateError,
+    SandboxDaemonAPIError,
+    SandboxError,
+    SandboxExecTimeout,
+    SandboxFileNotFound,
+    SandboxFileNotPreviewable,
+    SandboxFileTooLarge,
+    SandboxImageValidateError,
+    SandboxServiceNotReady,
+    VolumeGranteeNotFound,
+    VolumeInUse,
+    VolumeNotFound,
+    VolumeNotMountable,
+    VolumeShareLimitExceeded,
+)
+from paasng.platform.agent_sandbox.mixins import SandboxViewMixin, record_sandbox_request
+from paasng.platform.agent_sandbox.models import Sandbox, Volume
+from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
+from paasng.platform.agent_sandbox.resident_daemon_client import get_resident_daemon_client
+from paasng.platform.agent_sandbox.sandbox import (
+    create_sandbox,
+    delete_sandbox,
+    get_sandbox_client,
+)
+from paasng.platform.agent_sandbox.serializers import (
+    SandboxCodeRunInputSLZ,
+    SandboxCreateFolderInputSLZ,
+    SandboxCreateInputSLZ,
+    SandboxCreateOutputSLZ,
+    SandboxDeleteFileInputSLZ,
+    SandboxDownloadFileInputSLZ,
+    SandboxExecInputSLZ,
+    SandboxGetLogsInputSLZ,
+    SandboxGetLogsOutputSLZ,
+    SandboxListQuerySLZ,
+    SandboxProcessOutputSLZ,
+    SandboxUploadFileInputSLZ,
+    VolumeCreateInputSLZ,
+    VolumeFileDeleteInputSLZ,
+    VolumeFileDownloadURLInputSLZ,
+    VolumeFileDownloadURLOutputSLZ,
+    VolumeFileListInputSLZ,
+    VolumeFileListOutputSLZ,
+    VolumeFilePreviewInputSLZ,
+    VolumeFileStatInputSLZ,
+    VolumeFileStatOutputSLZ,
+    VolumeOutputSLZ,
+    VolumeShareInputSLZ,
+)
+from paasng.platform.agent_sandbox.utils import public_detail
+from paasng.platform.agent_sandbox.volume import delete_volume, share_volume, unshare_volume
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.utils.error_codes import error_codes
+
+logger = logging.getLogger(__name__)
+
+
+class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    """Volume 共享存储卷相关接口"""
+
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        request_body=VolumeCreateInputSLZ(),
+        responses={status.HTTP_201_CREATED: VolumeOutputSLZ()},
+    )
+    def create(self, request, code):
+        """创建共享存储卷。"""
+        application = self.get_application()
+        slz = VolumeCreateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        if Volume.objects.filter(application=application, name=data["name"], deleted_at__isnull=True).exists():
+            raise error_codes.AGENT_SANDBOX_VOLUME_ALREADY_EXISTS
+
+        try:
+            volume = Volume.objects.create(
+                application=application,
+                name=data["name"],
+                display_name=data.get("display_name", ""),
+                tenant_id=application.tenant_id,
+            )
+        except Exception:
+            logger.exception("Failed to create volume for app %s", application.code)
+            raise error_codes.AGENT_SANDBOX_VOLUME_CREATE_FAILED
+        return Response(VolumeOutputSLZ(volume).data, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
+    def destroy(self, request, code, volume_id):
+        """删除共享存储卷: 加锁标记删除中 -> 物理清理共享存储目录 -> 落软删时间.
+
+        目录清理失败时卷停留在 "删除中" (不可再挂载) 且不会软删, 重试同一接口即可.
+        """
+        application = self.get_application()
+        volume = get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
+        try:
+            delete_volume(volume)
+        except VolumeNotFound:
+            raise error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND
+        except VolumeInUse:
+            raise error_codes.AGENT_SANDBOX_VOLUME_IN_USE
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError:
+            logger.exception("Failed to delete volume: %s", volume_id)
+            raise error_codes.AGENT_SANDBOX_VOLUME_DELETE_FAILED
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        responses={status.HTTP_200_OK: VolumeOutputSLZ(many=True)},
+    )
+    def list(self, request, code):
+        """查询当前应用自己创建的共享存储卷。
+
+        不包含他人授权给本应用的 Volume。授权关系写在 ``shared_app_codes`` JSON
+        字段上，按「code 是否在列表中」查询无法走索引，租户 Volume 量大时会扫全表。
+        跨应用挂载仍可通过已知 ``volume_id`` + 授权校验完成（创建沙箱时解析）。
+        """
+        application = self.get_application()
+        volumes = Volume.objects.filter(application=application, deleted_at__isnull=True).order_by("-created")
+        return Response(VolumeOutputSLZ(volumes, many=True).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        request_body=VolumeShareInputSLZ(),
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def share(self, request, code, volume_id):
+        """授权另一应用将该 Volume 挂到自己的沙箱。幂等。给自己授权视为 no-op。"""
+        application = self.get_application()
+        slz = VolumeShareInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        volume = get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
+        try:
+            share_volume(volume, slz.validated_data["grantee_app_code"])
+        except VolumeGranteeNotFound:
+            raise error_codes.APP_NOT_FOUND
+        except VolumeShareLimitExceeded:
+            raise error_codes.AGENT_SANDBOX_VOLUME_SHARE_LIMIT_EXCEEDED
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
+    def unshare(self, request, code, volume_id, grantee_app_code):
+        """撤销对指定应用的挂载授权。幂等。"""
+        application = self.get_application()
+        volume = get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
+        unshare_volume(volume, grantee_app_code)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def handle_volume_file_errors(action: str):
+    """把 ``VolumeFileViewSet`` 各 action 中重复的「基础设施异常 -> 错误码」映射收敛到一处。
+
+    仅覆盖所有 action 共有、处理方式一致的异常:
+
+    - ``SandboxServiceNotReady``: 服务未就绪(502), 不记录 traceback。
+    - ``SandboxDaemonAPIError``: 4xx 视为客户端错误透传(不记录), 5xx/传输层错误记录后转 DAEMON_API_ERROR。
+    - ``SandboxError``(兜底): 记录后转 FILE_OPERATION_FAILED。
+
+    对外只透传 ``public_detail(exc)``; 传输层错误、内部配置问题等仅返回通用错误码文案, 详细信息留在日志里。
+
+    各 action 仍可在方法体内保留自己的领域异常分支(如 ``SandboxFileNotFound`` /
+    ``SandboxFileTooLarge`` / ``SandboxArchiveFailed``), 它们会先于此处的兜底分支命中,
+    从而保持各 action 原有的精确语义。
+    """
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(self, request, *args, **kwargs):
+            volume_id = kwargs.get("volume_id")
+            try:
+                return func(self, request, *args, **kwargs)
+            except SandboxServiceNotReady:
+                raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+            except SandboxFileNotFound:
+                raise error_codes.AGENT_SANDBOX_FILE_NOT_FOUND
+            except SandboxDaemonAPIError as exc:
+                detail = public_detail(exc)
+                if exc.status_code is not None and 400 <= exc.status_code < 500:
+                    # 客户端错误(如非法路径): 透传 daemon 返回的安全信息, 不记录 traceback
+                    raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(detail)
+                logger.exception("Failed to %s in volume: %s", action, volume_id)
+                raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(detail)
+            except SandboxError:
+                logger.exception("Failed to %s in volume: %s", action, volume_id)
+                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+
+        return wrapper
+
+    return decorator
+
+
+class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    """Volume 文件持久化相关接口
+
+    面向 AIDev 前端提供沙箱销毁后仍可访问的产物文件的 列表 / 元数据 / 文本预览 /
+    下载(预览)URL / 删除。数据(下载)走 bkrepo 签名 URL直连, 归档由常驻 daemon
+    直连 bkrepo 上传,apiserver 仅编排、签发临时 URL。
+
+    paas-apiserver --> 常驻 daemon --> bkrepo --> 响应
+                            |
+                           CFS
+    """
+
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
+
+    def _get_volume(self, volume_id: str) -> Volume:
+        """校验 app 归属并返回未删除的 Volume。
+
+        get_application() 触发 IsAPIGWVerifiedApp 的对象级校验(来源 app 必须与目标 app 一致),
+        再按 application 过滤 volume, 保证 app 之间的隔离。
+        """
+        application = self.get_application()
+        return get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
+
+    def _validate(self, slz_cls, data) -> dict:
+        """实例化序列化器并校验,返回 validated_data。"""
+        slz = slz_cls(data=data)
+        slz.is_valid(raise_exception=True)
+        return slz.validated_data
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        query_serializer=VolumeFileListInputSLZ(),
+        responses={status.HTTP_200_OK: VolumeFileListOutputSLZ()},
+    )
+    @handle_volume_file_errors("list files")
+    def list(self, request, code, volume_id):
+        """列出 volume 内文件(分页)。"""
+        volume = self._get_volume(volume_id)
+        data = self._validate(VolumeFileListInputSLZ, request.query_params)
+
+        result = get_resident_daemon_client().list(
+            base_path=volume.storage_path,
+            rel_path=data["path"],
+            is_recursive=data["is_recursive"],
+            page=data["page"],
+            page_size=data["page_size"],
+            since=data["since"],
+            until=data["until"],
+        )
+        # daemon 直接返回 {count, results}, 经序列化器校验后透传给前端
+        return Response(VolumeFileListOutputSLZ(result).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        query_serializer=VolumeFileStatInputSLZ(),
+        responses={status.HTTP_200_OK: VolumeFileStatOutputSLZ()},
+    )
+    @handle_volume_file_errors("stat file")
+    def stat(self, request, code, volume_id):
+        """查询 volume 内文件元数据(不存在时返回 200 + exists=false)。"""
+        volume = self._get_volume(volume_id)
+        data = self._validate(VolumeFileStatInputSLZ, request.query_params)
+
+        result = get_resident_daemon_client().stat(base_path=volume.storage_path, rel_path=data["path"])
+        return Response(VolumeFileStatOutputSLZ(result).data)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], query_serializer=VolumeFilePreviewInputSLZ(), responses={200: ""})
+    @handle_volume_file_errors("preview file")
+    def preview(self, request, code, volume_id):
+        """文本小段预览。忠实透传 daemon 的 text/plain body 与 X-Truncated header。"""
+        volume = self._get_volume(volume_id)
+        data = self._validate(VolumeFilePreviewInputSLZ, request.query_params)
+
+        try:
+            content, truncated = get_resident_daemon_client().preview(
+                base_path=volume.storage_path, rel_path=data["path"], max_bytes=data["max_bytes"]
+            )
+        except SandboxFileNotPreviewable:
+            raise error_codes.AGENT_SANDBOX_FILE_NOT_PREVIEWABLE
+
+        # 透传原始文本，手动设置 content_type
+        response = HttpResponse(content, content_type="text/plain; charset=utf-8")
+        response["X-Truncated"] = "true" if truncated else "false"
+        response["Access-Control-Expose-Headers"] = "X-Truncated"
+        return response
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        query_serializer=VolumeFileDownloadURLInputSLZ(),
+        responses={status.HTTP_200_OK: VolumeFileDownloadURLOutputSLZ()},
+    )
+    @handle_volume_file_errors("build download url")
+    def download_url(self, request, code, volume_id):
+        """归档到 bkrepo(按需)并签发下载 URL 与预览页 URL。
+
+        ``download_url`` 是直连对象存储的临时签名地址(带 ``download=true``, 浏览器另存为);
+        ``preview_url`` 指向 bkrepo 前端预览页, 由 bkrepo 渲染图片/PDF 等富类型文件。
+        """
+        volume = self._get_volume(volume_id)
+        data = self._validate(VolumeFileDownloadURLInputSLZ, request.query_params)
+
+        try:
+            artifact = archive_volume_file(volume, data["path"])
+            base_url = build_download_url(artifact, expires_in=data["expires_in"])
+            sep = "&" if urlparse(base_url).query else "?"
+            download_url = f"{base_url}{sep}{urlencode({'download': 'true'})}"
+            preview_url = build_preview_url(artifact, expires_in=data["expires_in"])
+        except SandboxFileTooLarge:
+            raise error_codes.AGENT_SANDBOX_FILE_TOO_LARGE
+        except SandboxArchiveFailed:
+            logger.exception("Failed to archive file in volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_ARCHIVE_FAILED
+
+        return Response(
+            VolumeFileDownloadURLOutputSLZ(
+                {
+                    "download_url": download_url,
+                    "preview_url": preview_url,
+                    "expires_at": timezone.now() + timedelta(seconds=data["expires_in"]),
+                    "size": artifact.size,
+                    "sha256": artifact.sha256,
+                }
+            ).data
+        )
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"], query_serializer=VolumeFileDeleteInputSLZ(), responses={status.HTTP_204_NO_CONTENT: ""}
+    )
+    @handle_volume_file_errors("delete file")
+    def destroy(self, request, code, volume_id):
+        """删除 volume 内单个文件(幂等)。"""
+        volume = self._get_volume(volume_id)
+        data = self._validate(VolumeFileDeleteInputSLZ, request.query_params)
+
+        get_resident_daemon_client().delete(base_path=volume.storage_path, rel_path=data["path"])
+
+        # 清理 bkrepo 对象 + 去重表记录, 避免下次归档命中陈旧映射 / "Node existed"
+        delete_volume_artifact(volume, data["path"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, SandboxViewMixin):
+    """Agent Sandbox 相关接口"""
+
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        request_body=SandboxCreateInputSLZ(),
+        responses={status.HTTP_201_CREATED: SandboxCreateOutputSLZ()},
+    )
+    @record_sandbox_request(SandboxOperation.CREATE)
+    def create(self, request, code):
+        """创建一个新的 Agent Sandbox。接口在沙箱就绪、可以接受请求后才返回。"""
+        application = self.get_application()
+        slz = SandboxCreateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            sandbox = create_sandbox(
+                application=application,
+                creator=request.user.pk,
+                name=data.get("name"),
+                env_vars=data.get("env_vars"),
+                snapshot=data.get("snapshot"),
+                snapshot_entrypoint=data.get("snapshot_entrypoint"),
+                workspace=data.get("workspace"),
+                ttl_seconds=data["ttl_seconds"],
+                volume_mounts=data.get("volume_mounts"),
+                workload_type=data.get("workload_type"),
+            )
+        except SandboxAlreadyExists:
+            raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
+        except SandboxActiveCountLimitExceeded as e:
+            raise error_codes.AGENT_SANDBOX_ACTIVE_COUNT_LIMIT_EXCEEDED.f(limit=e.limit)
+        except SandboxImageValidateError as e:
+            logger.exception("Failed to validate snapshot image")
+            raise error_codes.AGENT_SANDBOX_IMAGE_VALIDATE_FAILED.f(public_detail(e))
+        except (VolumeNotFound, VolumeNotMountable):
+            # 未授权与不存在返回同一错误码，避免用 volume_id 探测其他应用的 Volume
+            raise error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND
+        except SandboxCreateError as e:
+            raise error_codes.AGENT_SANDBOX_CREATE_FAILED.set_data({"logs": e.logs})
+        except SandboxError:
+            logger.exception("Failed to create agent sandbox")
+            raise error_codes.AGENT_SANDBOX_CREATE_FAILED
+        return Response(SandboxCreateOutputSLZ(sandbox).data, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        query_serializer=SandboxListQuerySLZ(),
+        responses={status.HTTP_200_OK: SandboxCreateOutputSLZ(many=True)},
+    )
+    @record_sandbox_request(SandboxOperation.LIST)
+    def list(self, request, code):
+        """查询应用下的 Agent Sandbox 列表。
+
+        支持按 ``workload_type`` / ``status`` / ``name`` 筛选。
+        未指定 ``status`` 时默认排除已软删除的沙箱；显式传入 ``status=deleted`` 时可查询已删除记录。
+        """
+        application = self.get_application()
+        slz = SandboxListQuerySLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        queryset = Sandbox.objects.filter(application=application)
+        if status_val := data.get("status"):
+            queryset = queryset.filter(status=status_val)
+        else:
+            queryset = queryset.filter(deleted_at__isnull=True)
+        if workload_type := data.get("workload_type"):
+            queryset = queryset.filter(workload_type=workload_type)
+        if name := data.get("name"):
+            queryset = queryset.filter(name=name)
+
+        queryset = queryset.order_by("-created")
+        return Response(SandboxCreateOutputSLZ(queryset, many=True).data)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
+    @record_sandbox_request(SandboxOperation.DESTROY)
+    def destroy(self, request, sandbox_id):
+        """停止并销毁一个 Agent Sandbox"""
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
+
+        try:
+            delete_sandbox(sandbox, delete_source=SandboxDeleteSource.USER)
+        except SandboxError:
+            logger.exception("Failed to delete agent sandbox")
+            raise error_codes.AGENT_SANDBOX_DELETE_FAILED
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
+    """Agent Sandbox 文件系统相关接口。"""
+
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
+
+    @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxCreateFolderInputSLZ(), responses={204: ""})
+    @record_sandbox_request(SandboxOperation.CREATE_FOLDER)
+    def create_folder(self, request, sandbox_id):
+        """在 Agent Sandbox 中创建目录。"""
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxCreateFolderInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            get_sandbox_client(sandbox).create_folder(path=data["path"], mode=data["mode"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError as exc:
+            logger.exception("Failed to create folder in sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(public_detail(exc))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxUploadFileInputSLZ(), responses={204: ""})
+    @record_sandbox_request(SandboxOperation.UPLOAD_FILE)
+    def upload_file(self, request, sandbox_id):
+        """上传文件到 Agent Sandbox。"""
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxUploadFileInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            get_sandbox_client(sandbox).upload_file(file=data["file"].read(), remote_path=data["path"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError as exc:
+            logger.exception("Failed to upload file to sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(public_detail(exc))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxDeleteFileInputSLZ(), responses={204: ""})
+    @record_sandbox_request(SandboxOperation.DELETE_FILE)
+    def delete_file(self, request, sandbox_id):
+        """删除 Agent Sandbox 中的文件或目录。"""
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxDeleteFileInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            get_sandbox_client(sandbox).delete_file(path=data["path"], recursive=data["recursive"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError as exc:
+            logger.exception("Failed to delete file in sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(public_detail(exc))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], query_serializer=SandboxDownloadFileInputSLZ(), responses={200: ""})
+    @record_sandbox_request(SandboxOperation.DOWNLOAD_FILE)
+    def download_file(self, request, sandbox_id):
+        """下载 Agent Sandbox 中的文件。"""
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxDownloadFileInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            content = get_sandbox_client(sandbox).download_file(remote_path=data["path"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError as exc:
+            logger.exception("Failed to download file from sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(public_detail(exc))
+
+        filename = PurePosixPath(data["path"]).name or "sandbox-file"
+        response = HttpResponse(content, content_type="application/octet-stream")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Access-Control-Expose-Headers"] = "Content-Disposition"
+        return response
+
+
+class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
+    """Agent Sandbox 进程相关接口。"""
+
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"], request_body=SandboxExecInputSLZ(), responses={200: SandboxProcessOutputSLZ()}
+    )
+    @record_sandbox_request(SandboxOperation.EXEC)
+    def exec(self, request, sandbox_id):
+        """在 Agent Sandbox 内执行命令。"""
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxExecInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            result = get_sandbox_client(sandbox).exec(
+                cmd=data["cmd"],
+                cwd=data.get("cwd"),
+                env_vars=data["env_vars"],
+                timeout=data["timeout"],
+            )
+        except SandboxExecTimeout:
+            raise error_codes.AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT.f(
+                _("超时时间: {timeout}s").format(timeout=data["timeout"])
+            )
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError as exc:
+            logger.exception("Failed to execute command in sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED.f(public_detail(exc))
+        return Response(SandboxProcessOutputSLZ(result).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        request_body=SandboxCodeRunInputSLZ(),
+        responses={200: SandboxProcessOutputSLZ()},
+    )
+    @record_sandbox_request(SandboxOperation.CODE_RUN)
+    def code_run(self, request, sandbox_id):
+        """在 Agent Sandbox 内执行代码片段。"""
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxCodeRunInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            result = get_sandbox_client(sandbox).code_run(content=data["content"], language=data["language"])
+        except SandboxExecTimeout:
+            raise error_codes.AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError as exc:
+            logger.exception("Failed to run code in sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED.f(public_detail(exc))
+        return Response(SandboxProcessOutputSLZ(result).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"], query_serializer=SandboxGetLogsInputSLZ(), responses={200: SandboxGetLogsOutputSLZ()}
+    )
+    @record_sandbox_request(SandboxOperation.LOGS)
+    def logs(self, request, sandbox_id):
+        """读取 Agent Sandbox 日志。"""
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxGetLogsInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            logs = get_sandbox_client(sandbox).get_logs(
+                tail_lines=data.get("tail_lines"),
+                timestamps=data["timestamps"],
+            )
+        except SandboxExecTimeout:
+            raise error_codes.AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT
+        except SandboxError as exc:
+            logger.exception("Failed to get logs from sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED.f(public_detail(exc))
+        return Response(SandboxGetLogsOutputSLZ({"logs": logs}).data)

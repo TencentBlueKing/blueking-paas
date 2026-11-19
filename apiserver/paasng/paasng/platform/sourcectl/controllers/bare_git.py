@@ -109,12 +109,10 @@ class BareGitRepoController(BaseGitRepoController):
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         """尝试直接从远端获取可选的分支信息"""
         with generate_temp_dir() as temp_dir:
-            # Use "blob-less" cloning for faster speed.
-            #
-            # NOTE: We should consider getting branches and tags using the "ls-remote"
-            # command to avoid any form of cloning. But there is still a problem with
-            # "ls-remote": We can't get commit time and message without cloning the repo.
-            self.client.clone_no_blob(self.repo_url, temp_dir)
+            # "ls-remote" can't get the commit time and message, so only fetch the tip commits of
+            # branches and tags instead of cloning, whose cost grows with the history and the trees.
+            self.client.init_repo(temp_dir)
+            self.client.fetch_ref_tips(self.repo_url, temp_dir)
             return sorted(
                 self.transfer_refs_to_versions(self.client.list_refs(temp_dir)),
                 key=operator.attrgetter("last_update"),

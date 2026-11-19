@@ -35,3 +35,11 @@ class AlertCode(StrStructuredEnum):
     HIGH_RABBITMQ_QUEUE_USAGE = "high_rabbitmq_queue_usage"
     GCS_MYSQL_SLOW_QUERY = "gcs_mysql_slow_query"
     HIGH_BKREPO_QUOTA_USAGE = "high_bkrepo_quota_usage"
+    # Redis 实例内存使用率超过阈值时触发
+    HIGH_REDIS_MEMORY_USAGE = "high_redis_memory_usage"
+    # Redis 实例连接数使用率超过阈值时触发
+    HIGH_REDIS_CONNECTION_USAGE = "high_redis_connection_usage"
+    # Redis 实例近期发生 OOMKilled 时触发
+    REDIS_OOM_KILLED = "redis_oom_killed"
+    # Redis 实例的 Pod 未就绪时触发
+    REDIS_UNAVAILABLE = "redis_unavailable"

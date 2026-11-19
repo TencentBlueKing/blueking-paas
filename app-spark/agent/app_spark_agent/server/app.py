@@ -34,8 +34,8 @@ def create_runtime_app(
 
     Three streams are persisted under ``state_dir``, split by how each one mutates: an
     append-only raw transcript, an append-only AG-UI event history, and the single mutable
-    context blob compaction rewrites. See ``README.md`` for why the context can never be
-    rebuilt from the transcript.
+    context blob compaction rewrites. See ``docs/harness_state.md`` for why the context can
+    never be rebuilt from the transcript.
 
     When a control plane is supplied all three are also replicated to it, which is what makes
     ``state_dir`` disposable. Without one the Runtime is entirely self-contained.
@@ -83,6 +83,8 @@ def create_runtime_app(
             lifecycle_task.cancel()
             # 任一 watch 若因非 CancelledError 退出，串行 await 会跳过另一个任务和后面的 drain。
             await asyncio.gather(app_watch_task, lifecycle_task, return_exceptions=True)
+            # 控制面 start 的那次启动可能还在装依赖。它拉起的子进程由 lifecycle.shutdown 统一停。
+            await runtime.preview_starter.aclose()
             try:
                 # A turn does not end with its connection, so uvicorn cutting the SSE off ends
                 # nothing. It has to be stopped here, and before the drain, so that what the

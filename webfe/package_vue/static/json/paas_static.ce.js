@@ -675,6 +675,17 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "agentSandbox",
+                "label": staticI18n.$t("Agent 沙箱"),
+                "iconfontName": "fx",
+                "supportModule": false,
+                "matchRouters": ["agentSandbox", "agentSandboxTemplateDetail"],
+                "destRoute": {
+                  "name": "agentSandbox"
+                },
+                "children": []
+            },
+            {
                 "name": "appConfigs",
                 "label": staticI18n.$t("应用设置"),
                 "iconfontName": "gear",
@@ -942,6 +953,17 @@ export const PAAS_STATIC_CONFIG = {
                 "supportModule": true,
                 "destRoute": {
                     "name": "appAnalysis"
+                },
+                "children": []
+            },
+            {
+                "name": "agentSandbox",
+                "label": staticI18n.$t("Agent 沙箱"),
+                "iconfontName": "fx",
+                "supportModule": false,
+                "matchRouters": ["agentSandbox", "agentSandboxTemplateDetail"],
+                "destRoute": {
+                  "name": "agentSandbox"
                 },
                 "children": []
             },

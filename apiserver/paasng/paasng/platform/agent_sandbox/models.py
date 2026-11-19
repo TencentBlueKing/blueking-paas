@@ -24,6 +24,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
+from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -41,9 +42,15 @@ from .constants import (
 from .e2b.constants import (
     KEY_GENERATE_MAX_RETRIES,
     MAX_ACTIVE_KEYS_PER_APP,
+    RESOURCE_NAME_MAX_LENGTH,
     E2BSandboxStatus,
 )
-from .e2b.exceptions import E2BApiKeyGenerateError, E2BApiKeyQuotaExceeded, E2BSandboxNotFound
+from .e2b.exceptions import (
+    E2BApiKeyGenerateError,
+    E2BApiKeyQuotaExceeded,
+    E2BSandboxNotFound,
+    E2BTemplateNotFound,
+)
 from .e2b.keys import generate_api_key, hash_api_key, make_display_prefix
 from .exceptions import SandboxAlreadyExists, SandboxNoClusterError
 
@@ -155,11 +162,12 @@ class SandboxManager(models.Manager):
             raise SandboxAlreadyExists(f"sandbox name {name} in application {application.code} already exists")
 
         # 分配可调度集群；SandboxInstance -> AGENT_SANDBOX_ISOLATED
-        alloc_ctx = AllocationContext.create_for_agent_sandbox(
-            application.tenant_id,
-            application.region,
-            is_isolated=workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value,
+        usage = (
+            ClusterUsage.AGENT_SANDBOX_ISOLATED
+            if workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value
+            else ClusterUsage.AGENT_SANDBOX
         )
+        alloc_ctx = AllocationContext.create_for_agent_sandbox(application.tenant_id, application.region, usage=usage)
 
         try:
             cluster = ClusterAllocator(alloc_ctx).get_default()
@@ -457,7 +465,7 @@ class E2BSandbox(UuidAuditedModel):
         Application, on_delete=models.CASCADE, db_constraint=False, related_name="e2b_sandboxes"
     )
     cluster_name = models.CharField(verbose_name="所属集群", max_length=32)
-    # 创建沙箱使用的模板标识，由底层 e2b-gateway 识别并使用，此处只做透传和记录
+    # 创建沙箱所用模板的资源名，即底层 E2B 网关侧的模板标识。自定义模板的资源名带应用前缀，与 SDK 传入的不同
     template_id = models.CharField(verbose_name="模板标识", max_length=128, blank=True, default="")
     status = models.CharField(verbose_name="状态", max_length=16, default=E2BSandboxStatus.RUNNING.value)
     expired_at = models.DateTimeField(verbose_name="过期时间", null=True)
@@ -475,38 +483,100 @@ class E2BSandbox(UuidAuditedModel):
         return f"{self.sandbox_id}({self.application_id})"
 
 
+class E2BSandboxTemplateManager(models.Manager):
+    """模板的可见性与可用性判定入口，判断应用能看到、能使用哪些模板时不要自行拼 filter。"""
+
+    def builtins(self) -> "models.QuerySet[E2BSandboxTemplate]":
+        return self.filter(application__isnull=True)
+
+    def customs(self) -> "models.QuerySet[E2BSandboxTemplate]":
+        """所有应用的自定义模板"""
+        return self.filter(application__isnull=False)
+
+    def listable_by(self, application: Application) -> "models.QuerySet[E2BSandboxTemplate]":
+        """应用在页面上能看到的模板：已启用且公开的内置模板，加上本应用的自定义模板"""
+        return self.filter(
+            models.Q(application__isnull=True, enabled=True, is_public=True) | models.Q(application=application)
+        )
+
+    def get_usable(self, application: Application, template_id: str) -> "E2BSandboxTemplate":
+        """取出应用可以用来创建沙箱的模板。
+
+        内置模板不看 is_public：不公开只影响页面展示，服务自用的模板要能通过 SDK 使用。
+
+        :raises E2BTemplateNotFound: 模板不存在、已停用，或是其他应用的自定义模板
+        :raises MultipleObjectsReturned: 自定义模板与内置模板同名
+        """
+        try:
+            return (
+                self.filter(enabled=True, template_id=template_id)
+                .filter(models.Q(application__isnull=True) | models.Q(application=application))
+                .get()
+            )
+        except self.model.DoesNotExist:
+            raise E2BTemplateNotFound(f"template {template_id} is not available")
+
+
 class E2BSandboxTemplate(UuidAuditedModel):
-    """平台登记的 e2b 沙箱模板，由运维通过 ``e2b_sandbox_template`` 命令维护。
+    """e2b 沙箱模板，平台以它为准，向启用了 e2b 的集群下发同名的 SandboxTemplate 与 SandboxPool。
 
-    模板的真实定义在 e2b 网关侧，这里只登记展示用的元数据与状态：
+    - 内置模板：由平台管理员通过管理命令或平台管理页面维护，所有应用都可使用
+    - 自定义模板：由应用自己创建，只有该应用可见、可用
 
-    - enabled：SDK 只能用已启用的模板创建沙箱
-    - is_public：页面只展示已启用且公开的模板。不公开的模板（如某些服务自用的）
+    - enabled：SDK 只能用已启用的模板创建沙箱，停用不影响已下发的 CR
+    - is_public：仅对内置模板生效，页面只展示公开的内置模板。不公开的模板（如某些服务自用的）
       仍可由知道 template_id 的调用方通过 SDK 使用，它不是访问控制
 
-    template_id 须与网关侧一致，由运维登记时保证，平台不做校验。
-
-    [multi-tenancy] This model is not tenant-aware.
+    [multi-tenancy] 内置模板全平台共享，不区分租户；自定义模板的 tenant_id 取所属应用的租户。
     """
 
-    template_id = models.CharField(verbose_name="模板标识", max_length=128, unique=True, help_text="与网关侧一致")
+    # 为空即内置模板。应用删除是软删除，自定义模板要由清理流程删掉，不会因此变成内置模板
+    # TODO 接入自定义模板时，在 ApplicationCleaner 中调用 templates.delete_custom_templates_of
+    application = models.ForeignKey(
+        Application,
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        null=True,
+        related_name="e2b_sandbox_templates",
+    )
+    # 用户登记的原始 template_id，不同的应用可能有相同的 template_id。
+    # 便于用户使用登记的原始值在 SDK 中创建沙箱实例。
+    template_id = models.CharField(verbose_name="模板标识", max_length=64, help_text="SDK 创建沙箱时传入的 templateID")
+    # 内置模板与 template_id 相同，自定义模板为 {应用}--{template_id}。自定义模板的唯一性也由它保证
+    resource_name = models.CharField(
+        verbose_name="资源名",
+        max_length=RESOURCE_NAME_MAX_LENGTH,
+        unique=True,
+        help_text="集群内 SandboxTemplate 与 SandboxPool 共用的名称，底层 E2B 网关把它当作 e2b 的 templateID",
+    )
     name = models.CharField(verbose_name="名称", max_length=64)
     description = models.TextField(verbose_name="描述", blank=True, default="")
-    # 以下字段仅供展示，不参与创建沙箱，实际规格以网关侧模板为准
-    image = models.CharField(verbose_name="镜像", max_length=256, blank=True, default="")
-    cpu_count = models.PositiveIntegerField(verbose_name="CPU 核数", null=True)
-    memory_mb = models.PositiveIntegerField(verbose_name="内存（MB）", null=True)
-    disk_size_mb = models.PositiveIntegerField(verbose_name="磁盘（MB）", null=True)
-    timeout = models.PositiveIntegerField(verbose_name="默认存活秒数", null=True)
-    network = models.CharField(verbose_name="网络", max_length=128, blank=True, default="")
-    region = models.CharField(verbose_name="地域", max_length=64, blank=True, default="")
-    prewarm_count = models.PositiveIntegerField(verbose_name="预热数量", null=True)
+    image = models.CharField(verbose_name="镜像", max_length=256)
+    cpu_count = models.PositiveIntegerField(verbose_name="CPU 核数")
+    memory_mb = models.PositiveIntegerField(verbose_name="内存（MB）")
+    disk_size_mb = models.PositiveIntegerField(
+        verbose_name="系统盘（MB）",
+        null=True,
+        help_text="为空时不挂载独立系统盘，使用运行时默认的根文件系统；填写时为每个沙箱创建一块该大小的 PVC 作为系统盘",
+    )
+    env_vars = models.JSONField(verbose_name="环境变量", default=dict, blank=True)
+    workdir = models.CharField(verbose_name="工作目录", max_length=256, blank=True, default="")
+    # 自定义模板固定为 0，靠集群内 e2b 控制器在无库存时现场创建
+    prewarm_count = models.PositiveIntegerField(verbose_name="预热数量", default=0)
     enabled = models.BooleanField(verbose_name="是否启用", default=True)
     # 默认不公开：漏配时只是页面上看不到，不会把内部模板误展示出去
     is_public = models.BooleanField(verbose_name="是否公开", default=False, help_text="是否在开发者中心页面展示")
+
+    tenant_id = tenant_id_field_factory()
+
+    objects = E2BSandboxTemplateManager()
 
     class Meta:
         ordering = ["template_id"]
 
     def __str__(self):
-        return self.template_id
+        return self.resource_name
+
+    @property
+    def is_builtin(self) -> bool:
+        return self.application_id is None

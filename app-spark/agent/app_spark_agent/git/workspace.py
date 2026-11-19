@@ -39,11 +39,12 @@ logger = logging.getLogger(__name__)
 ReadyAction = Literal["initialised", "cloned", "reused"]
 
 # Push rejections that mean "the remote moved on", as opposed to a transport or auth failure.
+# A ref lock ("cannot lock ref","reference already exists") or "stale info" is a race with
+# another push that is still creating or moving the ref.
+# Retrying that either finds the ref already at this commit or comes back as a real non-fast-forward.
 _DIVERGED_MARKERS = (
     "non-fast-forward",
     "fetch first",
-    "cannot lock ref",
-    "stale info",
 )
 
 

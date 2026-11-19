@@ -19,6 +19,7 @@ from paasng.utils.basic import make_app_pattern, re_path
 from .views import config
 from .views import legacy as legacy_views
 from .views import logs as logs_views
+from .views import sys_api as sys_views
 
 # log
 urlpatterns = [
@@ -106,13 +107,6 @@ urlpatterns = [
         logs_views.ModuleIngressLogAPIView.as_view({"post": "aggregate_fields_filters"}),
         name="api.logs.ingress.aggregate_fields_filters.legacy",
     ),
-    # System APIs
-    re_path(
-        r"sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/"
-        r"envs/(?P<environment>stag|prod)/structured/list/$",
-        logs_views.SysStructuredLogAPIView.as_view({"post": "query_logs"}),
-        name="sys.api.logs.structured",
-    ),
 ]
 
 # 日志采集配置 API
@@ -144,6 +138,17 @@ urlpatterns += [
         legacy_views.V1StdoutLogAPIView.as_view({"get": "query_logs_scroll_with_get", "post": "query_logs_scroll"}),
         name="api.logs.standard.list.deprecated",
     ),
+]
+
+# System APIs: 给固定的系统调用
+urlpatterns += [
+    re_path(
+        r"sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/"
+        r"envs/(?P<environment>stag|prod)/structured/list/$",
+        sys_views.SysStructuredLogAPIView.as_view({"post": "query_logs"}),
+        name="sys.api.logs.structured",
+    ),
+    # [Deprecated] 已注册到 APIGW, 慎重删除
     re_path(
         r"sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/structured/list/$",
         legacy_views.V1SysStructuredLogAPIView.as_view({"post": "query_logs", "get": "query_logs_get"}),

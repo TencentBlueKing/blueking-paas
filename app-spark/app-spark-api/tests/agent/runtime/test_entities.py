@@ -52,6 +52,7 @@ HEALTHY_PAYLOAD = {
     "replication_pending": False,
     "dev_server_status": "ready",
     "run_id": None,
+    "model_ready": True,
 }
 
 

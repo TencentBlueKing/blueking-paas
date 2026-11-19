@@ -221,7 +221,7 @@ class SysAddonsAPIViewSet(viewsets.ViewSet):
         return Response(data=service_info)
 
 
-class LessCodeSystemAPIViewSet(viewsets.ViewSet):
+class SysLessCodeViewSet(viewsets.ViewSet):
     """System api for lesscode"""
 
     permission_classes = [
@@ -278,7 +278,7 @@ class LessCodeSystemAPIViewSet(viewsets.ViewSet):
         return svc
 
 
-class ClusterNamespaceInfoView(viewsets.ViewSet):
+class SysClusterNamespaceInfoView(viewsets.ViewSet):
     """System api for query app cluster/namespace info"""
 
     permission_classes = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]

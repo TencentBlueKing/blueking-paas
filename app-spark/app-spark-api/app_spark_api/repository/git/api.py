@@ -24,13 +24,13 @@ from ninja import Path, Router
 
 from app_spark_api.core.shortcuts import aget_project_or_404
 from app_spark_api.entities import ERROR_RESPONSES
-from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import login_required
 from app_spark_api.repository.git import archives, services
 from app_spark_api.repository.git.entities import GitRepositoryResponse
 from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError
 from app_spark_api.repository.git.factory import get_repo_server_config
 from app_spark_api.repository.git.models import ProjectGitRepository
+from app_spark_api.utils.api_errors.error_codes import error_codes
 
 if TYPE_CHECKING:
     from django.http import HttpRequest

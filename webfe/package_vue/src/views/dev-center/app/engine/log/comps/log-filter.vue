@@ -656,11 +656,6 @@ export default {
             .action-btn {
                 margin-left: 10px;
             }
-            /deep/ .bk-date-picker-rel {
-                .icon-wrapper {
-                    left: 0 !important;
-                }
-            }
         }
 
         .auto-time-list {

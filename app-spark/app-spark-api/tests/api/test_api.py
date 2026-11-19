@@ -23,6 +23,7 @@ from http import HTTPStatus
 
 import pytest
 from django.test import RequestFactory
+from ninja.errors import ValidationError
 
 from app_spark_api.agent.runtime import (
     AgentBusyError,
@@ -34,9 +35,9 @@ from app_spark_api.agent.runtime import (
     ModelCredentialMissingError,
 )
 from app_spark_api.api import api
-from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.bk_access_token import AccessTokenUnavailableError
 from app_spark_api.infras.bkaidev import BkAidevGatewayError
+from app_spark_api.utils.api_errors.error_codes import error_codes
 
 SECRET = "internal-secret-token"
 
@@ -113,10 +114,10 @@ def test_model_access_errors_say_who_has_to_fix_them(exc, status, code):
     assert SECRET not in response.content.decode()
 
 
-@pytest.mark.parametrize("name", ["PROJECT_ID_TAKEN", "PROJECT_NAME_TAKEN"])
+@pytest.mark.parametrize("name", ["PROJECT_ID_TAKEN", "PROJECT_DELETE_FAILED"])
 def test_error_code_instances_do_not_share_message_or_data(name):
-    first = getattr(error_codes, name).f(project_id="one", name="one").set_data({"one": True})
-    second = getattr(error_codes, name).f(project_id="two", name="two")
+    first = getattr(error_codes, name).f(project_id="one", category="one").set_data({"one": True})
+    second = getattr(error_codes, name).f(project_id="two", category="two")
     assert first.code == second.code == name
     assert "one" in first.message
     assert "two" in second.message
@@ -161,6 +162,45 @@ def test_handled_error_rolls_back_an_atomic_request(project):
         assert project.name != "must roll back"
     finally:
         connection.settings_dict["ATOMIC_REQUESTS"] = old
+
+
+def test_a_validation_error_summarizes_a_few_failures_and_keeps_all_of_them_in_data():
+    errors = [{"loc": ("body", "items", i, "name"), "msg": "Field required", "type": "missing"} for i in range(5)]
+    response = api.on_exception(RequestFactory().get("/"), ValidationError(errors))
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    body = json.loads(response.content)
+    assert body["detail"] == (
+        "Request validation failed: body.items[0].name: Field required; body.items[1].name: Field required; "
+        "body.items[2].name: Field required; and 2 more"
+    )
+    assert len(body["data"]) == 5
+
+
+def test_a_validation_error_without_a_location_is_summarized_by_its_message():
+    response = api.on_exception(RequestFactory().get("/"), ValidationError([{"msg": "Pick a model first"}]))
+
+    assert json.loads(response.content)["detail"] == "Request validation failed: Pick a model first"
+
+
+def test_openapi_types_the_validation_errors_in_data():
+    schemas = json.loads(json.dumps(api.get_openapi_schema()))["components"]["schemas"]
+
+    assert set(schemas["ValidationErrorItem"]["required"]) == {"loc", "msg", "type"}
+    data = schemas["ErrorResponse"]["properties"]["data"]
+    assert {"$ref": "#/components/schemas/ValidationErrorItem"} in [option.get("items") for option in data["anyOf"]]
+
+
+def test_a_validation_error_without_messages_keeps_the_generic_detail():
+    """ninja's own pagination raises entries with no `loc`/`msg`; they must not break the handler."""
+    response = api.on_exception(RequestFactory().get("/"), ValidationError([{"cursor": "Invalid Cursor"}]))
+
+    body = json.loads(response.content)
+    assert body == {
+        "code": "VALIDATION_ERROR",
+        "detail": "Request validation failed.",
+        "data": [{"cursor": "Invalid Cursor"}],
+    }
 
 
 def test_openapi_declares_the_same_error_shape_for_internal_and_public_routes():

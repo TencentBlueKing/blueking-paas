@@ -21,11 +21,14 @@ import pytest
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.applications.models import Build
+from paas_wl.bk_app.cnative.specs.models import AppModelRevision
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.entities import DeployHandleResult
 from paasng.platform.engine.deploy.image_release import ImageReleaseMgr
+from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
 
@@ -66,6 +69,61 @@ class TestHandleProcessesAndDummyBuild:
         deployment = Deployment.objects.get(id=deployment.id)
         assert deployment.processes == {"web": ProcessTmpl(name="web", command="run server")}
         assert str(deployment.build_id) == deployment.advanced_options.build_id
+
+    @pytest.mark.usefixtures("_with_wl_apps")
+    @pytest.mark.parametrize(
+        ("current_procs", "built_procs", "has_build_revision", "expected_missing"),
+        [
+            (["web", "def-w"], ["web", "celery"], True, "def-w"),
+            (["web"], ["web", "celery"], True, None),
+            (["web", "def-w"], ["web"], False, None),
+        ],
+    )
+    def test_cnative_procs_check(
+        self,
+        bk_module,
+        bk_stag_env,
+        deployment_with_build_options,
+        current_procs,
+        built_procs,
+        has_build_revision,
+        expected_missing,
+    ):
+        """选已构建镜像部署云原生应用时，当前进程必须都在镜像构建时的进程里"""
+        application = bk_module.application
+        application.type = ApplicationType.CLOUD_NATIVE
+        application.save(update_fields=["type"])
+
+        deployment = deployment_with_build_options
+        build_id = deployment.advanced_options["build_id"]
+        Build.objects.create(
+            uuid=build_id,
+            app=bk_stag_env.wl_app,
+            module_id=bk_module.id,
+            bkapp_revision_id=self._create_revision(bk_module, built_procs) if has_build_revision else None,
+            tenant_id=bk_module.tenant_id,
+        )
+        deployment.update_fields(bkapp_revision_id=self._create_revision(bk_module, current_procs))
+
+        mgr = ImageReleaseMgr.from_deployment_id(deployment.id)
+        if expected_missing:
+            with pytest.raises(DeployShouldAbortError, match=expected_missing):
+                mgr._handle_app_processes_and_dummy_build()
+        else:
+            mgr._handle_app_processes_and_dummy_build()
+            assert Deployment.objects.get(id=deployment.id).processes
+
+    @staticmethod
+    def _create_revision(module, proc_names: list[str]) -> int:
+        json_value = {"spec": {"processes": [{"name": name} for name in proc_names]}}
+        return AppModelRevision.objects.create(
+            application_id=module.application.id,
+            module_id=module.id,
+            version="paas.bk.tencent.com/v1alpha2",
+            json_value=json_value,
+            yaml_value="",
+            tenant_id=module.tenant_id,
+        ).id
 
     @pytest.mark.usefixtures("_with_wl_apps")
     @pytest.mark.parametrize(

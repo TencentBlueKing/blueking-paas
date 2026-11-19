@@ -2418,6 +2418,52 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Create an AppSpark application with system API credentials
+  /accounts/user_profile/:
+    post:
+      operationId: register_user_profile
+      description: 为当前用户在开发者中心注册。浏览器首次访问会自动建档；只经 API 网关调用开发者中心时，要靠本接口预先注册，之后该用户才能被设为应用管理员。已注册时原样返回
+      tags:
+      - 用户信息
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/api/accounts/user_profile/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Register the current user in the Developer Center. A first browser visit creates the profile automatically; callers that only reach the Developer Center through the API gateway use this API to register the user beforehand, which is required before that user can be an application administrator. An existing profile is returned unchanged
+  /system/bkapps/applications/validations/:
+    post:
+      operationId: sys_validate_app_basic_info
+      description: 应用态校验应用 ID 和名称能否用于创建应用
+      tags:
+      - 应用/模块信息查询
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/validations/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Validate whether an application ID and name can be used to create an application with system API credentials
   /bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/aggregate_by_interval:
     get:
       operationId: aggregate_by_interval
@@ -2835,10 +2881,10 @@ paths:
                   description: 模块名，默认 default
                 plan_id:
                   type: string
-                  description: 手动指定方案 ID。不传则使用平台默认方案
+                  description: 所有环境使用的方案 ID。仅当 list_service_possible_plans 返回 static_plans 时使用；只有一个可选方案时可不传
                 env_plan_id_map:
                   type: object
-                  description: '分环境方案 ID，如 {"stag": "<plan_id>", "prod": "<plan_id>"}'
+                  description: '分环境方案 ID，如 {"stag": "<plan_id>", "prod": "<plan_id>"}；list_service_possible_plans 返回 env_specific_plans 时必须使用'
         required: true
         description: ''
       x-bk-apigateway-resource:
@@ -2922,6 +2968,192 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Unbind addon service
+  /bkapps/applications/{app_code}/modules/{module}/services/{service_id}/possible_plans:
+    get:
+      operationId: list_service_possible_plans
+      description: 查询模块绑定增强服务时可选的方案
+      tags:
+      - 增强服务
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: path
+        name: service_id
+        schema:
+          type: string
+        required: true
+        description: 增强服务 UUID，可通过 list_module_services 的 unbound[].uuid 获取
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/services/{service_id}/possible_plans
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List the plans a module can choose when binding an addon service
+  /bkapps/applications/{app_code}/modules/{module}/build_config/:
+    get:
+      operationId: get_module_build_config
+      description: 查看模块的构建配置
+      tags:
+      - 应用/模块信息查询
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/build_config/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Retrieve the build config of a module
+    post:
+      operationId: update_module_build_config
+      description: 修改模块的构建配置（整体覆盖，先查询再修改）
+      tags:
+      - 应用/模块信息查询
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - build_method
+              properties:
+                build_method:
+                  type: string
+                  description: 构建方式：buildpack、dockerfile 或 custom_image；custom_image 与其他方式不能互相切换
+                tag_options:
+                  type: object
+                  description: 镜像 Tag 规则，buildpack / dockerfile 必填，包含 prefix、with_version、with_build_time、with_commit_id
+                bp_stack_name:
+                  type: string
+                  description: 基础镜像名，buildpack 必填，取自 list_module_bp_runtimes 的 image
+                buildpacks:
+                  type: array
+                  description: '有序的构建工具列表，buildpack 必填，元素为 {"id": <int>}，id 须属于所选基础镜像'
+                dockerfile_path:
+                  type: string
+                  description: Dockerfile 路径，dockerfile 方式使用
+                docker_build_args:
+                  type: object
+                  description: Docker 构建参数，dockerfile 必填，可为空对象
+                image_repository:
+                  type: string
+                  description: 镜像仓库，custom_image 必填
+                image_credential_name:
+                  type: string
+                  description: 镜像凭证名称，custom_image 使用
+                use_bk_ci_pipeline:
+                  type: boolean
+                  description: 是否通过蓝盾流水线构建；不传会被重置为 false
+        required: true
+        description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/build_config/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Update the build config of a module (full replacement)
+  /bkapps/applications/{app_code}/modules/{module}/bp_runtimes/:
+    get:
+      operationId: list_module_bp_runtimes
+      description: 查询模块可用的基础镜像及其构建工具（buildpack）
+      tags:
+      - 应用/模块信息查询
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/bp_runtimes/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List base images and their buildpacks available to a module
   /system/bk_plugins/ai/{code}/granted_distributors/{distributor_code}/:
     post:
       operationId: granted_ai_agent_distributors
@@ -3879,6 +4111,33 @@ paths:
           resourcePermissionRequired: false
         descriptionEn:
         noneSchema: true
+  /agent_sandbox/e2b/sandboxes/{sandbox_id}/connect:
+    post:
+      operationId: connect_e2b_sandbox
+      description: 连接 e2b 沙箱
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/e2b/sandboxes/{sandbox_id}/connect
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: false
+          resourcePermissionRequired: false
+        descriptionEn:
+        noneSchema: true
   /agent_sandbox/applications/{app_code}/e2b/api_keys/:
     post:
       operationId: create_e2b_api_key
@@ -4346,3 +4605,225 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: false
         descriptionEn: Get gateway resource permission apply record detail
+  /system/cloudapi_v2/bkapps/applications/{app_code}/gateways/:
+    get:
+      operationId: sys_list_cloud_api_gateways
+      description: 应用态获取网关列表
+      tags:
+      - 网关 API
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/gateways/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List gateways with system API credentials
+  /system/cloudapi_v2/bkapps/applications/{app_code}/gateways/{gateway_name}/permissions/resources/:
+    get:
+      operationId: sys_list_cloud_api_gateway_apis
+      description: 应用态获取网关下的接口列表（含当前应用的权限状态）
+      tags:
+      - 网关 API
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: gateway_name
+        schema:
+          type: string
+        required: true
+        description: 网关名称
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/gateways/{gateway_name}/permissions/resources/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List gateway APIs with system API credentials
+  /system/cloudapi_v2/bkapps/applications/{app_code}/gateways/{gateway_name}/permissions/apply/:
+    post:
+      operationId: sys_apply_cloud_api_permission
+      description: 应用态申请网关接口权限
+      tags:
+      - 网关 API
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: gateway_name
+        schema:
+          type: string
+        required: true
+        description: 网关名称
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/gateways/{gateway_name}/permissions/apply/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Apply gateway API permission with system API credentials
+  /system/cloudapi_v2/bkapps/applications/{app_code}/gateways/permissions/apply-records/:
+    get:
+      operationId: sys_list_cloud_api_permission_apply_records
+      description: 应用态查询网关接口权限申请记录
+      tags:
+      - 网关 API
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/gateways/permissions/apply-records/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List gateway API permission apply records
+  /system/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/:
+    get:
+      operationId: sys_list_mcp_servers
+      description: 应用态获取 MCP Server 列表
+      tags:
+      - MCP Server
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List MCP servers with system API credentials
+  /system/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/permissions/apply/:
+    post:
+      operationId: sys_apply_mcp_server_permission
+      description: 应用态申请 MCP Server 权限
+      tags:
+      - MCP Server
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/permissions/apply/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Apply MCP server permission with system API credentials
+  /system/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/permissions/apply-records/:
+    get:
+      operationId: sys_list_mcp_server_permission_apply_records
+      description: 应用态查询 MCP Server 权限申请记录
+      tags:
+      - MCP Server
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/permissions/apply-records/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List MCP server permission apply records

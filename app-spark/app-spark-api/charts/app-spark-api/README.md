@@ -21,7 +21,7 @@ Dockerfile.dev 不得进入生产或预发布流水线，也不得推送为正�
 `agent.runtimeProvider` 配为 `e2b`。
 
 `agent.runtimeProvider: e2b` 时，每个会话在 e2b 沙箱里运行 Agent，沙箱模板由
-[agent 镜像](../../../agent/README.md) 添加而来。按 [values.yaml](values.yaml) 中注释的 e2b 示例填写
+[agent 镜像](../../../agent/docs/dev_guide.md#本地镜像) 添加而来。按 [values.yaml](values.yaml) 中注释的 e2b 示例填写
 `agent.runtimeProviderConfig`，只写 e2b 的字段即可：Helm 会把 values.yaml 里 local_process 的默认字段合并进来，
 Chart 在 e2b 模式下会自动去掉它们。`api_key`、`api_url`、`callback_base_url`、`template` 缺任何一项，渲染直接失败，
 不会等到第一个会话才报错。
@@ -66,6 +66,13 @@ Ingress 依赖 **ingress-nginx**，使用正则路径 `/api-svc(/|$)(.*)` 和重
 转发时去掉外部 `/api-svc` 前缀。按集群配置设置 `ingress.ingressClass`。
 
 前端服务可在同一域名单独配置 `/` 的 Ingress，无需添加上述重写注解。
+
+## 发布到开发者中心
+
+发布任务在上面的 Celery worker 上推进，不需要额外的 Deployment。还需要 `appSecret`、`bkApiUrlTmpl`，
+以及 `bkpaasApigwName`（开发者中心网关名，默认 bkpaas3）、`bkpaasUrl`（开发者中心站点地址，用于拼页面链接）。
+`appCode` 默认 `bk-app-spark`，开发者中心网关已按它预授权发布要用的资源，一般不用改。
+在开发者中心开通权限的步骤见[发布到开发者中心](../../docs/publish.md#在开发者中心开通权限)。
 
 ## 数据持久化
 

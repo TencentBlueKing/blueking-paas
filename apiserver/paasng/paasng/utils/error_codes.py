@@ -22,6 +22,9 @@ from django.utils.translation import gettext_lazy as _
 class ErrorCodes:
     # 平台管理员相关
     USER_PROFILE_NOT_FOUND = ErrorCode(_("用户不存在"))
+    USER_PROFILE_AUTO_CREATE_DISABLED = ErrorCode(
+        _("开发者中心未开放自助注册，请联系平台管理员添加用户"), status_code=403
+    )
 
     # 用户特性相关
     USER_FEATURE_FLAG_NOT_FOUND = ErrorCode(_("用户特性不存在"))
@@ -244,6 +247,8 @@ class ErrorCodes:
     # 集群组件
     CANNOT_UPSERT_CLUSTER_COMPONENT = ErrorCode(_("无法更新集群组件"))
     CANNOT_GET_CLUSTER_STATUS = ErrorCode(_("无法获取集群状态"))
+    # 集群 e2b 沙箱配置
+    CANNOT_DELETE_CLUSTER_E2B_CONFIG = ErrorCode(_("无法删除集群 e2b 沙箱配置"))
 
     # dev sandbox
     DEV_SANDBOX_CREATE_FAILED = ErrorCode(_("创建开发沙箱失败"))

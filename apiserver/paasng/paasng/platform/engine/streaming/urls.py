@@ -30,6 +30,10 @@ urlpatterns = [
         views.StreamViewSet.as_view(dict(get="history_events")),
         name="streaming.stream.history_events",
     ),
+]
+
+# System APIs: 给固定的系统调用
+urlpatterns += [
     # 应用态获取部署日志，仅供 AIDEV 查询 AI Agent 应用
     re_path(
         r"^sys/api/streams/(?P<channel_id>[0-9a-f-]{32,36})/history_events$",

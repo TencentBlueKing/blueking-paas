@@ -14,7 +14,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Orchestrating a conversation: the row, its Runtime, and one turn at a time.
+"""Orchestrating a conversation: the row and its Runtime.
+
+Starting something on that Runtime -- a turn, or the preview -- is in
+:mod:`app_spark_api.agent.conversations.lifecycle`.
 
 Where a conversation's history is read from is the thing to keep straight here. The Runtime is
 authoritative only while it is alive, and it is disposable by design -- so this service reads
@@ -29,7 +32,6 @@ import logging
 import time
 from functools import partial
 from typing import TYPE_CHECKING, Any
-from uuid import uuid4
 
 import attrs
 from asgiref.sync import sync_to_async
@@ -37,7 +39,7 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
-from app_spark_api.agent.conversations import checkpoints, state
+from app_spark_api.agent.conversations import state
 from app_spark_api.agent.conversations.exceptions import (
     ConversationClosedError,
     RunNotFoundError,
@@ -47,12 +49,11 @@ from app_spark_api.agent.conversations.internal_api import state_ingest_path
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.conversations.tokens import mint_state_token
-from app_spark_api.agent.model_catalog.services import resolve_model_access, resolve_run_model_id
+from app_spark_api.agent.model_catalog.services import resolve_model_access
 from app_spark_api.agent.runtime import (
     AgentProvisionError,
     AgentRuntimeClient,
     AgentUnavailableError,
-    AgentWorkspaceSavePendingError,
     EventPage,
     GitRemote,
     StateCallback,
@@ -66,7 +67,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
-    from app_spark_api.agent.runtime import AgentRun, PreviewTarget, RuntimeHealth
+    from app_spark_api.agent.runtime import AgentRun, PreviewTarget
     from app_spark_api.core.projects.models import Project
     from app_spark_api.infras.bk_access_token import UserCredential
     from app_spark_api.repository.git.models import ProjectGitRepository
@@ -77,8 +78,6 @@ logger = logging.getLogger(__name__)
 # Runtime's own default, because this read no longer goes anywhere near a Runtime.
 DEFAULT_UI_EVENT_PAGE_SIZE = 200
 MAX_UI_EVENT_PAGE_SIZE = 1_000
-
-_CLOSED_MESSAGE = "Conversation {id} has been closed and cannot be advanced"
 
 
 @attrs.frozen
@@ -243,7 +242,7 @@ async def close_conversation(conversation: Conversation) -> None:
     #
     # * 条件写让并发的两个「结束」里只有一个能改到行，另一个拿到 0 行受影响，于是它知道自己
     #   慢了一步。读-判断-写的话两个都会觉得自己是第一个，各自回一个成功。
-    # * 顺序也不能反。这条 UPDATE 才是真正拦住后续对话的东西（见 :func:`start_run` 的闸门），
+    # * 顺序也不能反。这条 UPDATE 才是真正拦住后续对话的东西（见 ``lifecycle.start.start_run`` 的闸门），
     #   而停进程是尽力而为的——先停进程再落库，中间失败就会留下一个「Runtime 没了但会话还活着」
     #   的状态，下一轮对话又会把 Runtime 拉起来，等于这次结束什么也没做成。
     #
@@ -423,105 +422,6 @@ async def read_ui_events(
     return EventPage(since=since, last_seq=last_seq, records=records)
 
 
-async def start_run(
-    conversation: Conversation,
-    *,
-    content: str,
-    credential: UserCredential | None = None,
-    model_id: str | None = None,
-) -> AgentRun:
-    """Submit one turn and return its open event stream.
-
-    The context version is read from ``/health`` immediately before the run rather than
-    remembered between turns. Compaction can move it in the middle of a run, so a version
-    carried over from the previous turn is not merely stale, it is wrong often enough to matter.
-
-    :param conversation: Conversation the turn belongs to.
-    :param content: The user's message.
-    :param credential: The caller's BlueKing login, passed to :func:`open_client`.
-    :param model_id: The model this turn asked for; None runs it on the Runtime's default.
-    :return: The accepted run, whose bytes are still to come.
-    :raises ConversationClosedError: If the conversation has been closed.
-    :raises ModelNotAvailableError: If the model list does not offer model_id.
-    :raises AgentBusyError: If a run is already occupying the Runtime.
-    :raises AgentProvisionError: If no Runtime could be brought up.
-    :raises ModelAccessConfigurationError: If the model source or its settings are invalid, or
-        no model is left to run on.
-    :raises ModelCredentialMissingError: If bkaidev needs the caller's login, to check
-        model_id or to start a Runtime, and credential is None.
-    :raises AccessTokenUnavailableError: If the caller's access_token could not be obtained.
-    :raises BkAidevGatewayError: If the gateway could not give the model list.
-    :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the turn.
-    """
-    # 这道闸门是「结束会话」有意义的前提。没有它，结束一个会话只是杀掉了一个进程：下一轮对话
-    # 会照常把 Runtime 重新拉起来，被回收的 workspace 也会被重新占上。
-    if not conversation.is_live:
-        raise ConversationClosedError(_CLOSED_MESSAGE.format(id=conversation.id))
-
-    # 模型不可用时在拉起沙箱、写入用户消息之前就拒掉：这一轮本来就不会发生，不该为它付启动成本，
-    # 也不该在历史里留一条没有回答的输入。
-    forwarded_model_id = await resolve_run_model_id(model_id, credential)
-
-    client = await open_client(conversation, credential=credential)
-
-    # 先回库确认会话还活着，再读 client。open_client 要花好几秒，这中间会话可能已被关掉；
-    # 确认没过会收掉刚拉起来的 Runtime 并返回 409。先碰 client.handle 会把这次拒绝变成 500。
-    await _reject_if_closed_meanwhile(conversation)
-
-    logger.info(
-        "Conversation %s is using the Agent Runtime at %s",
-        conversation.id,
-        client.handle.base_url,
-    )
-    health = await client.health()
-    health = await _resume_if_cold(conversation, client, health)
-    logger.info(
-        "Conversation %s runtime health at %s: context_version=%s dev_server_status=%s running=%s",
-        conversation.id,
-        client.handle.base_url,
-        health.context_version,
-        health.dev_server_status,
-        health.running,
-    )
-
-    # run_id 在请求 Runtime 之前就随消息落库。Runtime 一接受，/health 就会报出这个 run_id，前端随即可以
-    # 拿它来停；要是等 Runtime 应答后再补写，这中间 stop_run 的归属校验会把一个真实的 run 当成不存在。
-    # 落库在前，也就不会因为浏览器断开或任务取消而丢掉用户输入与 run 的关联。
-    run_id = str(uuid4())
-    message = await sync_to_async(ConversationUserMessage.objects.create_for_conversation)(
-        conversation, content=content, run_id=run_id
-    )
-    try:
-        run = await client.start_run(
-            content=content,
-            context_version=health.context_version,
-            run_id=run_id,
-            model_id=forwarded_model_id,
-        )
-    except AgentWorkspaceSavePendingError as exc:
-        # 409 不会进 API 的异常日志，而页面上的文案是固定的，沙箱地址和 Runtime 的说明只在这里。
-        logger.warning(
-            "Conversation %s at %s refused the run because the previous turn is not saved yet: %s",
-            conversation.id,
-            client.handle.base_url,
-            exc,
-        )
-        await message.adelete()
-        raise
-    except BaseException:
-        # Runtime 拒绝的请求不应留在历史里；输入必须先于调用创建，才不会把本轮新事件算入游标。
-        await message.adelete()
-        raise
-
-    logger.info(
-        "Conversation %s accepted run %s at %s",
-        conversation.id,
-        run.run_id,
-        client.handle.base_url,
-    )
-    return run
-
-
 async def stop_run(conversation: Conversation, run_id: str) -> None:
     """请求停下这个会话正在跑的那一轮，不等它真正收尾就返回。
 
@@ -546,170 +446,6 @@ async def stop_run(conversation: Conversation, run_id: str) -> None:
     if handle is None or not await AgentRuntimeClient(handle).stop_run(run_id):
         raise RunNotInProgressError(f"Run {run_id} of conversation {conversation.id} is not in progress")
     logger.info("Conversation %s asked its Agent Runtime to stop run %s", conversation.id, run_id)
-
-
-async def _reject_if_closed_meanwhile(conversation: Conversation) -> None:
-    """Runtime 拉起来之后，回库再确认一次这个会话还活着。
-
-    :func:`start_run` 开头那道闸门看的是请求进来时读到的那一行，而 :func:`open_client` 要花上
-    好几秒才回来。这中间足够另一个请求把会话结束掉，于是这一轮会为一个已经结束的会话拉起
-    Runtime：刚交还的 Project workspace 又被占上（同一个 Project 的下一个会话于是开不起来），
-    而它手里那张回写 token 已经被 close 吊销了——这一轮跑得成功，却什么都写不回来。
-
-    检查放在 ``open_client()`` **之后**才兜得住，因为两边的顺序正好相反：close 是先落库、
-    再收 Runtime，这里是先拉起 Runtime（provider 里已经登记）、再回库读。于是不管这两个请求
-    怎么交错，总有一边能看见对方：
-
-    * close 的 UPDATE 落在这次读之前——这里读到「已结束」，Runtime 由这里收掉；
-    * close 的 UPDATE 落在这次读之后——那它的 terminate 必然晚于上面的 ``ensure()``，能在
-      provider 里找到这个 Runtime，由 close 收掉。
-
-    :param conversation: 要确认的会话。
-    :raises ConversationClosedError: 会话在这期间被结束了。抛出之前会先把 Runtime 收掉。
-    """
-    if await Conversation.objects.get_queryset().filter(pk=conversation.pk).live().aexists():
-        return
-
-    logger.warning(
-        "Conversation %s was closed while its Agent Runtime was coming up, taking the Runtime back down",
-        conversation.id,
-    )
-    await terminate_runtime(conversation)
-    raise ConversationClosedError(_CLOSED_MESSAGE.format(id=conversation.id))
-
-
-async def _resume_if_cold(
-    conversation: Conversation,
-    client: AgentRuntimeClient,
-    health: RuntimeHealth,
-) -> RuntimeHealth:
-    """Hand an untouched Runtime the conversation it is supposed to be continuing.
-
-    This is where a cold start actually happens, and it is on the run path rather than at
-    provisioning time because that is the first moment the history is genuinely needed.
-
-    A Runtime is only treated as untouched when it reports no conversation, version 0 and no
-    entries in either channel. Any one alone would be ambiguous, and injecting into a Runtime
-    that already holds a conversation would be destroying one. The channels count because a
-    first turn can fail before committing any context: that Runtime still reads as version 0,
-    but it has numbered entries of its own and can no longer be told where to start.
-
-    Files come back before the conversation does. In between the two, the Runtime is a process
-    that remembers writing code which is not on disk yet, and a run arriving in that window
-    would have the model act on the mismatch. Nothing accepts runs until both are done, which
-    is what the caller's ordering gives us for free.
-
-    The two halves are not required to describe the same moment. The files belong to the
-    Project: they come from the conversation's latest checkpoint, or from a newer remote branch
-    tip when another conversation has developed the Project since. The conversation is always
-    the newest archived one. Turns that change no files leave no checkpoint behind, so the
-    conversation being ahead of the files is the ordinary case; the files can be ahead too, when
-    a turn's commit was reported but its final context never arrived. Either way the Agent is
-    left to notice the difference itself.
-
-    :return: The health to start the run against, unchanged when there was nothing to resume.
-    :raises AgentUnavailableError: If a checkpoint exists but its files could not be restored.
-    """
-    if (
-        health.conversation_id is not None
-        or health.context_version != 0
-        or health.log_seq != 0
-        or health.ui_event_seq != 0
-    ):
-        return health
-
-    document = await _restore_files(conversation, client)
-
-    # Read now, not taken from the checkpoint. The checkpoint's own cursors were recorded when
-    # its commit reached the remote, which is before that turn's events have finished being
-    # replicated here -- and seeding a Runtime below the real cursor makes it number its first
-    # entry over one that already exists, where the ingest's own idempotency silently drops it.
-    # The channels are append-only and nothing truncates them, so "where we are now" is always
-    # the right place for the next entry to go.
-    log_seq = await state.alast_seq(conversation.id, state.MESSAGE_CHANNEL)
-    ui_event_seq = await state.alast_seq(conversation.id, state.UI_EVENT_CHANNEL)
-    if document is None:
-        return await _resume_numbering_only(conversation, client, health, log_seq=log_seq, ui_event_seq=ui_event_seq)
-
-    restored_version = await client.restore_context(
-        document,
-        if_match=health.context_version,
-        log_seq=log_seq,
-        ui_event_seq=ui_event_seq,
-    )
-    logger.info(
-        "Conversation %s was resumed on a cold Runtime at context version %d, "
-        "continuing from log seq %d and ui event seq %d",
-        conversation.id,
-        restored_version,
-        log_seq,
-        ui_event_seq,
-    )
-    return attrs.evolve(health, context_version=restored_version)
-
-
-async def _resume_numbering_only(
-    conversation: Conversation,
-    client: AgentRuntimeClient,
-    health: RuntimeHealth,
-    *,
-    log_seq: int,
-    ui_event_seq: int,
-) -> RuntimeHealth:
-    """Continue a conversation that has entries stored here but no archived context.
-
-    The Runtime pushes its channels before its context, so one lost during the conversation's
-    first turn leaves exactly this behind. There is no memory to hand back, but the numbering
-    still has to continue past what is stored: the ingest treats a repeated seq as a redelivery
-    and drops it, so a Runtime restarting at 1 would lose its first entries without an error.
-    """
-    if log_seq == 0 and ui_event_seq == 0:
-        return health
-
-    await client.restore_cursors(log_seq=log_seq, ui_event_seq=ui_event_seq)
-    logger.warning(
-        "Conversation %s was resumed on a cold Runtime without any archived context, "
-        "continuing from log seq %d and ui event seq %d",
-        conversation.id,
-        log_seq,
-        ui_event_seq,
-    )
-    return attrs.evolve(health, log_seq=log_seq, ui_event_seq=ui_event_seq)
-
-
-async def _restore_files(conversation: Conversation, client: AgentRuntimeClient) -> dict[str, Any] | None:
-    """Put the workspace back to this conversation's checkpoint, and return the latest context.
-
-    When the conversation has never pushed a checkpoint, the files are left alone and the newest
-    archived context is returned.
-
-    :raises AgentUnavailableError: If the Runtime cannot restore the checkpoint's commit.
-    :raises AgentBusyError: If a run is occupying the Runtime.
-    :raises ConversationStateError: If the newest archived context cannot be read back.
-    """
-    checkpoint = await checkpoints.alatest(conversation.id)
-    if checkpoint is None:
-        return await state.aload_context(conversation.id)
-
-    # 决策说明：冷启动不要求 checkpoint.context_version 与最新 context_version 严格相等。
-    # 会话上下文（对话/压缩）与工作区代码（Git 提交）正交：纯对话轮次、上下文压缩或上报失败后重启
-    # 都会使 context 领先于 checkpoint。旧沙箱既已销毁，因版本不等抛 502 只会让项目永久死锁；
-    # 直接恢复最新代码快照与最新上下文，若有差异交由 Agent 自行感知处理。
-    outcome = await client.restore_workspace(checkpoint.commit)
-    document = await state.aload_context(conversation.id)
-    # Info rather than a warning when the versions differ: every chat-only turn opens that gap,
-    # and from here it looks the same as a lost push. Logging both is what lets a "the Agent
-    # said it wrote that file" report be traced to the moment each half came from.
-    logger.info(
-        "Conversation %s restored its workspace to checkpoint %s at context version %d (%s), "
-        "resuming with context version %s",
-        conversation.id,
-        checkpoint.commit,
-        checkpoint.context_version,
-        outcome,
-        None if document is None else document.get("context_version"),
-    )
-    return document
 
 
 def _state_callback(conversation: Conversation) -> StateCallback:

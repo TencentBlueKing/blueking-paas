@@ -20,7 +20,10 @@ from unittest import mock
 
 import pytest
 import yaml
+from bkpaas_auth.models import user_id_encoder
+from django.conf import settings
 from django.core.management import call_command
+from django.test import override_settings
 
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.members.models import ApplicationGradeManager
@@ -83,3 +86,40 @@ class TestCreate3rdPartyApps:
 
         assert not Application.objects.filter(code=app_code).exists()
         assert not ApplicationGradeManager.objects.filter(app_code=app_code).exists()
+
+    @pytest.mark.parametrize(
+        ("admin_username", "yaml_creator", "expected_creator"),
+        [
+            # 未指定 creator 时使用平台内置管理员
+            ("bk_admin_x7k2p", None, user_id_encoder.encode(settings.USER_TYPE, "bk_admin_x7k2p")),
+            # 与 Chart 中 3rd_apps.yaml 写死的 creator 一致
+            ("admin", None, "0335cce79c92"),
+            # 指定了 creator 时原样使用
+            ("bk_admin_x7k2p", "0335cce79c92", "0335cce79c92"),
+        ],
+    )
+    def test_creator(self, tmp_path: Path, app_code: str, admin_username, yaml_creator, expected_creator):
+        app_desc = {
+            "code": app_code,
+            "name": app_code,
+            "name_en": app_code,
+            "tag": "",
+            "logo": "",
+            "introduction_zh_cn": "",
+            "introduction_en": "",
+            "source_tp_url": "http://example.com",
+        }
+        if yaml_creator:
+            app_desc["creator"] = yaml_creator
+        path = tmp_path / "3rd_apps.yaml"
+        path.write_text(yaml.safe_dump([app_desc]))
+
+        with (
+            override_settings(ADMIN_USERNAME=admin_username),
+            mock.patch(f"{CMD_MODULE}.AppManger") as mocked_app_manager,
+            mock.patch(f"{CMD_MODULE}.Command.create_3rd_app") as mocked_create,
+        ):
+            mocked_app_manager.return_value.get.return_value = None
+            call_command("create_3rd_party_apps", "--source", str(path), "--app_codes", app_code, "--override=true")
+
+        assert mocked_create.call_args.args[0].creator == expected_creator

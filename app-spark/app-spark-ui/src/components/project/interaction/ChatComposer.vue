@@ -53,6 +53,18 @@
         </button>
         <ModelSelector placement="top-start" />
         <button
+          v-if="running"
+          type="button"
+          class="composer__send composer__send--stop"
+          :disabled="!canStop"
+          aria-label="停止"
+          title="停止"
+          @click="handleStop"
+        >
+          <AppIcon name="square" />
+        </button>
+        <button
+          v-else
           type="button"
           class="composer__send"
           :disabled="disabled || !canSend"
@@ -81,12 +93,16 @@ const props = defineProps<{
   enableUpload?: boolean;
   hint?: string;
   placeholder?: string;
+  /** 有一轮正在跑：发送按钮换成停止按钮。与 `disabled` 无关，输入框锁着时也要能停。 */
+  running?: boolean;
+  canStop?: boolean;
 }>();
 
 const enableUpload = computed(() => props.enableUpload !== false);
 
 const emit = defineEmits<{
   (e: 'send', value: string, images: ChatImage[], modelId?: string): void;
+  (e: 'stop'): void;
 }>();
 
 const modelCatalogStore = useModelCatalogStore();
@@ -159,6 +175,10 @@ const handleSend = () => {
   draft.value = '';
   images.value = [];
   nextTick(resizeInput);
+};
+
+const handleStop = () => {
+  if (props.canStop) emit('stop');
 };
 
 const handleKeydown = (event: KeyboardEvent) => {
@@ -320,6 +340,14 @@ const handleKeydown = (event: KeyboardEvent) => {
 .composer__send:disabled {
   background: #c9d3e6;
   cursor: not-allowed;
+}
+
+.composer__send--stop :deep(.app-icon) {
+  font-size: 12px;
+}
+
+.composer__send--stop :deep(svg) {
+  fill: currentColor;
 }
 
 .composer__send:focus-visible,

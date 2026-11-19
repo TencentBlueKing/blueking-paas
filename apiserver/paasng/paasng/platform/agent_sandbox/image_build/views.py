@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 @ForceAllowAuthedApp.mark_view_set
-class ImageBuildViewSet(viewsets.ViewSet):
+class SysImageBuildViewSet(viewsets.ViewSet):
     """Agent Sandbox 镜像构建相关接口（System API）。"""
 
     permission_classes = [sysapi_client_perm_class(ClientAction.BUILD_SANDBOX_IMAGE)]

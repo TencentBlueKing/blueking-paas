@@ -72,12 +72,6 @@ urlpatterns = [
         views.ModuleSourcePackageViewSet.as_view({"post": "upload_via_url"}),
         name="api.sourcectl.source_package.create_via_url",
     ),
-    # 应用态源码包管理：AIDEV 为 AI Agent 应用、AppSpark 为 AppSpark 应用上传源码包
-    re_path(
-        make_app_pattern(r"/source_package/link/$", include_envs=False, prefix="sys/api/bkapps/applications/"),
-        views.SysModuleSourcePackageViewSet.as_view({"post": "upload_via_url"}),
-        name="sys.api.sourcectl.source_package.create_via_url",
-    ),
     re_path(
         make_app_pattern(r"/source_package/$", include_envs=False),
         views.ModuleSourcePackageViewSet.as_view({"get": "list"}),
@@ -92,11 +86,6 @@ urlpatterns += [
         make_app_pattern("/repo/branches/$", include_envs=False),
         views.RepoDataViewSet.as_view({"get": "get_repo_branches"}),
         name="api.repo.branches",
-    ),
-    re_path(
-        make_app_pattern("/repo/branches/$", include_envs=False, prefix="sys/api/bkapps/applications/"),
-        views.SysRepoDataViewSet.as_view({"get": "get_repo_branches"}),
-        name="sys.api.repo.branches",
     ),
     re_path(
         make_app_pattern("/repo/tags/$", include_envs=False),
@@ -121,5 +110,21 @@ urlpatterns += [
         ),
         views.RepoDataViewSet.as_view({"get": "get_compare_url"}),
         name="api.repo.revision.comment-diff-external",
+    ),
+]
+
+# System APIs: 给固定的系统调用
+urlpatterns += [
+    # 应用态源码包管理：AIDEV 为 AI Agent 应用、AppSpark 为 AppSpark 应用上传源码包
+    re_path(
+        make_app_pattern(r"/source_package/link/$", include_envs=False, prefix="sys/api/bkapps/applications/"),
+        views.SysModuleSourcePackageViewSet.as_view({"post": "upload_via_url"}),
+        name="sys.api.sourcectl.source_package.create_via_url",
+    ),
+    # 应用态代码仓库分支查询
+    re_path(
+        make_app_pattern("/repo/branches/$", include_envs=False, prefix="sys/api/bkapps/applications/"),
+        views.SysRepoDataViewSet.as_view({"get": "get_repo_branches"}),
+        name="sys.api.repo.branches",
     ),
 ]

@@ -12,9 +12,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.10
-  title: "Add system APIs for AIDEV to query AI Agent app info, repo branches, add-ons, and manage processes."
-  comment: "Add sys_get_app_info, sys_get_repo_branches, sys_get_service_instance_by_module, sys_list_processes and sys_update_process for AI Agent applications."
+  version: 1.4.15
+  title: "Add APIs to list addon service plans and to manage module build config."
+  comment: "Add list_service_possible_plans, get_module_build_config, update_module_build_config and list_module_bp_runtimes, and expose them in the deploy-with-module MCP server."
 
 stages:
   - name: "prod"
@@ -31,7 +31,7 @@ stages:
     # 社区版初始化时由 sync_apigw_stage_mcp_servers 注册，须在资源版本发布之后执行
     mcp_servers:
       - name: "perm-management"
-        title: "PaaS 平台权限管理"
+        title: "开发者中心-权限管理"
         description: "为当前应用查询网关及资源，申请、续期网关资源权限，并查询申请记录与审批结果。"
         resource_names:
           - "list_gateways"
@@ -48,7 +48,7 @@ stages:
         category_names:
           - "Official"
       - name: "deploy-with-module"
-        title: "开发者中心(PaaS 平台)模块部署"
+        title: "开发者中心-模块部署"
         description: "创建应用与模块，配置环境变量和增强服务，部署指定模块，并查询部署结果、日志与进程状态。"
         resource_names:
           - "get_minimal_app_list"
@@ -69,8 +69,12 @@ stages:
           - "get_service_instance_by_module"
           - "list_module_services"
           - "bind_service"
+          - "list_service_possible_plans"
           - "list_config_vars"
           - "get_config_var"
+          - "get_module_build_config"
+          - "update_module_build_config"
+          - "list_module_bp_runtimes"
         is_public: true
         status: 1
         protocol_type: "streamable_http"
@@ -80,15 +84,122 @@ stages:
 
 grant_permissions:
   - bk_app_code: "{{ settings.BK_APP_CODE }}"
+    grant_dimension: "gateway"
   - bk_app_code: bk_apigateway
-  - bk_app_code: bk_lesscode
-  - bk_app_code: bk_sops
+    grant_dimension: "resource"
+    resource_names:
+      - "uni_apps_query_by_username"
+      - "get_deployment_result"
+      - "uni_apps_query_by_id"
+      - "shim_plugins_center_sync_members"
+  - bk_app_code: bk_vision
+    grant_dimension: "resource"
+    resource_names:
+      - "uni_apps_query_by_username"
   - bk_app_code: bk_log_search
+    grant_dimension: "resource"
+    resource_names:
+      - "get_app_info"
+      - "get_minimal_app_list"
+      - "uni_apps_query_by_id"
   - bk_app_code: bk_monitorv3
+    grant_dimension: "resource"
+    resource_names:
+      - "list_cluster_namespaces_by_code"
   - bk_app_code: bk_dataweb
+    grant_dimension: "resource"
+    resource_names:
+      - "get_app_info"
+      - "get_minimal_app_list"
+      - "get_detailed_app_list"
   - bk_app_code: bk_bkdata
+    grant_dimension: "resource"
+    resource_names:
+      - "uni_apps_list_minimal"
+      - "uni_apps_query_by_id"
+      - "get_app_info"
+      - "get_minimal_app_list"
   - bk_app_code: bk_notice
+    grant_dimension: "resource"
+    resource_names:
+      - "uni_apps_query_by_id"
   - bk_app_code: bk_flow_engine
+    grant_dimension: "resource"
+    resource_names:
+      - "uni_apps_query_by_id"
+      - "list_bk_plugins"
+      - "retrieve_bk_plugin"
+      - "list_detailed_bk_plugins"
+      - "list_bk_plugin_logs_cloned"
+      - "list_bk_plugin_tags"
+      - "search_structured_log"
+  - bk_app_code: bk_aidev
+    grant_dimension: "resource"
+    resource_names:
+      - "sys_get_app_info"
+      - "uni_apps_query_by_id"
+      - "create_sys_ai_agent_app"
+      - "sys_validate_app_basic_info"
+      - "sys_deploy_with_module"
+      - "sys_get_deployment_result"
+      - "sys_streams_history_events"
+      - "upload_ai_agent_source_package_via_link"
+      - "uni_apps_query_by_username"
+      - "granted_ai_agent_distributors"
+      - "delete_ai_agent_distributors"
+      - "sys_module_offline"
+      - "sys_get_offline_result"
+      - "sys_get_repo_branches"
+      - "sys_get_service_instance_by_module"
+      - "fetch_app_access_token"
+      - "shim_plugins_center_add_role_members"
+      - "shim_plugins_center_delete_role_members"
+      - "sys_update_process"
+      - "sys_list_processes"
+      - "uni_apps_list_minimal"
+      - "build_sandbox_image"
+      - "get_sandbox_image_by_build_id"
+      - "grant_agent_sandbox_api_permissions"
+  - bk_app_code: bk-app-spark
+    grant_dimension: "resource"
+    resource_names:
+      - "sys_validate_app_basic_info"
+      - "create_sys_app_spark_app"
+      - "upload_ai_agent_source_package_via_link"
+      - "sys_deploy_with_module"
+      - "sys_get_deployment_result"
+  - bk_app_code: bk_dbm
+    grant_dimension: "resource"
+    resource_names:
+      - "create_agent_sandbox"
+      - "destroy_agent_sandbox"
+      - "exec_in_agent_sandbox"
+      - "upload_to_agent_sandbox"
+      - "download_from_agent_sandbox"
+      - "create_agent_sandbox_volume"
+      - "delete_agent_sandbox_volume"
+      - "list_agent_sandbox_volumes"
+      - "list_agent_sandbox_volume_files"
+      - "stat_agent_sandbox_volume_file"
+      - "preview_agent_sandbox_volume_file"
+      - "get_agent_sandbox_volume_file_download_url"
+      - "delete_agent_sandbox_volume_file"
+  - bk_app_code: cw_aitsm
+    grant_dimension: "resource"
+    resource_names:
+      - "get_minimal_app_list"
+  - bk_app_code: bk_sops
+    grant_dimension: "resource"
+    resource_names:
+      - "create_light_applications"
+      - "get_light_applications"
+      - "patch_light_applications"
+      - "delete_light_applications"
+      - "retrieve_bk_plugin"
+      - "list_detailed_bk_plugins"
+      - "list_bk_plugin_tags"
+      - "list_bk_plugin_logs_cloned"
+      - "search_structured_log"
 
 strategies: []
 

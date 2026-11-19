@@ -21,6 +21,7 @@ dependencies = [
     # project imports it directly to drive the Agent Runtime over HTTP.
     "httpx2>=2.10.0,<3.0.0",
     "packaging>=26.3,<27.0",
+    "pydantic-ai-slim[openai]>=2.32.1,<3.0.0",
     "pymysql>=1.2.0,<2.0.0",
     # Required by the production ASGI server, including the container image.
     "uvicorn>=0.52.1,<0.53.0",
@@ -40,6 +41,10 @@ extend = "../../pyproject.toml"
 target-version = "py314"
 extend-exclude = [".venv"]
 
+[tool.ruff.lint.per-file-ignores]
+# 运维脚本的输出就是给人看的。
+"scripts/**" = ["T201"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["app_spark_api"]
 
@@ -56,11 +61,23 @@ runtime-evaluated-base-classes = [
 python_version = "3.14"
 show_error_codes = true
 check_untyped_defs = true
-files = ["app_spark_api", "manage.py"]
+files = ["app_spark_api", "manage.py", "scripts"]
 plugins = ["mypy_django_plugin.main"]
 
 [[tool.mypy.overrides]]
-module = ["dynaconf", "dynaconf.*", "pymysql", "blue_krill", "blue_krill.*", "celery", "celery.*", "kombu", "kombu.*", "amqp", "amqp.*"]
+module = [
+    "dynaconf",
+    "dynaconf.*",
+    "pymysql",
+    "blue_krill",
+    "blue_krill.*",
+    "celery",
+    "celery.*",
+    "kombu",
+    "kombu.*",
+    "amqp",
+    "amqp.*",
+]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -79,4 +96,5 @@ markers = [
     "bkrepo: requires a configured live BkRepo (BLOBSTORE_BKREPO_CONFIG); skipped otherwise",
     "e2b: requires a configured live E2B endpoint and provisions real sandboxes",
     "forgejo: requires a live Forgejo; collected only when APP_SPARK_FORGEJO_LIVE=1",
+    "live_llm: calls real models (DeepSeek, bkaidev gateway) where their credentials are set; skipped otherwise",
 ]

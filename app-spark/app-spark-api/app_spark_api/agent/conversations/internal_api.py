@@ -44,7 +44,7 @@ from app_spark_api.agent.conversations.tokens import (
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.agent.runtime.lifetime import extend_lifetime_quietly
 from app_spark_api.entities import ERROR_RESPONSES
-from app_spark_api.error_codes import error_codes
+from app_spark_api.utils.api_errors.error_codes import error_codes
 from app_spark_api.utils.urls import reverse_public
 
 if TYPE_CHECKING:

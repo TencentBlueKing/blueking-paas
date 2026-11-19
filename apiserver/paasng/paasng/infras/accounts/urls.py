@@ -28,6 +28,11 @@ urlpatterns = [
     ),
     re_path(r"^api/accounts/userinfo/$", views.UserInfoViewSet.as_view(), name="api.accounts.userinfo"),
     re_path(
+        r"^api/accounts/user_profile/$",
+        views.UserProfileRegistrationView.as_view(),
+        name="api.accounts.user_profile",
+    ),
+    re_path(
         r"^api/accounts/verification/generation/$",
         views.UserVerificationGenerationView.as_view(),
         name="api.accounts.verification.generation",

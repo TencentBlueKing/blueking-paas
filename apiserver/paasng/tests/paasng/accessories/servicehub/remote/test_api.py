@@ -25,7 +25,7 @@ pytestmark = pytest.mark.django_db
 def test_retrieve_service(api_client, bk_service):
     url = f"/api/services/{bk_service.uuid}/"
     with mock.patch(
-        "paasng.accessories.servicehub.views.mixed_service_mgr.get",
+        "paasng.accessories.servicehub.views.api.mixed_service_mgr.get",
         return_value=bk_service,
     ):
         resp = api_client.get(url)

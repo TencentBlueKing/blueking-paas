@@ -19,7 +19,6 @@ import logging
 from dataclasses import asdict
 from typing import Dict, Optional
 
-from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.core.encoder import user_id_encoder
 from bkpaas_auth.models import User
 from blue_krill.storages.blobstore.exceptions import DownloadFailedError
@@ -44,12 +43,8 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.accounts.permissions.user import user_has_feature
 from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.sysapi_client.constants import ClientAction
-from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
-from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin, SysManagedAppInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
@@ -74,8 +69,6 @@ from paasng.platform.engine.serializers import (
     DeployOptionsSLZ,
     DeployPhaseSLZ,
     QueryDeploymentsSLZ,
-    SysCreateDeploymentSLZ,
-    SysInterruptDeploymentSLZ,
 )
 from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.utils.query import DeploymentGetter, get_latest_deploy_options
@@ -275,12 +268,12 @@ class DeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, ApplicationCode
         """查询部署任务结果"""
         query_slz = DeploymentResultQuerySLZ(data=request.query_params)
         query_slz.is_valid(raise_exception=True)
-        deployment = _get_deployment(self.get_module_via_path(), uuid)
-        return JsonResponse(_render_deployment_result(deployment, query_slz.validated_data["include_ansi_codes"]))
+        deployment = get_module_deployment(self.get_module_via_path(), uuid)
+        return JsonResponse(render_deployment_result(deployment, query_slz.validated_data["include_ansi_codes"]))
 
     def export_deployment_log(self, request, code, module_name, uuid):
         """导出部署日志"""
-        deployment = _get_deployment(self.get_module_via_path(), uuid)
+        deployment = get_module_deployment(self.get_module_via_path(), uuid)
         logs = get_all_logs(deployment)
         filename = f"{code}-{module_name}-{uuid}.log"
 
@@ -341,8 +334,8 @@ class DeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, ApplicationCode
         - 该接口并不保证一定能成功中断部署，客户端成功调用该接口，仅代表本次中断请求已被成功接收，具体以最终
           检查到的部署状态码为准。
         """
-        deployment = _get_deployment(self.get_module_via_path(), uuid)
-        # 用户态只允许中断自己发起的部署；应用态由调用方系统决定谁能中断，见 SysDeploymentViewSet.interrupt
+        deployment = get_module_deployment(self.get_module_via_path(), uuid)
+        # 用户态只允许中断自己发起的部署；应用态由调用方系统决定谁能中断，见 sys_api.SysDeploymentViewSet.interrupt
         if deployment.operator != request.user.pk:
             raise error_codes.DEPLOY_INTERRUPTION_FAILED.f(_("无法中断由他人发起的部署"))
 
@@ -361,7 +354,7 @@ class DeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, ApplicationCode
         if not user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self):
             raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("你暂无权限访问构建调试控制台"))
 
-        deployment = _get_deployment(self.get_module_via_path(), uuid)
+        deployment = get_module_deployment(self.get_module_via_path(), uuid)
         latest = DeploymentGetter(deployment.app_environment).get_latest_deployment()
         if deployment != latest:
             return Response(self._build_debug_data(enabled=False, available=False))
@@ -396,7 +389,7 @@ class DeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, ApplicationCode
     @swagger_auto_schema(tags=["部署阶段"])
     def create_build_debug_console(self, request, code, module_name, uuid):
         """创建构建调试容器的 WebConsole 会话"""
-        deployment = _get_deployment(self.get_module_via_path(), uuid)
+        deployment = get_module_deployment(self.get_module_via_path(), uuid)
         latest = DeploymentGetter(deployment.app_environment).get_latest_deployment()
         if deployment != latest:
             raise error_codes.BUILD_DEBUG_STALE_DEPLOYMENT.f(_("已有新的部署开始，当前构建调试入口已失效"))
@@ -514,86 +507,6 @@ class DeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, ApplicationCode
         }
 
 
-class SysDeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, SysManagedAppInPathMixin):
-    """应用态部署接口：AIDEV 只能操作 AI Agent 应用，AppSpark 只能操作 AppSpark 应用。"""
-
-    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_APPLICATIONS)]
-
-    @swagger_auto_schema(
-        request_body=SysCreateDeploymentSLZ,
-        responses={"201": CreateDeploymentResponseSLZ()},
-        tags=["部署相关接口"],
-        operation_description="提供给 AIDEV / AppSpark 使用的应用态部署接口，只能操作调用方管理的应用",
-    )
-    def deploy(self, request, code, module_name, environment):
-        """应用态部署应用，只允许操作调用方管理的应用，AppSpark 只能部署生产环境。"""
-        env = self.get_managed_env_via_path()
-
-        serializer = SysCreateDeploymentSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        params = serializer.data
-        if params["advanced_options"].get("debug_enabled"):
-            raise error_codes.CANNOT_DEPLOY_APP.f(_("应用态部署不支持构建调试"))
-
-        # operator 仅用于记录操作人，不做 IAM 角色校验：AIDEV 将用户加入应用成员后，IAM 权限存在生效延迟
-        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, params["operator"]))
-        deployment = self.do_deploy(env, params, operator)
-        return JsonResponse(
-            data={"deployment_id": deployment.id, "stream_url": f"/streams/{deployment.id}"},
-            status=status.HTTP_201_CREATED,
-        )
-
-    @swagger_auto_schema(
-        responses={200: DeploymentResultSLZ},
-        query_serializer=DeploymentResultQuerySLZ(),
-        paginator_inspectors=[],
-        tags=["部署相关接口"],
-    )
-    def get_deployment_result(self, request, code, module_name, uuid):
-        """应用态查询部署任务结果，只允许查询调用方管理的应用。"""
-        query_slz = DeploymentResultQuerySLZ(data=request.query_params)
-        query_slz.is_valid(raise_exception=True)
-        deployment = _get_deployment(self.get_managed_module_via_path(), uuid)
-        self.ensure_env_allowed_for_client(deployment.app_environment.environment)
-        return JsonResponse(_render_deployment_result(deployment, query_slz.validated_data["include_ansi_codes"]))
-
-    @swagger_auto_schema(request_body=SysInterruptDeploymentSLZ, tags=["部署相关接口"])
-    def interrupt(self, request, code, module_name, uuid):
-        """应用态中断部署，只允许操作调用方管理的应用。
-
-        与用户态中断不同，这里不要求 operator 是部署发起人，operator 只记作操作人。
-        接口成功只代表中断请求已受理，最终以部署结果的 interrupted 状态为准。
-        """
-        deployment = _get_deployment(self.get_managed_module_via_path(), uuid)
-        # 路径里没有环境，按部署所在环境校验，避免 AppSpark 中断用户在预发布环境手动发起的部署
-        self.ensure_env_allowed_for_client(deployment.app_environment.environment)
-
-        serializer = SysInterruptDeploymentSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, serializer.data["operator"]))
-
-        try:
-            interrupt_deployment(deployment, operator)
-        except DeployInterruptionFailed as e:
-            raise error_codes.DEPLOY_INTERRUPTION_FAILED.f(str(e))
-
-        # 部署记录里的操作人是部署发起人，应用态中断可能由别人发起，所以单独留一条审计记录
-        env = deployment.app_environment
-        add_app_audit_record(
-            app_code=env.application.code,
-            tenant_id=env.application.tenant_id,
-            user=operator.pk,
-            action_id=AppAction.BASIC_DEVELOP,
-            operation=OperationEnum.INTERRUPT_DEPLOY,
-            target=OperationTarget.APP,
-            module_name=env.module.name,
-            environment=env.environment,
-            access_type=AccessType.API,
-            data_after=DataDetail(data={"deployment_id": str(deployment.id)}),
-        )
-        return Response({})
-
-
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
@@ -658,7 +571,7 @@ class DeployOptionsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return ReplicasPolicy.APP_DESC_PRIORITY
 
 
-def _get_deployment(module: Module, uuid: str) -> Deployment:
+def get_module_deployment(module: Module, uuid: str) -> Deployment:
     """Shortcut for getting deployment object by uuid
 
     :param module: If the deployment exists, it must belongs to this module, otherwise raise an
@@ -677,7 +590,7 @@ def _get_deployment(module: Module, uuid: str) -> Deployment:
     return deployment
 
 
-def _render_deployment_result(deployment: Deployment, include_ansi_codes: bool) -> Dict:
+def render_deployment_result(deployment: Deployment, include_ansi_codes: bool) -> Dict:
     """Render the result of a deployment, including status, logs and failure hints."""
     logs = get_all_logs(deployment)
     if not include_ansi_codes:

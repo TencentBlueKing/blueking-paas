@@ -26,6 +26,8 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 指定其他文件后，`settings_files/*.yaml` 与 `settings_local.yaml` 仍然会生效，最终
 配置会是所有内容合并后的结果。
 
+每个配置项的说明、默认值和是否必填以 `conf.yaml.tpl` 为准。在这里增删改配置项时，同步更新它。
+
 除了 YAML 外，每个配置项也可通过环境变量设置。比如，在 YAML 文件里的配置项 `SECRET_KEY: foo`，
 也可使用以下环境变量修改：
 
@@ -123,10 +125,16 @@ DEBUG = settings.get("DEBUG", False)
 # 允许通过什么域名访问服务，详见：https://docs.djangoproject.com/zh-hans/6.1/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = settings.get("ALLOWED_HOSTS", ["*"])
 
-# 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、换 access_token 等）都用这一对。
+# 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、开发者中心等）都用这一对。
 # APP_SECRET 只留在本服务里，不会交给 Agent Runtime。
-APP_CODE = settings.get("APP_CODE", "")
+# 开发者中心网关按 bk-app-spark 预授权了发布要用的资源，换成别的 app_code 要自己去网关申请。
+APP_CODE = settings.get("APP_CODE", "bk-app-spark")
 APP_SECRET = settings.get("APP_SECRET", "")
+
+# 用于签发用户态 AccessToken。注意 AccessToken 会进入用户沙箱，因此需要确保该应用权限可控。
+# 目前该应用只应包含 AIDEV 相关的大模型调用权限，AGENT_MODEL_SOURCE 为 bkaidev 时必填。
+USER_ACCESS_TOKEN_APP_CODE = settings.get("USER_ACCESS_TOKEN_APP_CODE", "")
+USER_ACCESS_TOKEN_APP_SECRET = settings.get("USER_ACCESS_TOKEN_APP_SECRET", "")
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -143,6 +151,7 @@ INSTALLED_APPS = [
     "app_spark_api.agent.runtime.apps.RuntimeConfig",
     "app_spark_api.repository.storage.apps.StorageConfig",
     "app_spark_api.repository.git.apps.GitConfig",
+    "app_spark_api.publication.apps.PublicationConfig",
 ]
 
 
@@ -215,7 +224,7 @@ CELERY_BROKER_URL = build_rabbitmq_broker_url(settings)
 CELERY_TASK_IGNORE_RESULT = True
 
 # == 缓存相关配置项
-# DEFAULT_CACHE_CONFIG 优先级最高，若无该配置则检查是否配置 Redis，若存在则作为缓存, 否则使用临时文件作为缓存(仅适用于本地开发)
+# 配置了 DEFAULT_CACHE_CONFIG 就用它，否则使用临时文件作为缓存(仅适用于本地开发)
 # WARNING: 生产环境请配置远程服务缓存, 如 RedisCache, DatabaseCache 等, 以保证多副本多 worker 时, 缓存数据一致, 否则可能无法正常工作
 DEFAULT_CACHE_CONFIG = settings.get("DEFAULT_CACHE_CONFIG")
 if DEFAULT_CACHE_CONFIG:
@@ -288,11 +297,23 @@ LOGIN_FULL = settings.get("LOGIN_FULL", "")
 ## 两种常见形态都可以：
 ##   https://bkapi.example.com/api/{api_name}/
 ##   https://{api_name}.apigw.example.com
-## bkaidev 的 LLM 基址从这个模板 + APIGW_ENVIRONMENT 拼出来，不要在 BKAIDEV_MODEL_CONFIG 里再配一份。
+## bkaidev 的 LLM 基址从这个模板 + BKAIDEV_APIGW_ENVIRONMENT 拼出来，不要在 BKAIDEV_MODEL_CONFIG 里再配一份。
 BK_API_URL_TMPL = settings.get("BK_API_URL_TMPL", "")
 
-## 调用网关时使用的环境名（stage）。
+## 调用网关时使用的环境名（stage），各网关没有单独配置时都用它。
 APIGW_ENVIRONMENT = settings.get("APIGW_ENVIRONMENT", "prod")
+
+## 各网关可以用不同的环境，例如 bkaidev 用 prod、开发者中心用 stag。留空时用 APIGW_ENVIRONMENT。
+BKAIDEV_APIGW_ENVIRONMENT = settings.get("BKAIDEV_APIGW_ENVIRONMENT") or APIGW_ENVIRONMENT
+BKPAAS_APIGW_ENVIRONMENT = settings.get("BKPAAS_APIGW_ENVIRONMENT") or APIGW_ENVIRONMENT
+
+## 开发者中心在 API 网关上的网关名。发布和建项目时注册用户都用它和 BK_API_URL_TMPL 拼地址。
+## 开发者中心不同版本的网关名不一样，按实际部署覆盖。
+BKPAAS_APIGW_NAME = settings.get("BKPAAS_APIGW_NAME", "bkpaas3")
+
+## 开发者中心前端站点地址，只用来拼发布结果里的开发者中心页面链接（日志、部署管理、环境变量、成员、
+## 部署详情）。网关模板只能拼出 API 地址，拼不出页面地址。留空时这些链接为空，发布本身不受影响。
+BKPAAS_URL = settings.get("BKPAAS_URL", "")
 
 ## 用户态 access_token 的签发地址。AGENT_MODEL_SOURCE 为 bkaidev 时必填。
 ## 支持直连 auth api 或 SSM 两种 backend，由 BKAUTH_BACKEND_TYPE 决定：bk_token 用 SSM，其余用 auth api。
@@ -431,7 +452,7 @@ AGENT_RUNTIME_PROVIDER_CONFIG = settings.get("AGENT_RUNTIME_PROVIDER_CONFIG", {}
 ## access_token 交给它；direct 直连模型厂商，用 AGENT_DIRECT_MODEL_CONFIG 里固定的 key。
 AGENT_MODEL_SOURCE = settings.get("AGENT_MODEL_SOURCE", "bkaidev")
 
-## AGENT_MODEL_SOURCE 为 direct 时必填，字段详见 DirectModelAccess。
+## AGENT_MODEL_SOURCE 为 direct 时必填，字段详见 DirectModelConfig。
 ##
 ## AGENT_DIRECT_MODEL_CONFIG:
 ##   ## 必填。pydantic-ai 的 <provider>:<model>；本地不花钱跑通可用 fake:write-file。
@@ -446,11 +467,11 @@ AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
 
 ## AGENT_MODEL_SOURCE 为 bkaidev 时可选，字段详见 BkAidevModelConfig。
 ##
-## access_token 由本服务按「APP_CODE + 当前用户」向 TOKEN_AUTH_ENDPOINT 申请，不落库、
+## access_token 由本服务按「USER_ACCESS_TOKEN_APP_CODE + 当前用户」向 TOKEN_AUTH_ENDPOINT 申请，不落库、
 ## 不缓存：签发服务在现有 token 仍有效时原样返回，不会因为新开会话而把用户已有的 token 废掉。
-## APP_SECRET 不会交给 Agent Runtime。
+## APP_SECRET 和 USER_ACCESS_TOKEN_APP_SECRET 都不会交给 Agent Runtime。
 ##
-## LLM 基址不在这里配，由 {BK_API_URL_TMPL:bkaidev}/{APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1 拼出。
+## LLM 基址不在这里配，由 {BK_API_URL_TMPL:bkaidev}/{BKAIDEV_APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1 拼出。
 ##
 ## BKAIDEV_MODEL_CONFIG:
 ##   ## 可选。默认模型，不在可选列表里时取列表第一个。
@@ -461,6 +482,33 @@ AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
 ##     - hy4-*
 ##     - qwen3-5-397B
 BKAIDEV_MODEL_CONFIG = settings.get("BKAIDEV_MODEL_CONFIG", {})
+
+# --------
+# 本服务自己调模型（目前用于给从一句话创建的项目起名）
+# --------
+
+## 走哪条路，可选值见 ext.llm.config.LLMSource。与 Agent Runtime 的 AGENT_MODEL_SOURCE 分开配，这类小活儿
+## 可以换更便宜、更快的模型：
+## - bkaidev（默认）：走 bkaidev 的 LLM 网关，基址与 Agent Runtime 相同（BK_API_URL_TMPL + BKAIDEV_APIGW_ENVIRONMENT
+##   拼出），凭用户态 access_token 调用。token 由有用户态的请求先换好，再交给后台任务；
+## - direct：直连模型厂商，用 LLM_DIRECT_CONFIG 里固定的 key；
+## - fake：不发起网络请求的假模型，本地不花钱跑通链路用。
+LLM_SOURCE = settings.get("LLM_SOURCE", "bkaidev")
+
+## LLM_SOURCE 为 bkaidev 时使用的模型 ID，不带厂商前缀。
+LLM_BKAIDEV_MODEL_ID = settings.get("LLM_BKAIDEV_MODEL_ID", "deepseek-v4-flash")
+
+## LLM_SOURCE 为 direct 时必填，字段详见 infras.llm.DirectLLMConfig。
+##
+## LLM_DIRECT_CONFIG:
+##   ## 必填。pydantic-ai 的 <provider>:<model>。
+##   model: deepseek:deepseek-v4-flash
+##   ## 必填。厂商 API Key。
+##   api_key: ''
+LLM_DIRECT_CONFIG = settings.get("LLM_DIRECT_CONFIG", {})
+
+## 单次模型请求的超时秒数。
+LLM_TIMEOUT_SECONDS = settings.get("LLM_TIMEOUT_SECONDS", 30)
 
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob
 ## 存储而不是塞进 MySQL 行里。会话冷启动就是从这里把文档取回来再注入新 Runtime。
@@ -475,7 +523,7 @@ AGENT_CONTEXT_STORAGE = settings.get(
 ## 小于 1 会被抬回 1：最新那一版是冷启动唯一能依赖的东西，任何配置都不该把它清掉。
 AGENT_CONTEXT_VERSIONS_KEPT = settings.get("AGENT_CONTEXT_VERSIONS_KEPT", 5)
 
-## 一个会话保留多少个最近的检查点。冷启动只用最新的那一个（见 services._restore_files），
+## 一个会话保留多少个最近的检查点。冷启动只用最新的那一个（见 lifecycle.utils._restore_files），
 ## 多留的几行只用于排查；行本身很小，不钉住任何上下文版本。
 AGENT_CHECKPOINTS_KEPT = settings.get("AGENT_CHECKPOINTS_KEPT", 3)
 

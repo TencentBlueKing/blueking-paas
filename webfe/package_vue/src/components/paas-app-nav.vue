@@ -98,6 +98,7 @@ export default {
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
           'appCloudAPI', // 云 API 权限管理
+          'agentSandbox', // Agent 沙箱
           'operationRecord', // 操作记录
         ],
 
@@ -111,6 +112,7 @@ export default {
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
           'appCloudAPI', // 云 API 权限管理
+          'agentSandbox', // Agent 沙箱
           'operationRecord', // 操作记录
         ],
 
@@ -136,6 +138,9 @@ export default {
     },
     curAppModule() {
       return this.$store.state.curAppModule;
+    },
+    platformFeature() {
+      return this.$store.state.platformFeature;
     },
   },
   watch: {
@@ -197,7 +202,8 @@ export default {
             if (nav.name === 'appMarketing') {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
             }
-            return ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI', 'operationRecord'].includes(nav.name);
+            return ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI', 'agentSandbox', 'operationRecord']
+              .includes(nav.name);
           });
         }
 
@@ -231,6 +237,11 @@ export default {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appPackages')];
             }
           });
+        }
+
+        // feature flag 未启用时不展示 Agent 沙箱。
+        if (!this.platformFeature.AGENT_SANDBOX) {
+          navTree = navTree.filter(nav => nav.name !== 'agentSandbox');
         }
 
         // 初始化属性
@@ -337,6 +348,10 @@ export default {
           }
         }
       });
+      // feature flag 未启用时，模板详情也不从侧栏权限放行。
+      if (allowRouters.includes('agentSandbox') && this.platformFeature.AGENT_SANDBOX) {
+        this.allowedRouterName.push('agentSandboxTemplateDetail');
+      }
     },
 
     /**

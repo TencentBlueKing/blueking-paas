@@ -17,9 +17,17 @@
 
 from django.urls import include, path
 
+from paasng.accessories.cloudapi_v2.apigateway import urls as apigateway_urls
+from paasng.accessories.cloudapi_v2.mcp_servers import urls as mcp_server_urls
+
 urlpatterns = [
     # MCP Server 相关
     path("api/cloudapi-v2/", include("paasng.accessories.cloudapi_v2.mcp_servers.urls")),
     # 网关 API & ESB 组件 API 相关
     path("api/cloudapi-v2/", include("paasng.accessories.cloudapi_v2.apigateway.urls")),
 ]
+
+# System APIs: 给固定的系统调用
+# 应用态接口的路径以 sys/api/ 开头，与用户态 api/ 前缀不冲突，因此直接挂载、不叠加 cloudapi-v2 前缀
+urlpatterns += apigateway_urls.sys_urlpatterns
+urlpatterns += mcp_server_urls.sys_urlpatterns

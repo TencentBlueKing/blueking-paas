@@ -71,7 +71,7 @@ def _require_setting(name: str, value: object) -> str:
 def build_bkaidev_llm_base_url() -> str:
     """Return the bkaidev OpenAI-compatible v1 root injected as MODEL_BASE_URL."""
     tmpl = _require_setting("BK_API_URL_TMPL", settings.BK_API_URL_TMPL)
-    stage = _require_setting("APIGW_ENVIRONMENT", settings.APIGW_ENVIRONMENT)
+    stage = _require_setting("BKAIDEV_APIGW_ENVIRONMENT", settings.BKAIDEV_APIGW_ENVIRONMENT)
 
     # format 遇到没用上的关键字参数不会报错：模板里没有 {api_name} 时会原样返回，拼出一个少了
     # 网关名的地址，用户的 token 就被发到了错误的路径。所以先显式检查。
@@ -94,10 +94,11 @@ def build_access_token_backend_config() -> AccessTokenBackendConfig:
     """Build the token-exchange config from top-level settings."""
     # 换票支持直连 auth api 或 SSM 两种 backend，地址不从 BK_API_URL_TMPL 拼，由部署方填。
     # env_name 只有 AuthApiBackend 会发；配成空时按 prod 处理，不因为一个用不上的字段拦下 SSM 换票。
+    # 换票应用没配时不回落到 APP_CODE：那样换出来的 token 带着本服务的全部授权进 Runtime。
     return AccessTokenBackendConfig(
         token_url=_require_setting("TOKEN_AUTH_ENDPOINT", settings.TOKEN_AUTH_ENDPOINT),
-        app_code=_require_setting("APP_CODE", settings.APP_CODE),
-        app_secret=_require_setting("APP_SECRET", settings.APP_SECRET),
+        app_code=_require_setting("USER_ACCESS_TOKEN_APP_CODE", settings.USER_ACCESS_TOKEN_APP_CODE),
+        app_secret=_require_setting("USER_ACCESS_TOKEN_APP_SECRET", settings.USER_ACCESS_TOKEN_APP_SECRET),
         env_name=str(settings.AUTH_ENV_NAME or "").strip() or "prod",
     )
 

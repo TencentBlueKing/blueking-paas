@@ -941,6 +941,6 @@ def _mock_sync_developers_to_sentry():
     # 避免单元测试时会往 celery 推送任务
     with (
         mock.patch("paasng.platform.applications.views.member.sync_developers_to_sentry"),
-        mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.sync_developers_to_sentry"),
+        mock.patch("paasng.bk_plugins.bk_plugins.views.pluginscenter_sys_api.sync_developers_to_sentry"),
     ):
         yield

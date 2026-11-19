@@ -136,6 +136,8 @@ def test_a_replayed_run_id_is_rejected(api: TestClient) -> None:
     "mutation",
     [
         pytest.param({"threadId": "   "}, id="blank-conversation-id"),
+        pytest.param({"protocolVersion": None}, id="protocol-version-missing"),
+        pytest.param({"protocolVersion": "0.1"}, id="protocol-version-not-1.0"),
         pytest.param({"runId": "not-a-uuid"}, id="run-id-is-not-a-uuid"),
         pytest.param({"forwardedProps": {}}, id="context-version-missing"),
         pytest.param({"forwardedProps": {"contextVersion": "0"}}, id="context-version-not-an-int"),

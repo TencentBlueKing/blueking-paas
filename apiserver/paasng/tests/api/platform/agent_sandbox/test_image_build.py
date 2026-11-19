@@ -24,7 +24,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
-from paasng.platform.agent_sandbox.image_build.views import ImageBuildViewSet
+from paasng.platform.agent_sandbox.image_build.views import SysImageBuildViewSet
 from paasng.platform.agent_sandbox.models import ImageBuildRecord
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -38,7 +38,7 @@ class MockApp(NamedTuple):
 
 @pytest.fixture(autouse=True)
 def _set_request_app(monkeypatch):
-    """Inject request.app into every request processed by ImageBuildViewSet.
+    """Inject request.app into every request processed by SysImageBuildViewSet.
 
     In production, request.app is set by ApiGatewayJWTAppMiddleware. Here we
     patch each view method to set it before the original logic runs.
@@ -51,9 +51,9 @@ def _set_request_app(monkeypatch):
 
         return wrapper
 
-    monkeypatch.setattr(ImageBuildViewSet, "create", _wrap(ImageBuildViewSet.create))
-    monkeypatch.setattr(ImageBuildViewSet, "retrieve", _wrap(ImageBuildViewSet.retrieve))
-    monkeypatch.setattr(ImageBuildViewSet, "list", _wrap(ImageBuildViewSet.list))
+    monkeypatch.setattr(SysImageBuildViewSet, "create", _wrap(SysImageBuildViewSet.create))
+    monkeypatch.setattr(SysImageBuildViewSet, "retrieve", _wrap(SysImageBuildViewSet.retrieve))
+    monkeypatch.setattr(SysImageBuildViewSet, "list", _wrap(SysImageBuildViewSet.list))
 
 
 class TestImageBuildCreate:
@@ -62,7 +62,7 @@ class TestImageBuildCreate:
         with mock.patch("paasng.platform.agent_sandbox.image_build.views.run_image_build") as mock_task:
             mock_task.delay = mock.MagicMock()
             resp = sys_aidev_api_client.post(
-                reverse("image_build.list_create"),
+                reverse("sys.api.agent_sandbox.image_build.list_create"),
                 data={
                     "source_url": "https://example.com/source.tar.gz",
                     "image_name": "my-app",
@@ -85,7 +85,7 @@ class TestImageBuildCreate:
     def test_create_invalid_params(self, sys_aidev_api_client: APIClient):
         """Test creating with invalid params returns 400."""
         resp = sys_aidev_api_client.post(
-            reverse("image_build.list_create"),
+            reverse("sys.api.agent_sandbox.image_build.list_create"),
             data={"source_url": "not-a-url", "image_name": "my-app", "image_tag": "v1.0"},
             format="json",
         )
@@ -106,7 +106,7 @@ class TestImageBuildRetrieveAndList:
 
     def test_retrieve(self, sys_aidev_api_client: APIClient):
         resp = sys_aidev_api_client.get(
-            reverse("image_build.retrieve", kwargs={"build_id": str(self.build.uuid)}),
+            reverse("sys.api.agent_sandbox.image_build.retrieve", kwargs={"build_id": str(self.build.uuid)}),
         )
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["build_id"] == str(self.build.uuid)
@@ -115,14 +115,17 @@ class TestImageBuildRetrieveAndList:
 
     def test_retrieve_not_found(self, sys_aidev_api_client: APIClient):
         resp = sys_aidev_api_client.get(
-            reverse("image_build.retrieve", kwargs={"build_id": "00000000-0000-0000-0000-000000000000"}),
+            reverse(
+                "sys.api.agent_sandbox.image_build.retrieve",
+                kwargs={"build_id": "00000000-0000-0000-0000-000000000000"},
+            ),
         )
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_list_filtered(self, sys_aidev_api_client: APIClient):
         """Test listing builds filtered by image_name and image_tag."""
         resp = sys_aidev_api_client.get(
-            reverse("image_build.list_create"),
+            reverse("sys.api.agent_sandbox.image_build.list_create"),
             data={"image_name": "my-app", "image_tag": "v1.0"},
         )
         assert resp.status_code == status.HTTP_200_OK

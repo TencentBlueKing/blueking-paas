@@ -57,3 +57,25 @@ urlpatterns = [
         name="api.cloudapi.v2.mcp_server_permission_apply_record_detail",
     ),
 ]
+
+# System APIs: 给固定的系统调用
+sys_urlpatterns = [
+    # mcp-server 列表
+    path(
+        "sys/api/cloudapi_v2/bkapps/applications/<slug:code>/mcp-servers/",
+        views.SysMCPServerAPIViewSet.as_view({"get": "list_mcp_servers"}),
+        name="sys.api.cloudapi_v2.mcp_servers",
+    ),
+    # mcp-server 批量权限申请
+    path(
+        "sys/api/cloudapi_v2/bkapps/applications/<slug:code>/mcp-servers/permissions/apply/",
+        views.SysMCPServerAPIViewSet.as_view({"post": "apply_mcp_server_permissions"}),
+        name="sys.api.cloudapi_v2.mcp_server_permission_apply",
+    ),
+    # mcp-server 权限申请记录
+    path(
+        "sys/api/cloudapi_v2/bkapps/applications/<slug:code>/mcp-servers/permissions/apply-records/",
+        views.SysMCPServerAPIViewSet.as_view({"get": "list_mcp_server_permissions_apply_records"}),
+        name="sys.api.cloudapi_v2.mcp_server_permission_apply_records",
+    ),
+]

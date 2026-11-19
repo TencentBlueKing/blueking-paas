@@ -26,12 +26,27 @@ export interface ChatToolCall {
   state: 'running' | 'done';
 }
 
+/**
+ * 模型的一段思考，来自 AG-UI 的 REASONING_* 事件。
+ *
+ * 只有模型回传了思考内容才会有这一块：Agent 不主动开启思考，有的模型思考了也不回传。
+ */
+export interface ChatReasoning {
+  text: string;
+  /** `done` 意味着这段思考说完了（收到它的结束事件），不代表这一轮结束了 */
+  state: 'running' | 'done';
+  /** 起止时刻（毫秒），取自事件自带的 timestamp，回放历史时也算得出耗时；缺了就不报耗时 */
+  startedAt?: number;
+  endedAt?: number;
+}
+
 export interface ChatBlock {
-  type: 'text' | 'image' | 'summary' | 'tool';
+  type: 'text' | 'image' | 'summary' | 'tool' | 'reasoning';
   text?: string;
   items?: string[];
   src?: string;
   tool?: ChatToolCall;
+  reasoning?: ChatReasoning;
 }
 
 export interface ChatMessage {
@@ -40,4 +55,6 @@ export interface ChatMessage {
   blocks: ChatBlock[];
   progress?: string;
   tone?: 'error';
+  /** 这一轮是被用户停下的，见 RUN_FINISHED 的 `outcome` */
+  stopped?: boolean;
 }

@@ -45,3 +45,12 @@ class ApplyMCPResourcePermissionInputSLZ(serializers.Serializer):
     mcp_server_ids = serializers.ListField(child=serializers.IntegerField(), help_text="mcp_server ID 列表")
     applied_by = serializers.CharField(help_text="申请人")
     reason = serializers.CharField(help_text="申请原因")
+
+
+# ============ 应用态 (系统 API) 相关 ============
+
+
+class SysApplyMCPResourcePermissionInputSLZ(ApplyMCPResourcePermissionInputSLZ):
+    """应用态 mcp_resource 权限申请参数"""
+
+    operator = serializers.CharField(required=True, help_text="申请人用户名")

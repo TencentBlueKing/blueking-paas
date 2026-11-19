@@ -423,13 +423,6 @@ def stored_events(records: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     return [cast(dict[str, Any], record["event"]) for record in records]
 
 
-def part_contents(messages: Sequence[dict[str, Any]]) -> list[str]:
-    """Return the text of every message part that carries string content."""
-    return [
-        part["content"] for message in messages for part in message["parts"] if isinstance(part.get("content"), str)
-    ]
-
-
 def part_kinds(messages: Sequence[dict[str, Any]]) -> set[str]:
     """Return every kind of part the messages are made of."""
     return {part["part_kind"] for message in messages for part in message["parts"]}

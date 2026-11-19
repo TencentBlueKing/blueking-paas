@@ -28,7 +28,7 @@
 ### 请求示例
 
 ```
-curl -X POST -H 'content-type: application/json' -H 'x-bkapi-authorization: {"bk_app_code": "app-spark", "bk_app_secret": "***"}' -d '{"operator": "admin"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bkapps/applications/demo-app/modules/default/deployments/22d0e9c8-9cfc-45a5-b5a8-718137c515db/interruptions/
+curl -X POST -H 'content-type: application/json' -H 'x-bkapi-authorization: {"bk_app_code": "bk-app-spark", "bk_app_secret": "***"}' -d '{"operator": "admin"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bkapps/applications/demo-app/modules/default/deployments/22d0e9c8-9cfc-45a5-b5a8-718137c515db/interruptions/
 ```
 
 ### 返回结果示例

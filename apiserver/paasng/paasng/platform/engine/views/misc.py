@@ -18,7 +18,6 @@
 import datetime
 import logging
 
-from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import User, user_id_encoder
 from django.conf import settings
 from django.http import JsonResponse
@@ -31,8 +30,6 @@ from rest_framework.response import Response
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.sysapi_client.constants import ClientAction
-from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.monitoring.metrics.exceptions import (
     AppInstancesNotFoundError,
     AppMetricNotSupportedError,
@@ -40,7 +37,7 @@ from paasng.misc.monitoring.metrics.exceptions import (
 )
 from paasng.misc.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
 from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin, SysManagedAppInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.deploy.archive import start_archive_step
 from paasng.platform.engine.exceptions import OfflineOperationExistError
@@ -55,7 +52,6 @@ from paasng.platform.engine.serializers import (
     QueryOperationsSLZ,
     ResourceMetricsResultSerializer,
     ResourceMetricsSLZ,
-    SysCreateOfflineOperationSLZ,
 )
 from paasng.platform.engine.utils.query import OfflineOperationGetter
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -156,36 +152,6 @@ class OfflineViewset(OfflineMixin, viewsets.ViewSet, ApplicationCodeInPathMixin)
 
         serializer = OfflineOperationSLZ(instance=offline_operation)
         return Response({"result": serializer.data})
-
-
-class SysOfflineViewSet(OfflineMixin, viewsets.ViewSet, SysManagedAppInPathMixin):
-    """应用态下架接口：AIDEV 只能操作 AI Agent 应用，AppSpark 只能操作 AppSpark 应用。"""
-
-    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_APPLICATIONS)]
-
-    @swagger_auto_schema(
-        request_body=SysCreateOfflineOperationSLZ,
-        tags=["部署相关接口"],
-        operation_description="提供给 AIDEV / AppSpark 使用的应用态下架接口，只能操作调用方管理的应用",
-    )
-    def offline(self, request, code, module_name, environment):
-        """应用态发起下架，只允许操作调用方管理的应用，AppSpark 只能下架生产环境。"""
-        env = self.get_managed_env_via_path()
-
-        serializer = SysCreateOfflineOperationSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        # operator 仅用于记录操作人，不做 IAM 角色校验：AIDEV 将用户加入应用成员后，IAM 权限存在生效延迟
-        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, serializer.data["operator"]))
-        offline_operation = self.do_offline(env, operator)
-        return JsonResponse(data={"offline_operation_id": offline_operation.id}, status=status.HTTP_201_CREATED)
-
-    @swagger_auto_schema(responses={200: OfflineOperationSLZ}, tags=["部署相关接口"])
-    def get_offline_result(self, request, code, module_name, uuid):
-        """应用态查询下架任务结果，只允许查询调用方管理的应用。"""
-        offline_operation = self.get_offline_operation(self.get_managed_module_via_path(), uuid)
-        self.ensure_env_allowed_for_client(offline_operation.app_environment.environment)
-        return JsonResponse(OfflineOperationSLZ(instance=offline_operation).data)
 
 
 class OperationsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):

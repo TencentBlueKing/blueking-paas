@@ -23,7 +23,7 @@ from datetime import UTC, datetime
 import pytest
 
 from app_spark_api.core.projects import services
-from app_spark_api.core.projects.exceptions import ProjectAlreadyDeletedError, ProjectNameTakenError
+from app_spark_api.core.projects.exceptions import ProjectAlreadyDeletedError
 from app_spark_api.core.projects.models import Project
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -57,8 +57,8 @@ async def test_renaming_persists_the_new_name_and_bumps_updated_at():
     assert (stored.name, stored.updated_at) == ("Spark Renamed", renamed.updated_at)
 
 
-async def test_renaming_to_the_current_name_is_not_a_conflict():
-    """A project trivially "holds" its own name; that must not read as someone else taking it."""
+async def test_renaming_to_the_current_name_is_a_no_op():
+    """A rename to the same name should not bump updated_at for nothing."""
     project = await make_project(project_id="spark-demo", name="Spark Demo")
     original_updated_at = project.updated_at
 
@@ -69,8 +69,8 @@ async def test_renaming_to_the_current_name_is_not_a_conflict():
     assert stored.updated_at == original_updated_at
 
 
-async def test_names_only_need_to_be_unique_within_a_tenant():
-    await make_project(project_id="elsewhere", name="Shared", tenant_id="some-other-tenant")
+async def test_names_may_repeat_within_a_tenant():
+    await make_project(project_id="other-demo", name="Shared")
     project = await make_project(project_id="spark-demo", name="Spark Demo")
 
     renamed = await services.rename_project(project, name="Shared")
@@ -78,14 +78,15 @@ async def test_names_only_need_to_be_unique_within_a_tenant():
     assert renamed.name == "Shared"
 
 
-async def test_a_name_released_by_a_deleted_project_can_be_reused():
-    await make_project(project_id="deleted-demo", name="Released")
+async def test_a_deleted_project_keeps_its_name():
+    await make_project(project_id="deleted-demo", name="Kept")
     await Project.objects.asoft_delete("deleted-demo")
     project = await make_project(project_id="spark-demo", name="Spark Demo")
 
-    renamed = await services.rename_project(project, name="Released")
+    renamed = await services.rename_project(project, name="Kept")
 
-    assert renamed.name == "Released"
+    assert renamed.name == "Kept"
+    assert (await Project.default_objects.aget(pk="deleted-demo")).name == "Kept"
 
 
 async def test_renaming_a_project_deleted_after_it_was_fetched_is_reported_as_deleted():
@@ -97,8 +98,8 @@ async def test_renaming_a_project_deleted_after_it_was_fetched_is_reported_as_de
         await services.rename_project(project, name="Spark Renamed")
 
     deleted = await Project.default_objects.aget(pk="spark-demo")
-    # 不能把已删除项目的名称写回去，否则它会重新占住租户内的唯一约束。
-    assert (deleted.is_deleted, deleted.name) == (True, None)
+    # 已删除项目不能被写回新名字。
+    assert (deleted.is_deleted, deleted.name) == (True, "Spark Demo")
 
 
 async def test_a_project_deleted_right_after_the_rename_is_reported_as_deleted(monkeypatch):
@@ -118,24 +119,3 @@ async def test_a_project_deleted_right_after_the_rename_is_reported_as_deleted(m
 
     with pytest.raises(ProjectAlreadyDeletedError):
         await services.rename_project(project, name="Spark Renamed")
-
-
-async def test_a_name_taken_after_the_check_is_still_reported_as_a_conflict(monkeypatch):
-    """The up-front check only narrows the race; the unique constraint is what closes it.
-
-    Someone else's row appears after the check has passed. That must still come out as a
-    name conflict rather than a raw IntegrityError.
-    """
-    project = await make_project(project_id="spark-demo", name="Spark Demo")
-    real_arename = Project.objects.arename
-
-    async def arename_after_losing_the_race(project_id, name):
-        await make_project(project_id="faster-caller", name=name)
-        return await real_arename(project_id, name)
-
-    monkeypatch.setattr(Project.objects, "arename", arename_after_losing_the_race)
-
-    with pytest.raises(ProjectNameTakenError):
-        await services.rename_project(project, name="Contested")
-
-    assert (await Project.objects.aget(pk="spark-demo")).name == "Spark Demo"

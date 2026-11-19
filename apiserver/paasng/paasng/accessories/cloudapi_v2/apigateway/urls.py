@@ -144,3 +144,31 @@ urlpatterns = [
         name="api.cloudapi.v2.app_alarm_records",
     ),
 ]
+
+# System APIs: 给固定的系统调用
+sys_urlpatterns = [
+    # 网关列表
+    path(
+        "sys/api/cloudapi_v2/bkapps/applications/<slug:code>/gateways/",
+        views.SysGatewayAPIViewSet.as_view({"get": "list_gateways"}),
+        name="sys.api.cloudapi_v2.gateways",
+    ),
+    # 网关资源列表
+    path(
+        "sys/api/cloudapi_v2/bkapps/applications/<slug:code>/gateways/<slug:gateway_name>/permissions/resources/",
+        views.SysGatewayAPIViewSet.as_view({"get": "list_gateway_permission_resources"}),
+        name="sys.api.cloudapi_v2.gateway_permission_resources",
+    ),
+    # 网关资源权限申请
+    path(
+        "sys/api/cloudapi_v2/bkapps/applications/<slug:code>/gateways/<slug:gateway_name>/permissions/apply/",
+        views.SysGatewayAPIViewSet.as_view({"post": "apply_gateway_resource_permission"}),
+        name="sys.api.cloudapi_v2.gateway_permission_apply",
+    ),
+    # 申请状态 (申请记录列表)
+    path(
+        "sys/api/cloudapi_v2/bkapps/applications/<slug:code>/gateways/permissions/apply-records/",
+        views.SysGatewayAPIViewSet.as_view({"get": "list_resource_permission_apply_records"}),
+        name="sys.api.cloudapi_v2.gateway_permission_apply_records",
+    ),
+]

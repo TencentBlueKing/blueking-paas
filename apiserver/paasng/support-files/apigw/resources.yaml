@@ -2881,10 +2881,10 @@ paths:
                   description: 模块名，默认 default
                 plan_id:
                   type: string
-                  description: 手动指定方案 ID。不传则使用平台默认方案
+                  description: 所有环境使用的方案 ID。仅当 list_service_possible_plans 返回 static_plans 时使用；只有一个可选方案时可不传
                 env_plan_id_map:
                   type: object
-                  description: '分环境方案 ID，如 {"stag": "<plan_id>", "prod": "<plan_id>"}'
+                  description: '分环境方案 ID，如 {"stag": "<plan_id>", "prod": "<plan_id>"}；list_service_possible_plans 返回 env_specific_plans 时必须使用'
         required: true
         description: ''
       x-bk-apigateway-resource:
@@ -2968,6 +2968,192 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Unbind addon service
+  /bkapps/applications/{app_code}/modules/{module}/services/{service_id}/possible_plans:
+    get:
+      operationId: list_service_possible_plans
+      description: 查询模块绑定增强服务时可选的方案
+      tags:
+      - 增强服务
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: path
+        name: service_id
+        schema:
+          type: string
+        required: true
+        description: 增强服务 UUID，可通过 list_module_services 的 unbound[].uuid 获取
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/services/{service_id}/possible_plans
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List the plans a module can choose when binding an addon service
+  /bkapps/applications/{app_code}/modules/{module}/build_config/:
+    get:
+      operationId: get_module_build_config
+      description: 查看模块的构建配置
+      tags:
+      - 应用/模块信息查询
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/build_config/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Retrieve the build config of a module
+    post:
+      operationId: update_module_build_config
+      description: 修改模块的构建配置（整体覆盖，先查询再修改）
+      tags:
+      - 应用/模块信息查询
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - build_method
+              properties:
+                build_method:
+                  type: string
+                  description: 构建方式：buildpack、dockerfile 或 custom_image；custom_image 与其他方式不能互相切换
+                tag_options:
+                  type: object
+                  description: 镜像 Tag 规则，buildpack / dockerfile 必填，包含 prefix、with_version、with_build_time、with_commit_id
+                bp_stack_name:
+                  type: string
+                  description: 基础镜像名，buildpack 必填，取自 list_module_bp_runtimes 的 image
+                buildpacks:
+                  type: array
+                  description: '有序的构建工具列表，buildpack 必填，元素为 {"id": <int>}，id 须属于所选基础镜像'
+                dockerfile_path:
+                  type: string
+                  description: Dockerfile 路径，dockerfile 方式使用
+                docker_build_args:
+                  type: object
+                  description: Docker 构建参数，dockerfile 必填，可为空对象
+                image_repository:
+                  type: string
+                  description: 镜像仓库，custom_image 必填
+                image_credential_name:
+                  type: string
+                  description: 镜像凭证名称，custom_image 使用
+                use_bk_ci_pipeline:
+                  type: boolean
+                  description: 是否通过蓝盾流水线构建；不传会被重置为 false
+        required: true
+        description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/build_config/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Update the build config of a module (full replacement)
+  /bkapps/applications/{app_code}/modules/{module}/bp_runtimes/:
+    get:
+      operationId: list_module_bp_runtimes
+      description: 查询模块可用的基础镜像及其构建工具（buildpack）
+      tags:
+      - 应用/模块信息查询
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/bp_runtimes/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List base images and their buildpacks available to a module
   /system/bk_plugins/ai/{code}/granted_distributors/{distributor_code}/:
     post:
       operationId: granted_ai_agent_distributors

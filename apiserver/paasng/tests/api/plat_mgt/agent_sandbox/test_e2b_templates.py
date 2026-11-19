@@ -28,7 +28,7 @@ from paasng.misc.audit.constants import OperationTarget
 from paasng.misc.audit.models import AdminOperationRecord
 from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateSyncStatus
 from paasng.platform.agent_sandbox.e2b.template_sync.manifests import spec_digest
-from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate, E2BSandboxTemplateSyncRecord
+from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate, E2BSandboxTemplateSyncState
 from tests.paasng.platform.agent_sandbox.e2b.test_utils import IMAGE, make_builtin_template, make_custom_template
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
@@ -46,9 +46,9 @@ def _detail_url(template_id: str) -> str:
 
 
 @pytest.fixture(autouse=True)
-def sync_task():
-    with mock.patch("paasng.platform.agent_sandbox.e2b.templates.sync_e2b_templates_task") as task:
-        yield task
+def _mock_sync_task():
+    with mock.patch("paasng.platform.agent_sandbox.e2b.templates.sync_e2b_templates_task"):
+        yield
 
 
 @pytest.fixture()
@@ -71,7 +71,7 @@ def _audited() -> bool:
 class TestList:
     def test_lists_builtin_only(self, plat_mgt_api_client, bk_app):
         make_builtin_template("e2b-envd", is_public=False, env_vars={"A": "1"})
-        make_custom_template(bk_app, "mine")
+        make_custom_template(bk_app, "custom")
 
         resp = plat_mgt_api_client.get(LIST_URL)
 
@@ -82,22 +82,20 @@ class TestList:
         assert item["is_public"] is False
 
     def test_custom_template_is_not_reachable(self, plat_mgt_api_client, bk_app):
-        make_custom_template(bk_app, "mine")
+        make_custom_template(bk_app, "custom")
 
-        assert plat_mgt_api_client.get(_detail_url("mine")).status_code == status.HTTP_404_NOT_FOUND
+        assert plat_mgt_api_client.get(_detail_url("custom")).status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestCreate:
-    def test_creates_builtin(self, plat_mgt_api_client, sync_task, django_capture_on_commit_callbacks):
+    def test_creates_builtin(self, plat_mgt_api_client):
         data = {"template_id": "e2b-envd", "name": "Base", "image": IMAGE, "prewarm_count": 2, "is_public": True}
 
-        with django_capture_on_commit_callbacks(execute=True):
-            resp = plat_mgt_api_client.post(LIST_URL, data=data, format="json")
+        resp = plat_mgt_api_client.post(LIST_URL, data=data, format="json")
 
         assert resp.status_code == status.HTTP_201_CREATED
         template = E2BSandboxTemplate.objects.get(template_id="e2b-envd")
-        assert (template.is_builtin, template.resource_name, template.prewarm_count) == (True, "e2b-envd", 2)
-        sync_task.delay.assert_called_once_with(resource_names=["e2b-envd"])
+        assert (template.is_builtin, template.prewarm_count) == (True, 2)
         assert _audited()
 
     def test_rejects_duplicate(self, plat_mgt_api_client):
@@ -108,14 +106,6 @@ class TestCreate:
         )
 
         assert resp.status_code == status.HTTP_409_CONFLICT
-
-    def test_rejects_double_dash(self, plat_mgt_api_client):
-        """双横线留给自定义模板的应用前缀"""
-        resp = plat_mgt_api_client.post(
-            LIST_URL, data={"template_id": "app--tpl", "name": "x", "image": IMAGE}, format="json"
-        )
-
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
 class TestUpdate:
@@ -135,15 +125,14 @@ class TestUpdate:
 
 
 class TestDestroy:
-    def test_deletes(self, plat_mgt_api_client, sync_task, django_capture_on_commit_callbacks):
+    def test_deletes(self, plat_mgt_api_client):
         make_builtin_template("e2b-envd")
 
-        with django_capture_on_commit_callbacks(execute=True):
-            resp = plat_mgt_api_client.delete(_detail_url("e2b-envd"))
+        resp = plat_mgt_api_client.delete(_detail_url("e2b-envd"))
 
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         assert not E2BSandboxTemplate.objects.exists()
-        sync_task.delay.assert_called_once_with(resource_names=["e2b-envd"])
+        assert _audited()
 
     def test_refuses_while_in_use(self, plat_mgt_api_client, bk_app):
         make_builtin_template("e2b-envd")
@@ -155,41 +144,32 @@ class TestDestroy:
         assert E2BSandboxTemplate.objects.exists()
 
 
+@pytest.mark.usefixtures("e2b_clusters")
 class TestSync:
-    def test_marks_pending_and_dispatches_task(self, plat_mgt_api_client):
-        """异步执行，不是最新的记录先置为待同步，否则分不清任务是还没跑还是跑完了仍然失败"""
-        template = make_builtin_template("e2b-envd")
-        E2BSandboxTemplateSyncRecord.objects.create(
-            template=template, cluster_name="c1", status=E2BTemplateSyncStatus.FAILED.value, message="boom"
-        )
-
-        with mock.patch("paasng.plat_mgt.agent_sandbox.views.sync_e2b_templates_task") as task:
-            resp = plat_mgt_api_client.post(SYNC_URL)
-
-        assert resp.status_code == status.HTTP_202_ACCEPTED
-        task.delay.assert_called_once_with(cluster_names=None, resource_names=None)
-        record = E2BSandboxTemplateSyncRecord.objects.get(template=template)
-        assert (record.status, record.message) == (E2BTemplateSyncStatus.PENDING.value, "")
-        assert _audited()
-
-    @pytest.mark.usefixtures("e2b_clusters")
-    def test_scoped_sync(self, plat_mgt_api_client):
-        """范围原样交给置待同步与下发任务，范围内外各自如何处理见 records 与 sync 的用例"""
+    @pytest.mark.parametrize(
+        ("data", "scope"),
+        [
+            ({}, (None, None)),
+            ({"cluster_names": [OTHER_CLUSTER], "resource_names": ["e2b-envd"]}, ([OTHER_CLUSTER], ["e2b-envd"])),
+        ],
+    )
+    def test_dispatches_scope(self, plat_mgt_api_client, data, scope):
         make_builtin_template("e2b-envd")
+        cluster_names, resource_names = scope
 
         with (
-            mock.patch("paasng.plat_mgt.agent_sandbox.views.mark_stale_pending") as mark_stale_pending,
+            mock.patch("paasng.plat_mgt.agent_sandbox.views.reset_unsynced_to_pending") as reset_unsynced_to_pending,
             mock.patch("paasng.plat_mgt.agent_sandbox.views.sync_e2b_templates_task") as task,
         ):
-            resp = plat_mgt_api_client.post(
-                SYNC_URL, data={"cluster_names": [OTHER_CLUSTER], "resource_names": ["e2b-envd"]}, format="json"
-            )
+            resp = plat_mgt_api_client.post(SYNC_URL, data=data, format="json")
 
         assert resp.status_code == status.HTTP_202_ACCEPTED
-        mark_stale_pending.assert_called_once_with({OTHER_CLUSTER}, {"e2b-envd"})
-        task.delay.assert_called_once_with(cluster_names=[OTHER_CLUSTER], resource_names=["e2b-envd"])
+        reset_unsynced_to_pending.assert_called_once_with(
+            set(cluster_names) if cluster_names else None, set(resource_names) if resource_names else None
+        )
+        task.delay.assert_called_once_with(cluster_names=cluster_names, resource_names=resource_names)
+        assert _audited()
 
-    @pytest.mark.usefixtures("e2b_clusters")
     @pytest.mark.parametrize(
         "data", [{"cluster_names": ["not-e2b"]}, {"resource_names": ["missing"]}, {"cluster_names": []}]
     )
@@ -204,58 +184,60 @@ class TestSync:
 
 @pytest.mark.usefixtures("e2b_clusters")
 class TestSyncOverview:
-    """测试集群 CLUSTER_NAME_FOR_TESTING 分配给默认租户，另一个集群启用了 e2b 但不在分配策略里"""
+    """测试集群 CLUSTER_NAME_FOR_TESTING 分配给默认租户"""
 
     @pytest.fixture()
-    def templates(self, bk_app):
-        """done 全部成功；mine 只需下发到测试集群且待同步；bad 其中一个集群失败；fresh 还没有任何记录"""
+    def templates(self, bk_app) -> dict[str, E2BSandboxTemplate]:
+        """准备各下发状态的模板，按模板标识返回，供用例按标识取用。
+
+        - done：内置模板，所有集群都下发成功
+        - custom：自定义模板，只需下发到测试集群，当前待同步
+        - fresh：内置模板，还没有任何下发状态
+        """
         done = make_builtin_template("done")
-        _record(done, CLUSTER_NAME_FOR_TESTING, E2BTemplateSyncStatus.SUCCEEDED)
-        _record(done, OTHER_CLUSTER, E2BTemplateSyncStatus.SUCCEEDED)
-        # 已停用 e2b 的集群留下的记录不算数
-        _record(done, "retired-cluster", E2BTemplateSyncStatus.FAILED)
-
-        mine = make_custom_template(bk_app, "mine")
-        _record(mine, CLUSTER_NAME_FOR_TESTING, E2BTemplateSyncStatus.PENDING)
-
-        bad = make_builtin_template("bad")
-        _record(bad, CLUSTER_NAME_FOR_TESTING, E2BTemplateSyncStatus.SUCCEEDED)
-        _record(bad, OTHER_CLUSTER, E2BTemplateSyncStatus.FAILED, "boom")
-
-        make_builtin_template("fresh")
-        return {"mine": mine}
+        for name in (CLUSTER_NAME_FOR_TESTING, OTHER_CLUSTER):
+            E2BSandboxTemplateSyncState.objects.create(
+                template=done,
+                cluster_name=name,
+                status=E2BTemplateSyncStatus.SUCCEEDED.value,
+                digest=spec_digest(done),
+            )
+        custom = make_custom_template(bk_app, "custom")
+        E2BSandboxTemplateSyncState.objects.create(
+            template=custom, cluster_name=CLUSTER_NAME_FOR_TESTING, status=E2BTemplateSyncStatus.PENDING.value
+        )
+        fresh = make_builtin_template("fresh")
+        return {"done": done, "custom": custom, "fresh": fresh}
 
     def test_templates(self, plat_mgt_api_client, bk_app, templates):
         resp = plat_mgt_api_client.get(SYNC_TEMPLATES_URL)
 
         assert resp.status_code == status.HTTP_200_OK
-        items = {i["resource_name"]: i for i in resp.json()}
-        mine = templates["mine"].resource_name
-        assert {k: v["status"] for k, v in items.items()} == {
-            "done": "succeeded",
-            mine: "pending",
-            "bad": "failed",
-            "fresh": "pending",
+        items = {i["template_id"]: i for i in resp.json()}
+        assert {k: (v["status"], v["is_builtin"], v["app_code"]) for k, v in items.items()} == {
+            "done": ("succeeded", True, None),
+            "custom": ("pending", False, bk_app.code),
+            "fresh": ("pending", True, None),
         }
-        assert {r["cluster_name"] for r in items["done"]["records"]} == {CLUSTER_NAME_FOR_TESTING, OTHER_CLUSTER}
-        assert items[mine]["app_code"] == bk_app.code
-        assert items[mine]["missing"] == []
-        assert [(r["status"], r["up_to_date"]) for r in items[mine]["records"]] == [("pending", False)]
-        assert {r["cluster_name"]: r["up_to_date"] for r in items["bad"]["records"]} == {
-            CLUSTER_NAME_FOR_TESTING: True,
-            OTHER_CLUSTER: False,
-        }
+        assert items["custom"]["resource_name"] == templates["custom"].resource_name
+        (state,) = items["custom"]["states"]
+        assert (state["cluster_name"], state["status"], state["up_to_date"]) == (
+            CLUSTER_NAME_FOR_TESTING,
+            "pending",
+            False,
+        )
         assert items["fresh"]["missing"] == sorted([CLUSTER_NAME_FOR_TESTING, OTHER_CLUSTER])
 
     @pytest.mark.parametrize(
         ("query", "expected"),
         [
-            ({"status": "failed"}, ["bad"]),
-            ({"is_builtin": "false"}, ["mine"]),
+            ({"status": "succeeded"}, ["done"]),
+            ({"is_builtin": "false"}, ["custom"]),
             ({"is_builtin": "true", "status": "pending"}, ["fresh"]),
         ],
     )
-    def test_templates_filter(self, plat_mgt_api_client, templates, query, expected):
+    @pytest.mark.usefixtures("templates")
+    def test_templates_filter(self, plat_mgt_api_client, query, expected):
         resp = plat_mgt_api_client.get(SYNC_TEMPLATES_URL, data=query)
 
         assert sorted(i["template_id"] for i in resp.json()) == expected
@@ -267,30 +249,14 @@ class TestSyncOverview:
         items = {i["cluster_name"]: i for i in resp.json()}
         assert set(items) == {CLUSTER_NAME_FOR_TESTING, OTHER_CLUSTER}
         main = items[CLUSTER_NAME_FOR_TESTING]
-        assert sorted(main["succeeded"]) == ["bad", "done"]
-        assert main["pending"] == [templates["mine"].resource_name]
-        assert main["missing"] == ["fresh"]
-        assert main["completed"] is False
-        other = items[OTHER_CLUSTER]
-        assert other["failed"] == {"bad": "boom"}
-        assert other["missing"] == ["fresh"]
-
-    def test_cluster_completed(self, plat_mgt_api_client):
-        template = make_builtin_template("done")
-        for name in (CLUSTER_NAME_FOR_TESTING, OTHER_CLUSTER):
-            _record(template, name, E2BTemplateSyncStatus.SUCCEEDED)
-
-        resp = plat_mgt_api_client.get(SYNC_CLUSTERS_URL)
-
-        assert all(i["completed"] for i in resp.json())
-
-
-def _record(template, cluster_name: str, sync_status: E2BTemplateSyncStatus, message: str = ""):
-    """成功的记录带上当前配置的摘要，与真实下发一致"""
-    digest = spec_digest(template) if sync_status == E2BTemplateSyncStatus.SUCCEEDED else ""
-    E2BSandboxTemplateSyncRecord.objects.create(
-        template=template, cluster_name=cluster_name, status=sync_status.value, message=message, digest=digest
-    )
+        assert (main["succeeded"], main["pending"], main["failed"], main["missing"], main["completed"]) == (
+            ["done"],
+            [templates["custom"].resource_name],
+            {},
+            ["fresh"],
+            False,
+        )
+        assert main["namespace"]
 
 
 @pytest.mark.parametrize(

@@ -78,7 +78,7 @@ class TemplateSyncOverviewQuerySLZ(serializers.Serializer):
     )
 
 
-class TemplateSyncRecordOutputSLZ(serializers.Serializer):
+class TemplateSyncStateOutputSLZ(serializers.Serializer):
     cluster_name = serializers.CharField(help_text="集群名称")
     status = serializers.SerializerMethodField(
         help_text="下发状态，pending / succeeded / failed。下发成功后模板又改了规格的按 pending 算"
@@ -107,9 +107,9 @@ class TemplateSyncOverviewOutputSLZ(serializers.Serializer):
         help_text="汇总状态：任一集群失败为 failed，否则任一集群未完成为 pending，全部成功为 succeeded；"
         "没有可下发的集群时为空",
     )
-    records = TemplateSyncRecordOutputSLZ(many=True, help_text="各目标集群的下发状态")
+    states = TemplateSyncStateOutputSLZ(many=True, help_text="各目标集群的下发状态")
     missing = serializers.ListField(
-        child=serializers.CharField(), help_text="是目标集群却没有下发记录的，需调用同步接口补齐"
+        child=serializers.CharField(), help_text="是目标集群却没有下发状态的，需调用同步接口补齐"
     )
 
     def get_app_code(self, obj) -> str | None:
@@ -125,5 +125,5 @@ class ClusterSyncOverviewOutputSLZ(serializers.Serializer):
     pending = serializers.ListField(child=serializers.CharField(), help_text="待同步的资源名")
     failed = serializers.DictField(child=serializers.CharField(), help_text="同步失败的资源名及原因")
     missing = serializers.ListField(
-        child=serializers.CharField(), help_text="应当下发却没有记录的资源名，需调用同步接口补齐"
+        child=serializers.CharField(), help_text="应当下发却没有下发状态的资源名，需调用同步接口补齐"
     )

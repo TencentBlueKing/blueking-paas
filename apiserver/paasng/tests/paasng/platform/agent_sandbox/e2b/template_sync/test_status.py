@@ -91,7 +91,7 @@ class TestTemplateStatuses:
         template = make_custom_template(bk_app, "mine")
         sync.sync_templates(resource_names={template.resource_name})
 
-        records.mark_stale_pending()
+        states.reset_unsynced_to_pending()
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
         clusters.broken_clusters.add(CLUSTER_NAME_FOR_TESTING)

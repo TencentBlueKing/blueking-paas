@@ -62,7 +62,7 @@ def create_sandbox(application: Application, template: E2BSandboxTemplate, paylo
     :raises E2BClusterUnavailable: 没有可用于 e2b 的集群
     :raises E2BGatewayTimeout: 网关未在创建超时窗口内返回
     :raises E2BTemplateNotReady: 选中集群里的模板还不是当前配置
-    :raises E2BTemplateNotFound: 下发记录显示已是当前配置，网关却没有这个模板，如集群里的 CR 被手工删掉了
+    :raises E2BTemplateNotFound: 下发状态显示已是当前配置，网关却没有这个模板，如集群里的 CR 被手工删掉了
     """
     payload = dict(payload)
     payload[TEMPLATE_ID_FIELD] = template.resource_name
@@ -237,6 +237,7 @@ def connect_sandbox(application: Application, sandbox_id: str, timeout: int) -> 
         except E2BGatewayNotFound as exc:
             raise E2BSandboxNotFound(f"sandbox {sandbox_id} is gone on gateway") from exc
 
+        _rewrite_template_id(application, resp)
         return _rewrite_data_plane_address(resp, client.config)
 
 
@@ -254,7 +255,7 @@ def _rewrite_data_plane_address(resp: dict[str, Any], config: ClusterE2BConfig) 
 
 
 def _rewrite_template_id(application: Application, resp: dict[str, Any]) -> dict[str, Any]:
-    """网关返回的是资源名，自定义模板的资源名带应用前缀，要还原成用户使用的模板标识"""
+    """将网关返回的集群资源名还原为用户侧的模板标识（自定义模板去掉应用前缀，内置模板不变）"""
     if template_id := resp.get(TEMPLATE_ID_FIELD):
         resp[TEMPLATE_ID_FIELD] = to_sdk_template_id(application, template_id)
     return resp

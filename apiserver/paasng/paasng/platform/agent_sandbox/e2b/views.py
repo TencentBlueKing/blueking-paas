@@ -17,7 +17,7 @@
 
 """e2b 的管理接口。
 
-- ``E2BApiKeyViewSet`` / ``E2BTemplateViewSet``：给平台调用方用的，走平台既有的 APIGW 认证
+- ``E2BApiKeyViewSet``：给平台调用方用的，走平台既有的 APIGW 认证
 - ``E2BConsole*ViewSet``：给开发者中心页面用的，走登录态与应用权限
 
 用 key 本身去访问的 e2b 协议端点见 ``base_views.E2BProtocolViewSet``。
@@ -177,14 +177,14 @@ class E2BConsoleSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMix
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class E2BTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
-    """应用可用的沙箱模板，以及本应用自定义模板的增删改。
+class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    """开发者中心页面管理沙箱模板：应用可用的模板，以及本应用自定义模板的增删改。
 
     能看到的是已启用且公开的内置模板，加上本应用的自定义模板。不公开的内置模板不在这里出现，
     但仍可通过 SDK 按标识使用。内置模板只能由平台管理员维护，这里只读。
     """
 
-    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(
         tags=["agent_sandbox.e2b"],
@@ -269,9 +269,3 @@ class E2BTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         if template is None:
             raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_NOT_FOUND
         return template
-
-
-class E2BConsoleTemplateViewSet(E2BTemplateViewSet):
-    """开发者中心页面管理沙箱模板，行为与 APIGW 版本一致。"""
-
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]

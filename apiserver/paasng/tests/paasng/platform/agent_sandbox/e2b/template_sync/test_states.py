@@ -54,7 +54,7 @@ class TestMarkPending:
         assert (state.status, state.message) == (E2BTemplateSyncStatus.PENDING.value, "")
 
 
-class TestMarkStalePending:
+class TestResetUnsyncedToPending:
     def test_resets_states_not_current(self, clusters):
         """已成功下发当前配置的不动，同步期间要保持可用"""
         template = make_builtin_template("e2b-envd")
@@ -64,7 +64,7 @@ class TestMarkStalePending:
         # 下发成功之后配置又变了，例如摘要算法调整后上线
         type(changed).objects.filter(pk=changed.pk).update(image="new:v2")
 
-        states.mark_stale_pending()
+        states.reset_unsynced_to_pending()
 
         assert status_of(template) == {
             CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value,
@@ -81,7 +81,7 @@ class TestMarkStalePending:
         sync.sync_templates()
         E2BSandboxTemplateSyncState.objects.update(status=E2BTemplateSyncStatus.FAILED.value)
 
-        states.mark_stale_pending(cluster_names={OTHER_CLUSTER}, resource_names={"e2b-envd"})
+        states.reset_unsynced_to_pending(cluster_names={OTHER_CLUSTER}, resource_names={"e2b-envd"})
 
         assert status_of(template) == {
             CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.FAILED.value,

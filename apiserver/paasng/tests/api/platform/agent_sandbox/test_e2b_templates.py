@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""应用侧的 e2b 沙箱模板接口：开发者中心页面与 APIGW 两个入口，行为一致。"""
+"""开发者中心页面的 e2b 沙箱模板接口"""
 
 from unittest import mock
 
@@ -272,23 +272,3 @@ class TestDestroy:
         resp = api_client.delete(_detail_url(bk_app, template_id))
 
         assert resp.status_code == status.HTTP_404_NOT_FOUND
-
-
-class TestApigwEntry:
-    def test_requires_verified_app(self, api_client, bk_app):
-        resp = api_client.get(reverse("agent_sandbox.e2b.templates", kwargs={"code": bk_app.code}))
-
-        assert resp.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_lists_templates(self, api_client, bk_app, visible_templates):
-        with (
-            mock.patch("paasng.platform.agent_sandbox.e2b.views.IsAPIGWVerifiedApp.has_permission", return_value=True),
-            mock.patch(
-                "paasng.platform.agent_sandbox.e2b.views.IsAPIGWVerifiedApp.has_object_permission",
-                return_value=True,
-            ),
-        ):
-            resp = api_client.get(reverse("agent_sandbox.e2b.templates", kwargs={"code": bk_app.code}))
-
-        assert resp.status_code == status.HTTP_200_OK
-        assert [t["template_id"] for t in resp.json()] == ["mine", "public"]

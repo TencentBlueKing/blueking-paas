@@ -39,7 +39,7 @@ from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BTemplateNotFound,
     E2BTemplateNotReady,
 )
-from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplateSyncRecord
+from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplateSyncState
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 from .conftest import DATA_PLANE_ADDRESS, GATEWAY_INTERNAL_DOMAIN
@@ -177,7 +177,7 @@ class TestCreate:
         assert gateway.created_payloads == []
 
     def test_only_checks_selected_cluster(self, gateway, bk_app):
-        E2BSandboxTemplateSyncRecord.objects.create(
+        E2BSandboxTemplateSyncState.objects.create(
             template=self.template, cluster_name="other-cluster", status=E2BTemplateSyncStatus.FAILED.value
         )
 
@@ -439,6 +439,12 @@ class TestConnect:
         assert gateway.connects == [(SANDBOX_ID, 600)]
         assert resp["domain"] == DATA_PLANE_ADDRESS
         assert resp["envdAccessToken"] == "refreshed-token"
+
+    def test_restores_custom_template_id(self, gateway, bk_app):
+        _record(bk_app)
+        gateway.get_response = _create_response(templateID=f"{bk_app.code}--my-tpl")
+
+        assert sandboxes.connect_sandbox(bk_app, SANDBOX_ID, 600)["templateID"] == "my-tpl"
 
     def test_other_application_is_not_found(self, gateway, bk_app, bk_app_full):
         """归属不对的与不存在的不作区分，也不能续到别人的沙箱。"""

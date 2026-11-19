@@ -38,12 +38,12 @@ urlpatterns = [
     ),
     re_path(
         r"^api/plat_mgt/agent_sandbox/e2b/template_sync/templates/$",
-        E2BTemplateSyncViewSet.as_view({"get": "list_templates"}),
+        E2BTemplateSyncViewSet.as_view({"get": "list_template_overviews"}),
         name="plat_mgt.agent_sandbox.e2b.template_sync.templates",
     ),
     re_path(
         r"^api/plat_mgt/agent_sandbox/e2b/template_sync/clusters/$",
-        E2BTemplateSyncViewSet.as_view({"get": "list_clusters"}),
+        E2BTemplateSyncViewSet.as_view({"get": "list_cluster_overviews"}),
         name="plat_mgt.agent_sandbox.e2b.template_sync.clusters",
     ),
 ]

@@ -12,9 +12,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.16
-  title: "Add APIs to manage e2b sandbox templates."
-  comment: "Add list_e2b_templates, create_e2b_template, get_e2b_template, update_e2b_template and delete_e2b_template."
+  version: 1.4.15
+  title: "Add APIs to list addon service plans and to manage module build config."
+  comment: "Add list_service_possible_plans, get_module_build_config, update_module_build_config and list_module_bp_runtimes, and expose them in the deploy-with-module MCP server."
 
 stages:
   - name: "prod"

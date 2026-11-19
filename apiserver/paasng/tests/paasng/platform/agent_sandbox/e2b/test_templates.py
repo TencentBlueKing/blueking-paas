@@ -33,7 +33,7 @@ from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BTemplateInUse,
     E2BTemplateNotFound,
 )
-from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate, E2BSandboxTemplateSyncRecord
+from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate, E2BSandboxTemplateSyncState
 from paasng.platform.applications.models import Application
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
@@ -114,7 +114,7 @@ class TestCreate:
             template = templates.create_custom_template(bk_app, "mine", **SPEC)
             sync_task.delay.assert_not_called()
 
-        assert [(r.cluster_name, r.status) for r in template.sync_records.all()] == [
+        assert [(r.cluster_name, r.status) for r in template.sync_states.all()] == [
             (CLUSTER_NAME_FOR_TESTING, E2BTemplateSyncStatus.PENDING.value)
         ]
         assert len(callbacks) == 1
@@ -143,9 +143,9 @@ class TestUpdate:
 
     @pytest.mark.usefixtures("e2b_config")
     def test_fields_outside_manifest_no_sync(self, sync_task, django_capture_on_commit_callbacks):
-        """名称、描述、启用、公开都不进 CR，改了不必下发，也不能把下发记录打回待同步"""
+        """名称、描述、启用、公开都不进 CR，改了不必下发，也不能把下发状态打回待同步"""
         template = make_builtin_template("e2b-envd")
-        E2BSandboxTemplateSyncRecord.objects.create(
+        E2BSandboxTemplateSyncState.objects.create(
             template=template, cluster_name=CLUSTER_NAME_FOR_TESTING, status=E2BTemplateSyncStatus.SUCCEEDED.value
         )
 
@@ -156,20 +156,20 @@ class TestUpdate:
 
         assert sorted(changed) == ["description", "enabled", "is_public", "name"]
         sync_task.delay.assert_not_called()
-        assert template.sync_records.get().status == E2BTemplateSyncStatus.SUCCEEDED.value
+        assert template.sync_states.get().status == E2BTemplateSyncStatus.SUCCEEDED.value
 
     @pytest.mark.usefixtures("e2b_config")
     @pytest.mark.parametrize("changes", [{"image": "mirrors.example.com/e2b/envd:v2"}, {"prewarm_count": 3}])
     def test_manifest_field_change_syncs(self, sync_task, django_capture_on_commit_callbacks, changes):
         template = make_builtin_template("e2b-envd")
-        E2BSandboxTemplateSyncRecord.objects.create(
+        E2BSandboxTemplateSyncState.objects.create(
             template=template, cluster_name=CLUSTER_NAME_FOR_TESTING, status=E2BTemplateSyncStatus.SUCCEEDED.value
         )
 
         with django_capture_on_commit_callbacks(execute=True):
             templates.update_template(template, name="renamed", **changes)
 
-        assert template.sync_records.get().status == E2BTemplateSyncStatus.PENDING.value
+        assert template.sync_states.get().status == E2BTemplateSyncStatus.PENDING.value
         sync_task.delay.assert_called_once_with(resource_names=["e2b-envd"])
 
 

@@ -15,23 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""根据下发记录汇总模板的下发状态
+"""根据各集群的下发状态汇总模板的同步情况
 
-每个集群的下发记录只描述最近一次下发：结果，以及所下发配置的摘要。
+每个集群的下发状态只描述最近一次下发：结果，以及所下发配置的摘要。
 """
 
 from dataclasses import dataclass, field
 from typing import Sequence
 
 from paasng.platform.agent_sandbox.e2b.clusters import (
-    TemplateTargetResolver,
-    list_enabled_e2b_cluster_names,
     list_enabled_e2b_configs,
+    resolve_template_targets,
     select_e2b_cluster,
 )
 from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateStatus, E2BTemplateSyncStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BClusterUnavailable
-from paasng.platform.agent_sandbox.models import E2BSandboxTemplate, E2BSandboxTemplateSyncRecord
+from paasng.platform.agent_sandbox.models import E2BSandboxTemplate, E2BSandboxTemplateSyncState
 from paasng.platform.applications.models import Application
 
 from .manifests import spec_digest
@@ -42,13 +41,13 @@ class TemplateSyncOverview:
     """单个模板在各目标集群上的下发状态
 
     :param status: 汇总状态，任一集群失败即为失败，否则任一集群未完成即为待同步；没有目标集群时为空
-    :param records: 各目标集群的下发记录。记录上的 status 可能已过期，展示时以 ``get_sync_status`` 为准
-    :param missing: 是目标集群却没有记录的，多半是之后才启用 e2b、还没做过全量同步
+    :param states: 各目标集群的下发状态。其中的 status 字段可能已过期，展示时以 ``get_sync_status`` 为准
+    :param missing: 是目标集群却没有下发状态的，多半是之后才启用 e2b、还没做过全量同步
     """
 
     template: E2BSandboxTemplate
     status: str | None
-    records: list[E2BSandboxTemplateSyncRecord]
+    states: list[E2BSandboxTemplateSyncState]
     missing: list[str]
 
 
@@ -71,20 +70,20 @@ class ClusterSyncOverview:
 
 def get_template_overviews(templates: list[E2BSandboxTemplate]) -> list[TemplateSyncOverview]:
     """按模板汇总下发状态"""
-    resolver = TemplateTargetResolver(list_enabled_e2b_cluster_names())
+    targets = resolve_template_targets(templates)
 
     overviews = []
     for template in templates:
-        target_names = resolver.resolve(template)
-        # 列出模板在目标集群上的下发记录
-        records = [r for r in template.sync_records.all() if r.cluster_name in target_names]
-        # 没有记录的集群标记为 missing
-        missing = sorted(target_names - {r.cluster_name for r in records})
+        target_names = targets[template.resource_name]
+        # 列出模板在目标集群上的下发状态
+        states = [s for s in template.sync_states.all() if s.cluster_name in target_names]
+        # 没有下发状态的集群标记为 missing
+        missing = sorted(target_names - {s.cluster_name for s in states})
         overviews.append(
             TemplateSyncOverview(
                 template=template,
-                status=_summarize({get_sync_status(r, template) for r in records}, has_missing=bool(missing)),
-                records=records,
+                status=_summarize({get_sync_status(s, template) for s in states}, has_missing=bool(missing)),
+                states=states,
                 missing=missing,
             )
         )
@@ -97,22 +96,23 @@ def get_cluster_overviews() -> list[ClusterSyncOverview]:
         c.cluster.name: ClusterSyncOverview(cluster_name=c.cluster.name, namespace=c.namespace)
         for c in list_enabled_e2b_configs()
     }
-    resolver = TemplateTargetResolver(set(overviews))
+    templates = list(E2BSandboxTemplate.objects.select_related("application").prefetch_related("sync_states"))
+    targets = resolve_template_targets(templates, set(overviews))
 
-    for template in E2BSandboxTemplate.objects.select_related("application").prefetch_related("sync_records"):
-        records = {r.cluster_name: r for r in template.sync_records.all()}
-        for cluster_name in resolver.resolve(template):
+    for template in templates:
+        states = {s.cluster_name: s for s in template.sync_states.all()}
+        for cluster_name in targets[template.resource_name]:
             overview = overviews[cluster_name]
-            record = records.get(cluster_name)
-            if record is None:
+            state = states.get(cluster_name)
+            if state is None:
                 overview.missing.append(template.resource_name)
                 continue
 
-            sync_status = get_sync_status(record, template)
+            sync_status = get_sync_status(state, template)
             if sync_status == E2BTemplateSyncStatus.SUCCEEDED:
                 overview.succeeded.append(template.resource_name)
             elif sync_status == E2BTemplateSyncStatus.FAILED:
-                overview.failed[template.resource_name] = record.message
+                overview.failed[template.resource_name] = state.message
             else:
                 overview.pending.append(template.resource_name)
     return list(overviews.values())
@@ -120,8 +120,8 @@ def get_cluster_overviews() -> list[ClusterSyncOverview]:
 
 def is_applied(template: E2BSandboxTemplate, cluster_name: str) -> bool:
     """集群里的 SandboxTemplate 是否已是模板的当前配置"""
-    record = E2BSandboxTemplateSyncRecord.objects.filter(template=template, cluster_name=cluster_name).first()
-    return record is not None and is_current(record, template)
+    state = E2BSandboxTemplateSyncState.objects.filter(template=template, cluster_name=cluster_name).first()
+    return state is not None and is_current(state, template)
 
 
 def get_template_statuses(
@@ -137,27 +137,27 @@ def get_template_statuses(
     except E2BClusterUnavailable:
         return {t.resource_name: E2BTemplateStatus.NO_CLUSTER for t in templates}
 
-    records = {
-        r.template_id: r
-        for r in E2BSandboxTemplateSyncRecord.objects.filter(template__in=templates, cluster_name=cluster_name)
+    states = {
+        s.template_id: s
+        for s in E2BSandboxTemplateSyncState.objects.filter(template__in=templates, cluster_name=cluster_name)
     }
-    return {t.resource_name: _template_status(t, records.get(t.pk)) for t in templates}
+    return {t.resource_name: _template_status(t, states.get(t.pk)) for t in templates}
 
 
-def is_current(record: E2BSandboxTemplateSyncRecord, template: E2BSandboxTemplate) -> bool:
+def is_current(state: E2BSandboxTemplateSyncState, template: E2BSandboxTemplate) -> bool:
     """最近一次下发成功，且下发的就是模板当前配置"""
-    return record.status == E2BTemplateSyncStatus.SUCCEEDED.value and record.digest == spec_digest(template)
+    return state.status == E2BTemplateSyncStatus.SUCCEEDED.value and state.digest == spec_digest(template)
 
 
-def get_sync_status(record: E2BSandboxTemplateSyncRecord, template: E2BSandboxTemplate) -> E2BTemplateSyncStatus:
-    """下发记录的有效状态，所有按记录判断状态的地方都以它为准。
+def get_sync_status(state: E2BSandboxTemplateSyncState, template: E2BSandboxTemplate) -> E2BTemplateSyncStatus:
+    """取有效的状态值，所有按下发状态做判断的地方都以它为准。
 
     成功但摘要与模板当前配置不一致的按待同步算：集群里不是当前配置，创建沙箱会被拦下。
-    正常保存模板时记录会先被置为待同步，绕过 templates 直接改库、或改了参与摘要的字段时才会出现
+    正常保存模板时状态会先被置为待同步，绕过 templates 直接改库、或改了参与摘要的字段时才会出现
     """
-    if is_current(record, template):
+    if is_current(state, template):
         return E2BTemplateSyncStatus.SUCCEEDED
-    if record.status == E2BTemplateSyncStatus.FAILED.value:
+    if state.status == E2BTemplateSyncStatus.FAILED.value:
         return E2BTemplateSyncStatus.FAILED
     return E2BTemplateSyncStatus.PENDING
 
@@ -169,10 +169,10 @@ _TEMPLATE_STATUSES = {
 }
 
 
-def _template_status(template: E2BSandboxTemplate, record: E2BSandboxTemplateSyncRecord | None) -> E2BTemplateStatus:
-    if record is None:
+def _template_status(template: E2BSandboxTemplate, state: E2BSandboxTemplateSyncState | None) -> E2BTemplateStatus:
+    if state is None:
         return E2BTemplateStatus.SYNCING
-    return _TEMPLATE_STATUSES[get_sync_status(record, template)]
+    return _TEMPLATE_STATUSES[get_sync_status(state, template)]
 
 
 def _summarize(statuses: set[E2BTemplateSyncStatus], has_missing: bool) -> str | None:

@@ -18,7 +18,7 @@
 from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateSyncStatus
 from paasng.platform.agent_sandbox.e2b.template_sync.manifests import spec_digest
 from paasng.platform.agent_sandbox.e2b.templates import make_custom_resource_name
-from paasng.platform.agent_sandbox.models import E2BSandboxTemplate, E2BSandboxTemplateSyncRecord
+from paasng.platform.agent_sandbox.models import E2BSandboxTemplate, E2BSandboxTemplateSyncState
 from paasng.platform.applications.models import Application
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
@@ -27,14 +27,14 @@ IMAGE = "mirrors.example.com/e2b/envd:v1"
 
 def mark_applied(
     template: E2BSandboxTemplate, cluster_name: str = CLUSTER_NAME_FOR_TESTING
-) -> E2BSandboxTemplateSyncRecord:
+) -> E2BSandboxTemplateSyncState:
     """当作模板的当前配置已下发到集群"""
-    record, _ = E2BSandboxTemplateSyncRecord.objects.update_or_create(
+    state, _ = E2BSandboxTemplateSyncState.objects.update_or_create(
         template=template,
         cluster_name=cluster_name,
         defaults={"status": E2BTemplateSyncStatus.SUCCEEDED.value, "digest": spec_digest(template)},
     )
-    return record
+    return state
 
 
 def make_builtin_template(template_id: str = "e2b-envd", **overrides) -> E2BSandboxTemplate:

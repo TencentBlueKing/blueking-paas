@@ -24,7 +24,7 @@ from types import SimpleNamespace
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import PatchType
 from paasng.platform.agent_sandbox.e2b.constants import TEMPLATE_MANAGED_BY_LABEL, TEMPLATE_MANAGED_BY_VALUE
-from paasng.platform.agent_sandbox.models import E2BSandboxTemplateSyncRecord
+from paasng.platform.agent_sandbox.models import E2BSandboxTemplateSyncState
 
 NAMESPACE = "e2b-system"
 # 启用了 e2b，但不在测试租户的分配策略里
@@ -135,7 +135,7 @@ class FakeLock:
 
 
 def status_of(template) -> dict[str, str]:
-    return {r.cluster_name: r.status for r in E2BSandboxTemplateSyncRecord.objects.filter(template=template)}
+    return {r.cluster_name: r.status for r in E2BSandboxTemplateSyncState.objects.filter(template=template)}
 
 
 def image_of(clusters: FakeClusters, cluster: str, name: str) -> str:

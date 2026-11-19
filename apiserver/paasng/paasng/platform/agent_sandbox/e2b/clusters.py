@@ -17,6 +17,7 @@
 
 
 import logging
+from collections.abc import Iterable
 
 from django.db.models import QuerySet
 
@@ -90,30 +91,38 @@ def list_enabled_e2b_cluster_names() -> set[str]:
     return set(ClusterE2BConfig.objects.filter(enabled=True).values_list("cluster__name", flat=True))
 
 
-class TemplateTargetResolver:
-    """求模板应当下发到的集群：内置模板是全部启用 e2b 的集群，自定义模板只到应用租户可分配的集群。
+def resolve_template_targets(
+    templates: Iterable[E2BSandboxTemplate], enabled_e2b_clusters: set[str] | None = None
+) -> dict[str, set[str]]:
+    """求各模板应当下发到的集群，键为资源名。
 
-    :param enabled_e2b_clusters: 启用 e2b 的集群名
+    内置模板是全部启用 e2b 的集群，自定义模板只到应用租户可分配的集群，同一（租户, region）只做一次集群分配。
+
+    :param enabled_e2b_clusters: 启用 e2b 的集群名，不传则查库。调用方还要按同一份集群遍历时须传入，
+        否则两次查询之间集群可能有变化
     """
+    if enabled_e2b_clusters is None:
+        enabled_e2b_clusters = list_enabled_e2b_cluster_names()
 
-    def __init__(self, enabled_e2b_clusters: set[str]):
-        self._enabled_e2b_clusters = enabled_e2b_clusters
-        self._allocated: dict[tuple[str, str], set[str]] = {}
-
-    def resolve(self, template: E2BSandboxTemplate) -> set[str]:
+    # 缓存(租户, region)到分配集群的映射，避免重复查询
+    allocated: dict[tuple[str, str], set[str]] = {}
+    targets = {}
+    for template in templates:
+        # 内置模板需要下发到所有集群
         if template.is_builtin:
-            return self._enabled_e2b_clusters
+            targets[template.resource_name] = enabled_e2b_clusters
+            continue
 
         app = template.application
         key = (app.tenant_id, app.region)
-        if key not in self._allocated:
+        if key not in allocated:
             try:
-                names = set(list_e2b_clusters(app.tenant_id, app.region).values_list("name", flat=True))
+                allocated[key] = set(list_e2b_clusters(app.tenant_id, app.region).values_list("name", flat=True))
             except E2BClusterUnavailable:
                 logger.warning("no e2b cluster allocated for tenant %s, skip its custom templates", app.tenant_id)
-                names = set()
-            self._allocated[key] = names
-        return self._allocated[key] & self._enabled_e2b_clusters
+                allocated[key] = set()
+        targets[template.resource_name] = allocated[key] & enabled_e2b_clusters
+    return targets
 
 
 def count_live_sandboxes(cluster_name: str) -> int:

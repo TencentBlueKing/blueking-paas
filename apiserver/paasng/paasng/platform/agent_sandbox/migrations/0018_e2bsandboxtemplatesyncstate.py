@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="E2BSandboxTemplateSyncRecord",
+            name="E2BSandboxTemplateSyncState",
             fields=[
                 (
                     "uuid",
@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         db_constraint=False,
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="sync_records",
+                        related_name="sync_states",
                         to="agent_sandbox.e2bsandboxtemplate",
                     ),
                 ),

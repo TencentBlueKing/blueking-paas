@@ -583,17 +583,17 @@ class E2BSandboxTemplate(UuidAuditedModel):
         return self.application_id is None
 
 
-class E2BSandboxTemplateSyncRecord(UuidAuditedModel):
+class E2BSandboxTemplateSyncState(UuidAuditedModel):
     """模板在单个集群上的下发状态。
 
-    每个目标集群恰好一条：保存模板时即为所有目标集群写入待同步，因此记录齐全即可据此判断模板或集群是否同步完成。
-    不再是目标的集群（如已停用 e2b）可能还留着旧记录，读取时只看目标集群，由全量同步收尾时清理。
+    每个目标集群恰好一条：保存模板时即为所有目标集群写入待同步，因此状态齐全即可据此判断模板或集群是否同步完成。
+    不再是目标的集群（如已停用 e2b）可能还留着旧状态，读取时只看目标集群，由同步收尾时清理。
 
     [multi-tenancy] This model is not tenant-aware.
     """
 
     template = models.ForeignKey(
-        E2BSandboxTemplate, on_delete=models.CASCADE, db_constraint=False, related_name="sync_records"
+        E2BSandboxTemplate, on_delete=models.CASCADE, db_constraint=False, related_name="sync_states"
     )
     cluster_name = models.CharField(verbose_name="集群名称", max_length=64)
     status = models.CharField(

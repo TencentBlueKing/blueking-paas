@@ -213,7 +213,7 @@ class TestDestroyE2BConfig:
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         assert not ClusterE2BConfig.objects.filter(cluster=init_default_cluster).exists()
 
-    def test_destroy_forgets_sync_records(self, plat_mgt_api_client, init_default_cluster, e2b_config):
+    def test_destroy_forgets_sync_states(self, plat_mgt_api_client, init_default_cluster, e2b_config):
         template = make_builtin_template()
         mark_applied(template, init_default_cluster.name)
         mark_applied(template, "other-cluster")
@@ -221,7 +221,7 @@ class TestDestroyE2BConfig:
         resp = plat_mgt_api_client.delete(_url(init_default_cluster.name))
 
         assert resp.status_code == status.HTTP_204_NO_CONTENT
-        # 换命名空间重建配置后，模板不能凭旧记录显示为可用
+        # 换命名空间重建配置后，模板不能凭旧的下发状态显示为可用
         assert not is_applied(template, init_default_cluster.name)
         assert is_applied(template, "other-cluster")
 

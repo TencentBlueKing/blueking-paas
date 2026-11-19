@@ -20,8 +20,8 @@ import pytest
 from paas_wl.infras.cluster.models import ClusterE2BConfig
 from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateSyncStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BTemplateSyncInProgress
-from paasng.platform.agent_sandbox.e2b.template_sync import records, status, sync
-from paasng.platform.agent_sandbox.models import E2BSandboxTemplateSyncRecord
+from paasng.platform.agent_sandbox.e2b.template_sync import states, status, sync
+from paasng.platform.agent_sandbox.models import E2BSandboxTemplateSyncState
 from tests.paasng.platform.agent_sandbox.e2b.helpers import make_builtin_template, make_custom_template
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
@@ -150,7 +150,7 @@ class TestSyncAll:
 
     def test_cluster_failure_is_isolated(self, clusters):
         template = make_builtin_template("e2b-envd")
-        records.mark_pending(template)
+        states.mark_pending(template)
         clusters.broken_clusters.add(OTHER_CLUSTER)
 
         results = {r.cluster_name: r for r in sync.sync_templates()}
@@ -165,10 +165,10 @@ class TestSyncAll:
         }
 
     def test_skips_and_prunes_non_target_clusters(self, clusters):
-        """保存之后才停用 e2b 的集群不再下发，它的记录收尾时清理，不会一直挂着待同步"""
+        """保存之后才停用 e2b 的集群不再下发，它的下发状态收尾时清理，不会一直挂着待同步"""
         template = make_builtin_template("e2b-envd")
-        records.mark_pending(template)
-        E2BSandboxTemplateSyncRecord.objects.create(template=template, cluster_name="retired", status="succeeded")
+        states.mark_pending(template)
+        E2BSandboxTemplateSyncState.objects.create(template=template, cluster_name="retired", status="succeeded")
         ClusterE2BConfig.objects.filter(cluster__name=OTHER_CLUSTER).update(enabled=False)
 
         sync.sync_templates()
@@ -176,8 +176,8 @@ class TestSyncAll:
         assert clusters.names(OTHER_CLUSTER, "SandboxPool") == set()
         assert status_of(template) == {CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value}
 
-    def test_fills_records_of_newly_enabled_cluster(self, clusters):
-        """之后才启用 e2b 的集群原本没有记录，全量同步后补齐"""
+    def test_fills_states_of_newly_enabled_cluster(self, clusters):
+        """之后才启用 e2b 的集群原本没有下发状态，全量同步后补齐"""
         template = make_builtin_template("e2b-envd")
         assert status.get_cluster_overviews()[0].missing == ["e2b-envd"]
 
@@ -195,9 +195,9 @@ class TestSyncAll:
         assert clusters.objects == {}
 
     def test_scoped_to_clusters(self, clusters):
-        """范围外集群的记录不动，不能被当成不再是目标而删掉"""
+        """范围外集群的下发状态不动，不能被当成不再是目标而删掉"""
         template = make_builtin_template("e2b-envd")
-        records.mark_pending(template)
+        states.mark_pending(template)
 
         results = sync.sync_templates(cluster_names={CLUSTER_NAME_FOR_TESTING})
 
@@ -250,7 +250,7 @@ class TestSyncAll:
             assert image_of(clusters, cluster, "e2b-envd") == "new:v2"
 
     def test_skips_template_deleted_during_sync(self, clusters, race_after_first_apply):
-        """同步途中被删除、CR 已清理的模板，不能再下发回去，也不留下记录"""
+        """同步途中被删除、CR 已清理的模板，不能再下发回去，也不留下下发状态"""
         template = make_builtin_template("e2b-envd")
 
         def _delete_and_cleanup():
@@ -261,4 +261,4 @@ class TestSyncAll:
         sync.sync_templates()
 
         assert clusters.objects == {}
-        assert not E2BSandboxTemplateSyncRecord.objects.exists()
+        assert not E2BSandboxTemplateSyncState.objects.exists()

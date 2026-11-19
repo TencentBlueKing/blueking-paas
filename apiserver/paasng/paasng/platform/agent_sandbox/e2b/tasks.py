@@ -75,7 +75,7 @@ def reconcile_e2b_sandboxes_task():
 
 @shared_task(bind=True, max_retries=TEMPLATE_SYNC_LOCK_TIMEOUT_SECONDS // 10)
 def sync_e2b_templates_task(self, cluster_names: list[str] | None = None, resource_names: list[str] | None = None):
-    """把模板下发到启用 e2b 的集群，结果写入下发记录。模板保存或删除后、平台管理端手动同步时触发。
+    """把模板下发到启用 e2b 的集群，结果写入下发状态。模板保存或删除后、平台管理端手动同步时触发。
     参数同 ``sync_templates``。
 
     另一次下发还没结束时每 10 秒重试一次，总时长覆盖锁的存活时间。不能跳过，否则模板会一直停在待同步。

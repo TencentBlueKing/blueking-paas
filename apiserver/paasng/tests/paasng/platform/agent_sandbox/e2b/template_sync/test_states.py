@@ -18,8 +18,8 @@
 import pytest
 
 from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateSyncStatus
-from paasng.platform.agent_sandbox.e2b.template_sync import records, sync
-from paasng.platform.agent_sandbox.models import E2BSandboxTemplateSyncRecord
+from paasng.platform.agent_sandbox.e2b.template_sync import states, sync
+from paasng.platform.agent_sandbox.models import E2BSandboxTemplateSyncState
 from tests.paasng.platform.agent_sandbox.e2b.helpers import make_builtin_template, make_custom_template
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
@@ -33,8 +33,8 @@ class TestMarkPending:
         builtin = make_builtin_template("e2b-envd")
         custom = make_custom_template(bk_app, "mine")
 
-        records.mark_pending(builtin)
-        records.mark_pending(custom)
+        states.mark_pending(builtin)
+        states.mark_pending(custom)
 
         assert status_of(builtin) == {
             CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.PENDING.value,
@@ -44,21 +44,21 @@ class TestMarkPending:
 
     def test_overwrites_previous_result(self):
         template = make_builtin_template("e2b-envd")
-        E2BSandboxTemplateSyncRecord.objects.create(
+        E2BSandboxTemplateSyncState.objects.create(
             template=template, cluster_name=CLUSTER_NAME_FOR_TESTING, status="failed", message="boom"
         )
 
-        records.mark_pending(template)
+        states.mark_pending(template)
 
-        record = E2BSandboxTemplateSyncRecord.objects.get(template=template, cluster_name=CLUSTER_NAME_FOR_TESTING)
-        assert (record.status, record.message) == (E2BTemplateSyncStatus.PENDING.value, "")
+        state = E2BSandboxTemplateSyncState.objects.get(template=template, cluster_name=CLUSTER_NAME_FOR_TESTING)
+        assert (state.status, state.message) == (E2BTemplateSyncStatus.PENDING.value, "")
 
 
-class TestDeleteClusterRecords:
-    def test_drops_records_of_the_cluster_only(self, clusters):
+class TestDeleteClusterSyncStates:
+    def test_drops_states_of_the_cluster_only(self, clusters):
         template = make_builtin_template("e2b-envd")
         sync.sync_templates()
 
-        records.delete_cluster_records(OTHER_CLUSTER)
+        states.delete_cluster_sync_states(OTHER_CLUSTER)
 
         assert status_of(template) == {CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value}

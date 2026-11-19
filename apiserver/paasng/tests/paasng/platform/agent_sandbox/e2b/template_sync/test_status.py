@@ -15,13 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""下发记录由真实的下发流程产生，再验证据此得出的状态"""
+"""下发状态由真实的下发流程产生，再验证据此得出的状态"""
 
 import pytest
 
 from paas_wl.infras.cluster.models import ClusterE2BConfig
 from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateStatus, E2BTemplateSyncStatus
-from paasng.platform.agent_sandbox.e2b.template_sync import records, status, sync
+from paasng.platform.agent_sandbox.e2b.template_sync import states, status, sync
 from tests.paasng.platform.agent_sandbox.e2b.helpers import make_builtin_template, make_custom_template
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
@@ -33,10 +33,10 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestOverviews:
     def test_template_status_follows_worst_cluster(self, clusters):
         template = make_builtin_template("e2b-envd")
-        records.mark_pending(template)
+        states.mark_pending(template)
 
         def _status():
-            refreshed = type(template).objects.prefetch_related("sync_records").get(pk=template.pk)
+            refreshed = type(template).objects.prefetch_related("sync_states").get(pk=template.pk)
             return status.get_template_overviews([refreshed])[0].status
 
         assert _status() == E2BTemplateSyncStatus.PENDING.value
@@ -55,7 +55,7 @@ class TestOverviews:
 
         (overview,) = status.get_template_overviews([template])
 
-        assert (overview.status, overview.records, overview.missing) == (None, [], [])
+        assert (overview.status, overview.states, overview.missing) == (None, [], [])
 
 
 class TestTemplateStatuses:
@@ -72,7 +72,7 @@ class TestTemplateStatuses:
 
         template.image = "new:v2"
         template.save()
-        records.mark_pending(template)
+        states.mark_pending(template)
         assert self._status(bk_app, template) == E2BTemplateStatus.SYNCING
 
         sync.sync_templates(resource_names={template.resource_name})
@@ -108,7 +108,7 @@ class TestTemplateStatuses:
 
         template.image = "old:v1"
         template.save()
-        records.mark_pending(template)
+        states.mark_pending(template)
 
         assert self._status(bk_app, template) == E2BTemplateStatus.SYNCING
         assert not status.is_applied(template, CLUSTER_NAME_FOR_TESTING)
@@ -127,7 +127,7 @@ class TestTemplateStatuses:
         assert self._status(bk_app, template) == E2BTemplateStatus.AVAILABLE
 
     def test_digest_follows_what_was_pushed(self, clusters, bk_app, race_after_first_apply):
-        """下发途中模板又被修改：记录是成功，但集群里是修改前的配置，应用视角与概览都要等下一次下发"""
+        """下发途中模板又被修改：下发状态是成功，但集群里是修改前的配置，应用视角与概览都要等下一次下发"""
         template = make_custom_template(bk_app, "mine", image="old:v1")
         race_after_first_apply(lambda: type(template).objects.filter(pk=template.pk).update(image="new:v2"))
 
@@ -136,7 +136,7 @@ class TestTemplateStatuses:
         assert status_of(template) == {CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value}
         assert self._status(bk_app, template) == E2BTemplateStatus.SYNCING
         refreshed = (
-            type(template).objects.select_related("application").prefetch_related("sync_records").get(pk=template.pk)
+            type(template).objects.select_related("application").prefetch_related("sync_states").get(pk=template.pk)
         )
         assert status.get_template_overviews([refreshed])[0].status == E2BTemplateSyncStatus.PENDING.value
         cluster_overview = {o.cluster_name: o for o in status.get_cluster_overviews()}[CLUSTER_NAME_FOR_TESTING]

@@ -184,11 +184,11 @@ class TestBuiltInEnvVars:
 
             # 环境变量中的 bool 值需要转为小写开头字符串
             assert config_vars["BKPAAS_MULTI_TENANT_MODE"] == "false"
-            assert config_vars["BKPAAS_ESB_ENABLED"] == "true"
+            assert config_vars["BKPAAS_ESB_ENABLED"] == "false"
 
     @pytest.mark.parametrize(("esb_enabled", "expected"), [(True, "true"), (False, "false")])
     def test_esb_enabled(self, bk_stag_env, settings, esb_enabled, expected):
-        settings.ESB_ENABLED = esb_enabled
+        settings.BK_ESB_ENABLED = esb_enabled
         config_vars = get_builtin_env_variables(bk_stag_env.engine_app).kv_map
         assert config_vars["BKPAAS_ESB_ENABLED"] == expected
 

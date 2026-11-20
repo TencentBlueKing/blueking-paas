@@ -35,9 +35,12 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandboxTemplate
 from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 from . import sandboxes, templates
@@ -227,6 +230,10 @@ class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMi
             raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_QUOTA_EXCEEDED
         except E2BTemplateAlreadyExists:
             raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_ALREADY_EXISTS
+
+        self._add_audit_record(
+            request, application, OperationEnum.CREATE, template, data_after=self._audit_data(template)
+        )
         return Response(
             E2BTemplateDetailOutputSLZ(template, context=self._context(application, [template])).data,
             status=status.HTTP_201_CREATED,
@@ -243,8 +250,18 @@ class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMi
         template = self._get_template(E2BSandboxTemplate.objects.filter(application=application), template_id)
         slz = E2BTemplateSpecInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
+        data_before = self._audit_data(template)
 
         templates.update_template(template, **slz.validated_data)
+
+        self._add_audit_record(
+            request,
+            application,
+            OperationEnum.MODIFY,
+            template,
+            data_before=data_before,
+            data_after=self._audit_data(template),
+        )
         return Response(E2BTemplateDetailOutputSLZ(template, context=self._context(application, [template])).data)
 
     @swagger_auto_schema(tags=["agent_sandbox.e2b"], responses={status.HTTP_204_NO_CONTENT: ""})
@@ -252,11 +269,14 @@ class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMi
         """删除自定义模板。模板下还有未销毁的沙箱时拒绝删除"""
         application = self.get_application()
         template = self._get_template(E2BSandboxTemplate.objects.filter(application=application), template_id)
+        data_before = self._audit_data(template)
 
         try:
             templates.delete_template(template)
         except E2BTemplateInUse:
             raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_IN_USE
+
+        self._add_audit_record(request, application, OperationEnum.DELETE, template, data_before=data_before)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @staticmethod
@@ -269,3 +289,28 @@ class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMi
         if template is None:
             raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_NOT_FOUND
         return template
+
+    @staticmethod
+    def _audit_data(template: E2BSandboxTemplate) -> dict:
+        return {"template_id": template.template_id, **E2BTemplateSpecInputSLZ(template).data}
+
+    @staticmethod
+    def _add_audit_record(
+        request,
+        application: Application,
+        operation: OperationEnum,
+        template: E2BSandboxTemplate,
+        data_before: dict | None = None,
+        data_after: dict | None = None,
+    ):
+        add_app_audit_record(
+            app_code=application.code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=operation,
+            target=OperationTarget.E2B_SANDBOX_TEMPLATE,
+            attribute=template.template_id,
+            data_before=DataDetail(data=data_before) if data_before is not None else None,
+            data_after=DataDetail(data=data_after) if data_after is not None else None,
+        )

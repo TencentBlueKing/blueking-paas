@@ -25,6 +25,8 @@ from django_dynamic_fixture import G
 from rest_framework import status
 
 from paas_wl.infras.cluster.models import Cluster, ClusterE2BConfig
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.agent_sandbox.e2b import templates
 from paasng.platform.agent_sandbox.e2b.constants import E2BSandboxStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BAppCodeTooLong, E2BTemplateIDTooLong
@@ -47,6 +49,12 @@ def _list_url(app: Application) -> str:
 
 def _detail_url(app: Application, template_id: str) -> str:
     return reverse("agent_sandbox.e2b.console.templates.detail", kwargs={"code": app.code, "template_id": template_id})
+
+
+def _audit_record(app: Application, operation: OperationEnum) -> AppOperationRecord:
+    return AppOperationRecord.objects.get(
+        app_code=app.code, target=OperationTarget.E2B_SANDBOX_TEMPLATE, operation=operation
+    )
 
 
 @pytest.fixture()
@@ -132,6 +140,8 @@ class TestCreate:
         assert template.resource_name == f"{bk_app.code}--my-tpl"
         assert (template.cpu_count, template.memory_mb, template.disk_size_mb) == (2, 4096, None)
         task.delay.assert_called_once_with(resource_names=[template.resource_name])
+        record = _audit_record(bk_app, OperationEnum.CREATE)
+        assert (record.attribute, record.data_after["data"]["image"]) == ("my-tpl", IMAGE)
 
     @pytest.mark.parametrize("template_id", ["internal", "public", "mine"])
     def test_rejects_taken_template_id(self, api_client, bk_app, visible_templates, template_id):
@@ -219,6 +229,8 @@ class TestUpdate:
         template.refresh_from_db()
         assert (template.image, template.cpu_count, template.env_vars) == ("new:v2", 4, {"A": "1"})
         task.delay.assert_called_once_with(resource_names=[template.resource_name])
+        record = _audit_record(bk_app, OperationEnum.MODIFY)
+        assert (record.data_before["data"]["image"], record.data_after["data"]["image"]) == (IMAGE, "new:v2")
 
     @pytest.mark.parametrize("template_id", ["public", "theirs"])
     def test_cannot_update_builtin_or_others(self, api_client, bk_app, visible_templates, template_id):
@@ -240,6 +252,7 @@ class TestDestroy:
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         assert not E2BSandboxTemplate.objects.filter(pk=template.pk).exists()
         task.delay.assert_called_once_with(resource_names=[template.resource_name])
+        assert _audit_record(bk_app, OperationEnum.DELETE).data_before["data"]["image"] == IMAGE
 
     def test_refuses_while_sandboxes_are_active(self, api_client, bk_app):
         """删除池子会连带销毁正在用的沙箱"""
@@ -252,6 +265,7 @@ class TestDestroy:
 
         assert resp.status_code == status.HTTP_409_CONFLICT
         assert E2BSandboxTemplate.objects.filter(pk=template.pk).exists()
+        assert not AppOperationRecord.objects.filter(target=OperationTarget.E2B_SANDBOX_TEMPLATE).exists()
 
     def test_terminated_sandboxes_do_not_block(self, api_client, bk_app):
         template = make_custom_template(bk_app, "mine")

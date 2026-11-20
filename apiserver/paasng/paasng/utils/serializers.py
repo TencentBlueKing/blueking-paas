@@ -35,6 +35,7 @@ from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator
 from django.utils import timezone
 from django.utils.encoding import force_str
+from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 from rest_framework import fields, serializers
 from rest_framework.fields import empty, flatten_choices_dict, to_choices_dict
@@ -165,7 +166,7 @@ def patch_datetime_field():
 
 class HumanizeDateTimeField(serializers.DateTimeField):
     def to_representation(self, value):
-        return arrow.get(value).humanize(locale="zh")
+        return arrow.get(value).humanize(locale=get_language())
 
 
 class HumanizeTimestampField(serializers.Field):

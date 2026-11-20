@@ -25,6 +25,7 @@ import arrow
 import cattr
 from dateutil import parser
 from django.utils import timezone
+from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 from kubernetes.utils.quantity import parse_quantity
 from rest_framework import serializers
@@ -45,7 +46,7 @@ from paasng.platform.sourcectl.models import VersionInfo
 
 class HumanizeDateTimeField(serializers.DateTimeField):
     def to_representation(self, value):
-        return arrow.get(value).humanize(locale="zh")
+        return arrow.get(value).humanize(locale=get_language())
 
 
 class ProcessForDisplaySLZ(serializers.Serializer):

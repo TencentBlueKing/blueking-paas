@@ -58,6 +58,9 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     messages,
     previewStarting,
     previewStartSeq,
+    runEndedWithError,
+    failedRunMayHaveChangedWorkspace,
+    failedRunPreviewSyncSeq,
   } = storeToRefs(useProjectStore());
 
   const origin = ref('');
@@ -83,6 +86,10 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   let resolved = false;
   /** 最近一条助手回复的正文。变了说明对话框有新内容，失败计数要回到 0。 */
   let replyMark = '';
+  /** 最终状态同步撞上已有请求时，等它结束后立即再问一次，不能等下一拍。 */
+  let finalPullPending = false;
+  /** 失败前工作区可能有改动；最终问到 ready 后重载当前 iframe。 */
+  let refreshFrameAfterFinalPull = false;
 
   const conversationKey = () => (
     projectId.value && conversationNumber.value != null
@@ -122,6 +129,10 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     if (!pageVisible.value || !panelOpen.value || conversationKey() === '' || !isLive.value) {
       return false;
     }
+    // 模型明确报错时没有成功产出可刷新的页面；回写水位变化也不应重新打开预览轮询。
+    if (runEndedWithError.value && status.value === 'idle' && !running.value) {
+      return devServerStatus.value === 'starting';
+    }
     if (status.value !== 'idle' || running.value || replicationPending.value) return true;
     return devServerStatus.value === 'starting';
   };
@@ -160,11 +171,26 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
         return;
       }
       // 同一地址不换 src。远程沙箱重建后 get_host 会变成另一个主机，那时才重载。
+      const originChanged = Boolean(data.origin && data.origin !== origin.value);
       if (data.origin && data.origin !== origin.value) {
         origin.value = data.origin;
         direct.value = data.direct;
       }
       devServerStatus.value = asDevServerStatus(data.dev_server_status);
+      if (
+        refreshFrameAfterFinalPull
+        && devServerStatus.value === 'ready'
+        && data.origin
+      ) {
+        // 地址变化本身就会让 iframe 导航；同地址才需要靠 key 强制读取失败前写入的新内容。
+        if (!originChanged) frameKey.value += 1;
+        refreshFrameAfterFinalPull = false;
+      } else if (
+        refreshFrameAfterFinalPull
+        && devServerStatus.value !== 'starting'
+      ) {
+        refreshFrameAfterFinalPull = false;
+      }
       pending.value = false;
       resolved = true;
       consecutiveFailures = 0;
@@ -191,6 +217,10 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
       stop();
     } finally {
       if (inFlightGeneration === gen) inFlightGeneration = -1;
+      if (finalPullPending && gen === generation) {
+        finalPullPending = false;
+        void pull();
+      }
     }
   };
 
@@ -205,6 +235,8 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
       pending.value = true;
       resolved = false;
       consecutiveFailures = 0;
+      finalPullPending = false;
+      refreshFrameAfterFinalPull = false;
     }
 
     stop();
@@ -240,6 +272,7 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     }
     replyMark = next;
     consecutiveFailures = 0;
+    if (runEndedWithError.value) return;
     if (
       timer
       || !pageVisible.value
@@ -256,12 +289,14 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   // 文件是在一轮对话里写的，回到 idle 时通常已经写完。不能指望状态变化来触发：只改文件时进程不
   // 重启，状态一直是 ready；就算重启了，5 秒一拍的轮询也未必赶得上中间那段 starting。
   watch(status, (next, prev) => {
-    if (next === 'idle' && prev !== 'idle') frameKey.value += 1;
+    if (next === 'idle' && prev !== 'idle' && !runEndedWithError.value) {
+      frameKey.value += 1;
+    }
   });
 
   // 连续失败停掉的，要等新回复把计数清零，这里不重新打开。
   // 还没问到第一次结果时也不停，避免把「进来先问一次」取消掉。
-  watch([status, running, replicationPending], () => {
+  watch([status, running, replicationPending, runEndedWithError], () => {
     if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES || pending.value) return;
     if (shouldKeepPolling()) {
       if (!timer) start();
@@ -274,6 +309,23 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   // 回来时应用已在 starting，shouldKeepPolling 会一直问到它出结果。
   watch(previewStartSeq, () => {
     if (!panelOpen.value || conversationKey() === '' || !isLive.value) return;
+    start();
+  });
+
+  // 普通 RUN_ERROR 不重拉对话历史，但必须最后确认一次应用状态。失败前有修改型工具返回过时，
+  // 同地址的 iframe 也要在确认 ready 后重载；没有改动则只更新状态，避免无意义闪烁。
+  watch(failedRunPreviewSyncSeq, () => {
+    refreshFrameAfterFinalPull = refreshFrameAfterFinalPull
+      || failedRunMayHaveChangedWorkspace.value;
+    if (
+      !pageVisible.value
+      || !panelOpen.value
+      || conversationKey() === ''
+      || !isLive.value
+    ) {
+      return;
+    }
+    if (inFlightGeneration === generation) finalPullPending = true;
     start();
   });
 

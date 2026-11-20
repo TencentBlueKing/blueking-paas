@@ -1,7 +1,10 @@
 import { deepMerge } from '@/common/util';
+import { resolveApiUrl } from '../resolve-api-url';
 import successInterceptor from './success-interceptor';
 import errorInterceptor from './error-interceptor';
 import RequestError from './request-error';
+
+export { resolveApiUrl };
 
 export interface IFetchConfig extends RequestInit {
   responseType?: 'json' | 'text' | 'arrayBuffer' | 'blob' | 'formData',
@@ -54,15 +57,6 @@ const getFetchConfig = (method: string, payload: any, config: IFetchConfig) => {
     fetchConfig = deepMerge(fetchConfig, { body: JSON.stringify(payload) });
   }
   return fetchConfig;
-};
-
-/** 同源 API 地址：origin + SITE_URL + 业务 path，避免调用方二次拼接站点前缀 */
-export const resolveApiUrl = (path: string) => {
-  if (/^https?:\/\//.test(path)) return path;
-  const site = String(window.SITE_URL || '').replace(/\/$/, '');
-  const ajax = String(process.env.BK_AJAX_URL_PREFIX || '').replace(/\/$/, '');
-  const normalized = path.startsWith('/') ? path : `/${path}`;
-  return `${location.origin}${site}${ajax}${normalized}`;
 };
 
 // 拼装发送请求 url

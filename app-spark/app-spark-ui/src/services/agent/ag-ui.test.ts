@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import type { ChatMessage } from '../../components/project/interaction/types.ts';
 import {
+  appendUserMessage,
   appendRunError,
   applyAgUiEvent,
   createApplyContext,
@@ -99,7 +100,76 @@ test('消息有没有看得见的东西', () => {
   });
   assert.equal(messageHasContent(message([{ type: 'text', text: '' }])), false);
   assert.equal(messageHasContent(message([{ type: 'text', text: 'hi' }])), true);
+  // 没有地址时界面仍会显示「图片已不可用」。
+  assert.equal(messageHasContent(message([{ type: 'image' }])), true);
+  assert.equal(messageHasContent(message([{ type: 'file' }])), true);
   // 思考还没有正文，标题也已经在界面上了。
   assert.equal(messageHasContent(message([{ type: 'reasoning', reasoning: { text: '', state: 'running' } }])), true);
   assert.equal(messageHasContent(message([], { stopped: true })), true);
+});
+
+test('历史附件按后端 MIME 区分图片和下载文件，纯附件消息也保留', () => {
+  Object.defineProperty(globalThis, 'window', {
+    value: { SITE_URL: '' },
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, 'location', {
+    value: { origin: 'https://spark.example.com' },
+    configurable: true,
+  });
+  const ctx = createApplyContext([]);
+  const message = appendUserMessage(ctx, {
+    id: 12,
+    run_id: 'run-1',
+    after_seq: 0,
+    created_at: '2026-11-18T10:00:00+08:00',
+    content: '',
+    attachments: [
+      {
+        id: 'image',
+        filename: 'shot.gif',
+        mime_type: 'image/gif',
+        size: 128,
+        url: '/api-svc/image',
+        created_at: '2026-11-18T10:00:00+08:00',
+      },
+      {
+        id: 'svg',
+        filename: 'icon.svg',
+        mime_type: 'image/svg+xml',
+        size: 256,
+        url: '/api-svc/svg',
+        created_at: '2026-11-18T10:00:00+08:00',
+      },
+      {
+        id: 'missing',
+        filename: 'notes.txt',
+        mime_type: 'text/plain',
+        size: 512,
+        url: null,
+        created_at: '2026-11-18T10:00:00+08:00',
+      },
+    ],
+  });
+
+  assert.equal(message?.id, 'user-12');
+  assert.deepEqual(message?.blocks, [
+    {
+      type: 'image',
+      src: 'https://spark.example.com/api-svc/image',
+      filename: 'shot.gif',
+    },
+    {
+      type: 'file',
+      href: 'https://spark.example.com/api-svc/svg',
+      filename: 'icon.svg',
+      size: 256,
+    },
+    {
+      type: 'file',
+      href: undefined,
+      filename: 'notes.txt',
+      size: 512,
+    },
+  ]);
 });

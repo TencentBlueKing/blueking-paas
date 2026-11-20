@@ -29,11 +29,10 @@
     <ChatComposer
       v-if="!viewingArchive"
       :disabled="composerDisabled"
-      :enable-upload="false"
+      :enable-upload="true"
       :hint="composerHint"
       :running="status !== 'idle'"
       :can-stop="canStop"
-      placeholder="描述你想做的改动"
       @send="handleSend"
       @stop="handleStop"
     />

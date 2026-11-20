@@ -279,7 +279,7 @@ const address = computed(() => props.src || placeholder.value);
   width: 36%;
   height: 100%;
   background: linear-gradient(90deg, transparent, #3d6dff 30%, #7b96ff 70%, transparent);
-  animation: preview-marquee 1.1s ease-in-out infinite;
+  animation: preview-marquee 2.2s ease-in-out infinite;
 }
 
 @keyframes preview-marquee {

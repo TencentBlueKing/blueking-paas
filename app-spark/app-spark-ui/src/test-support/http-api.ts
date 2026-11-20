@@ -34,3 +34,4 @@ export const listUiEvents = route('listUiEvents');
 export const startConversationPreview = route('startConversationPreview');
 export const startConversationRun = route('startConversationRun');
 export const stopConversationRun = route('stopConversationRun');
+export const uploadConversationAttachment = route('uploadConversationAttachment');

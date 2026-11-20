@@ -1,10 +1,27 @@
 export type ChatRole = 'user' | 'assistant';
 
-export interface ChatImage {
-  data: string;
+export type ChatAttachmentStatus = 'queued' | 'uploading' | 'ready' | 'failed';
+export type ChatAttachmentKind = 'pending' | 'image' | 'file';
+
+export interface ChatAttachment {
+  localId: string;
+  file: File | null;
   mimeType: string;
+  kind: ChatAttachmentKind;
   preview: string;
-  name?: string;
+  name: string;
+  size: number;
+  url?: string | null;
+  status: ChatAttachmentStatus;
+  attachmentId?: string;
+  errorMessage?: string;
+}
+
+export interface ChatSendLifecycle {
+  /** `/runs/` 在 SSE 建立前直接拒绝时，恢复刚刚乐观清空的可重试草稿。 */
+  onRejected?: () => void;
+  onAttachmentsInvalid?: (attachmentIds: string[]) => void;
+  onImageInputUnsupported?: () => void;
 }
 
 /**
@@ -41,10 +58,13 @@ export interface ChatReasoning {
 }
 
 export interface ChatBlock {
-  type: 'text' | 'image' | 'summary' | 'tool' | 'reasoning';
+  type: 'text' | 'image' | 'file' | 'summary' | 'tool' | 'reasoning';
   text?: string;
   items?: string[];
   src?: string;
+  href?: string;
+  filename?: string;
+  size?: number;
   tool?: ChatToolCall;
   reasoning?: ChatReasoning;
 }

@@ -18,6 +18,18 @@ export const ApiErrorCode = {
   RUN_NOT_RUNNING: 'RUN_NOT_RUNNING',
   /** 用户选择的模型已经不在当前推荐目录中，需要刷新目录并重新选择。 */
   MODEL_NOT_AVAILABLE: 'MODEL_NOT_AVAILABLE',
+  /** 当前模型不支持图片输入，本轮不会开始。 */
+  MODEL_IMAGE_INPUT_UNSUPPORTED: 'MODEL_IMAGE_INPUT_UNSUPPORTED',
+  /** 附件超过后端允许的 5MB。 */
+  ATTACHMENT_TOO_LARGE: 'ATTACHMENT_TOO_LARGE',
+  /** 附件存储暂时不可用，可以用同一份原始文件重试。 */
+  ATTACHMENT_STORAGE_UNAVAILABLE: 'ATTACHMENT_STORAGE_UNAVAILABLE',
+  /** 提交给本轮的附件不属于当前会话或已经不可用。 */
+  ATTACHMENT_NOT_FOUND: 'ATTACHMENT_NOT_FOUND',
+  /** 附件已经随另一轮对话发出，不能重复使用。 */
+  ATTACHMENT_ALREADY_USED: 'ATTACHMENT_ALREADY_USED',
+  /** 请求字段未通过后端校验。 */
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
   /** 当前项目还没有可发布的代码检查点。 */
   PUBLICATION_NO_VERSION: 'PUBLICATION_NO_VERSION',
   /** 首次发布时填写的应用名称过滤后为空。 */

@@ -4,6 +4,8 @@ import type {
   ChatReasoning,
   ChatToolCall,
 } from '@/components/project/interaction/types';
+import { isImageAttachmentMimeType } from '@/components/project/interaction/attachment';
+import { toAttachmentBlock } from '@/components/project/interaction/message-attachment';
 import type { AgUiEvent, UserMessageRecord } from '@/http/types';
 import { describeToolCall } from '@/services/agent/tool-call';
 
@@ -309,12 +311,21 @@ export const appendUserMessage = (
   record: UserMessageRecord,
 ): ChatMessage | null => {
   const text = String(record.content ?? '');
-  if (!text) return null;
+  const attachments = record.attachments || [];
+  if (!text && !attachments.length) return null;
 
   const message: ChatMessage = {
     id: `user-${record.id}`,
     role: 'user',
-    blocks: [{ type: 'text', text }],
+    blocks: [
+      ...(text ? [{ type: 'text' as const, text }] : []),
+      ...attachments.map(attachment => toAttachmentBlock({
+        kind: isImageAttachmentMimeType(attachment.mime_type) ? 'image' : 'file',
+        filename: attachment.filename,
+        size: attachment.size,
+        url: attachment.url,
+      })),
+    ],
   };
   ctx.messages.push(message);
   return message;
@@ -333,12 +344,14 @@ export const createWelcomeMessage = (): ChatMessage => ({
  * 这条消息在界面上有没有看得见的东西。
  *
  * 思考块一建出来就算，哪怕正文一个字都还没有：它的标题「思考中」「已思考」本身就看得见。
+ * 图片和文件块只要在就看得见：没有地址时界面会显示不可用占位。
  */
 export const messageHasContent = (message: ChatMessage) => (
   Boolean(message.stopped)
   || message.blocks.some(block => (
     (block.type === 'text' && Boolean(block.text))
-    || (block.type === 'image' && Boolean(block.src))
+    || block.type === 'image'
+    || block.type === 'file'
     || (block.type === 'summary' && Boolean(block.items?.length))
     || (block.type === 'tool' && Boolean(block.tool))
     || (block.type === 'reasoning' && Boolean(block.reasoning))

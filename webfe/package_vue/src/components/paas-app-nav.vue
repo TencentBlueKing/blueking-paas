@@ -14,6 +14,7 @@
         :class="{
           on: category.isActived && !category.isExpanded,
           expanded: category.isExpanded,
+          'engineless-observability': isEnginelessObservabilityNav(category),
         }"
       >
         <a
@@ -71,6 +72,10 @@
 import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import { traceIds } from '@/common/trace-ids';
 import { cloneDeep } from 'lodash';
+import { APPLICATION_TYPE } from '@/common/constants';
+
+// 可观测性导航项名称（配置于 paas_static.js，其子路由名与此一致）
+const OBSERVABILITY_NAV_NAME = 'monitorAlarm';
 
 export default {
   props: {
@@ -133,6 +138,9 @@ export default {
     curAppInfo() {
       return this.$store.state.curAppInfo;
     },
+    isEnginelessApp() {
+      return this.curAppInfo.application?.type === APPLICATION_TYPE.ENGINELESS_APP;
+    },
     curRouteName() {
       return this.$route.name;
     },
@@ -177,6 +185,13 @@ export default {
     },
 
     /**
+     * 是否为外链应用下的可观测性导航项
+     */
+    isEnginelessObservabilityNav(nav) {
+      return this.isEnginelessApp && nav.name === OBSERVABILITY_NAV_NAME;
+    },
+
+    /**
      * 根据接口来展示对应的导航项
      */
     async initNavByRegion(navTree) {
@@ -198,12 +213,20 @@ export default {
 
         // 如果不开启引擎，仅仅显示部分功能
         if (!this.curAppInfo.web_config.engine_enabled) {
+          const allowedNavNames = ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI', 'agentSandbox', 'operationRecord'];
+          if (this.isEnginelessApp) {
+            const alarmNav = navTree.find(nav => nav.name === OBSERVABILITY_NAV_NAME);
+            if (alarmNav) {
+              alarmNav.label = this.$t('可观测性');
+              alarmNav.iconfontName = 'keguance';
+              allowedNavNames.push(alarmNav.name);
+            }
+          }
           navTree = navTree.filter((nav) => {
             if (nav.name === 'appMarketing') {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
             }
-            return ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI', 'agentSandbox', 'operationRecord']
-              .includes(nav.name);
+            return allowedNavNames.includes(nav.name);
           });
         }
 
@@ -247,7 +270,7 @@ export default {
         // 初始化属性
         this.allNavItems = [];
         navTree = navTree.map((nav) => {
-          nav.isExpanded = false; // 是否展开，有子项时可应用
+          nav.isExpanded = this.isEnginelessObservabilityNav(nav);
           nav.isActived = false; // 是否激活，本身匹配或子项匹配时应用
           nav.hasChildSelected = false; // 是否展开，只有子项匹配时应用
 
@@ -294,6 +317,10 @@ export default {
             continue;
           }
           const children = nav.children.filter((sub) => {
+            // 外链应用的可观测性入口展示的是网关告警，不依赖 MONITORING 平台开关
+            if (this.isEnginelessApp && sub.destRoute.name === OBSERVABILITY_NAV_NAME) {
+              return true;
+            }
             const key = subFeatureMaps[sub.destRoute.name];
             // 如果有相应key，根据key来处理是否启用
             if (key && Object.prototype.hasOwnProperty.call(this.curAppInfo.feature, key)) {
@@ -364,7 +391,10 @@ export default {
           // 如果有子项，先遍历匹配
           if (nav.children && nav.children.length) {
             nav.isActived = false;
-            nav.isExpanded = false;
+            // 外链应用切换页面时保留可观测性的展开状态
+            if (!this.isEnginelessObservabilityNav(nav)) {
+              nav.isExpanded = false;
+            }
 
             nav.children.forEach((child) => {
               // 优先使用matchRouters来匹配，其次是destRoute
@@ -609,8 +639,11 @@ export default {
   > li {
     width: 239px;
     position: relative;
-    &.expanded {
-      background: #f5f7fa;
+    &:not(.engineless-observability) {
+      &.expanded,
+      .overview-text-slide {
+        background: #f5f7fa;
+      }
     }
 
     &.on {
@@ -662,7 +695,6 @@ export default {
   width: 100%;
   position: relative;
   overflow: hidden;
-  background: rgb(245, 247, 250);
   > a {
     width: 240px;
     display: block;

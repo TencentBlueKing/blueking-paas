@@ -206,6 +206,7 @@
 
 <script>
 import dayjs from '@/common/dayjs';
+import { TIME_SHORTCUT_KEYS, createDateShortcuts } from '@/common/date';
 
 
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
@@ -217,86 +218,16 @@ let timeShortCutText = '';
 export default {
   name: '',
   data() {
-    const dateShortCut = [
-      {
-        text: this.$t('最近5分钟'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 60 * 1000 * 5);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '5m';
-          timeShortCutText = this.$t('最近5分钟');
-        },
+    const dateShortCut = createDateShortcuts(
+      this.$i18n,
+      [...TIME_SHORTCUT_KEYS, '7d'],
+      (value) => {
+        timeRangeCache = value;
       },
-      {
-        text: this.$t('最近1小时'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 3600 * 1000 * 1);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '1h';
-          timeShortCutText = this.$t('最近1小时');
-        },
+      (text) => {
+        timeShortCutText = text;
       },
-      {
-        text: this.$t('最近3小时'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 3600 * 1000 * 3);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '3h';
-          timeShortCutText = this.$t('最近3小时');
-        },
-      },
-      {
-        text: this.$t('最近12小时'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 3600 * 1000 * 12);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '12h';
-          timeShortCutText = this.$t('最近12小时');
-        },
-      },
-      {
-        text: this.$t('最近1天'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 3600 * 1000 * 24);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '1d';
-          timeShortCutText = this.$t('最近1天');
-        },
-      },
-      {
-        text: this.$t('最近7天'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '7d';
-          timeShortCutText = this.$t('最近7天');
-        },
-      },
-    ];
+    );
     return {
       isLoading: true,
       minHeight: 550,

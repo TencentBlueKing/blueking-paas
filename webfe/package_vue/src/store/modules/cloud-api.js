@@ -63,6 +63,12 @@ export default {
       return http.get(url, {}, { ...config, params });
     },
 
+    /** 查询当前应用作为调用方触发的网关告警 */
+    getAppAlarmRecords({}, { appCode, ...params }, config = {}) {
+      const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/monitor/alarm-records/`;
+      return http.get(url, {}, { cancelWhenRouteChange: false, ...config, params });
+    },
+
     /**
      * 获取网关列表
      * @param {Object} params 请求参数：appCode

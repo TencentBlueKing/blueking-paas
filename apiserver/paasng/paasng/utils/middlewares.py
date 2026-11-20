@@ -18,7 +18,9 @@
 import logging
 
 from django.conf import settings
+from django.conf.urls.i18n import is_language_prefix_patterns_used
 from django.utils import translation
+from django.utils.cache import patch_vary_headers
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.translation import trans_real as trans
 from whitenoise.middleware import WhiteNoiseMiddleware
@@ -71,6 +73,39 @@ class AutoDisableCSRFMiddleware:
         # setting request._dont_enforce_csrf_checks = True.
         if getattr(view, "csrf_exempt", False):
             request._dont_enforce_csrf_checks = True
+
+
+class BkLocaleMiddleware(MiddlewareMixin):
+    """按 `blueking_language` cookie 决定请求语言, 取代 Django 的 `LocaleMiddleware`.
+
+    忽略 `Accept-Language`: 前端缺 cookie 时固定渲染中文, 后端跟随浏览器语言会导致同页面接口/界面语言不一致.
+    """
+
+    def process_request(self, request):
+        language = self._get_language_from_cookie(request)
+        translation.activate(language)
+        request.LANGUAGE_CODE = translation.get_language()
+
+    def process_response(self, request, response):
+        language = translation.get_language()
+        response.headers.setdefault("Content-Language", language)
+
+        # 语言只取决于 cookie, 因此缓存必须按 Cookie 区分 (不能按 Accept-Language)
+        if not (is_language_prefix_patterns_used(settings.ROOT_URLCONF)[0]):
+            patch_vary_headers(response, ("Cookie",))
+        return response
+
+    @staticmethod
+    def _get_language_from_cookie(request) -> str:
+        """语言只由 cookie 决定, 缺失/非法时回退到项目默认语言"""
+        lang_code = request.COOKIES.get(settings.LANGUAGE_COOKIE_NAME)
+        if lang_code:
+            try:
+                return trans.get_supported_language_variant(lang_code)
+            except LookupError:
+                logger.warning("The language %r from cookie is not supported, fallback to default.", lang_code)
+
+        return settings.LANGUAGE_CODE
 
 
 class APILanguageMiddleware(MiddlewareMixin):

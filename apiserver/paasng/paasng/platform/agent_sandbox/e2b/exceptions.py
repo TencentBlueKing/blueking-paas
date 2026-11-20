@@ -40,6 +40,13 @@ class E2BTemplateNotFound(E2BError):
     """
 
 
+class E2BTemplateNotReady(E2BError):
+    """选中集群里的模板还不是当前配置：还没下发完，或者下发失败
+
+    此时底层 E2B 网关能创建出沙箱，但用的是旧配置或者根本没有这个模板，因此在调网关之前拒绝。
+    """
+
+
 class E2BTemplateAlreadyExists(E2BError):
     """模板标识已被占用：同一应用下重名，或与内置模板重名"""
 
@@ -49,7 +56,14 @@ class E2BTemplateQuotaExceeded(E2BError):
 
 
 class E2BTemplateIDTooLong(E2BError):
-    """模板标识加上应用前缀后，资源名超出长度上限"""
+    """模板标识加上应用前缀后，资源名超出长度上限
+
+    :param max_length: 该应用可用的模板标识最大长度
+    """
+
+    def __init__(self, app_code: str, max_length: int):
+        super().__init__(f"template id of app {app_code} must be at most {max_length} characters")
+        self.max_length = max_length
 
 
 class E2BAppCodeTooLong(E2BError):

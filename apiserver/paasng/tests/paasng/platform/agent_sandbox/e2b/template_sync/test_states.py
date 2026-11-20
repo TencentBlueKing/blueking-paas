@@ -54,6 +54,42 @@ class TestMarkPending:
         assert (state.status, state.message) == (E2BTemplateSyncStatus.PENDING.value, "")
 
 
+class TestResetUnsyncedToPending:
+    def test_resets_states_not_current(self, clusters):
+        """已成功下发当前配置的不动，同步期间要保持可用"""
+        template = make_builtin_template("e2b-envd")
+        changed = make_builtin_template("e2b-changed")
+        clusters.broken_clusters.add(OTHER_CLUSTER)
+        sync.sync_templates()
+        # 下发成功之后配置又变了，例如摘要算法调整后上线
+        type(changed).objects.filter(pk=changed.pk).update(image="new:v2")
+
+        states.reset_unsynced_to_pending()
+
+        assert status_of(template) == {
+            CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.SUCCEEDED.value,
+            OTHER_CLUSTER: E2BTemplateSyncStatus.PENDING.value,
+        }
+        assert set(status_of(changed).values()) == {E2BTemplateSyncStatus.PENDING.value}
+        assert set(
+            E2BSandboxTemplateSyncState.objects.filter(template=template).values_list("message", flat=True)
+        ) == {""}
+
+    def test_only_resets_states_in_scope(self, clusters):
+        template = make_builtin_template("e2b-envd")
+        other = make_builtin_template("e2b-other")
+        sync.sync_templates()
+        E2BSandboxTemplateSyncState.objects.update(status=E2BTemplateSyncStatus.FAILED.value)
+
+        states.reset_unsynced_to_pending(cluster_names={OTHER_CLUSTER}, resource_names={"e2b-envd"})
+
+        assert status_of(template) == {
+            CLUSTER_NAME_FOR_TESTING: E2BTemplateSyncStatus.FAILED.value,
+            OTHER_CLUSTER: E2BTemplateSyncStatus.PENDING.value,
+        }
+        assert set(status_of(other).values()) == {E2BTemplateSyncStatus.FAILED.value}
+
+
 class TestDeleteClusterSyncStates:
     def test_drops_states_of_the_cluster_only(self, clusters):
         template = make_builtin_template("e2b-envd")

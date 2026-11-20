@@ -22,6 +22,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.iam.shim import get_paas_system_id
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import add_app_audit_record
+from paasng.platform.agent_sandbox.e2b.templates import delete_custom_templates_of
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.manager import ModuleCleaner
 
@@ -36,6 +37,9 @@ class ApplicationCleaner:
         """main entrance to clean application"""
         logger.info("going to delete iam resources for Application<%s>", self.application)
         self.delete_iam_resources()
+
+        logger.info("going to delete e2b sandbox templates for Application<%s>", self.application)
+        delete_custom_templates_of(self.application)
 
         # 软删除, 标记 is_deleted = True
         logger.info("going to delete Application<%s>", self.application)

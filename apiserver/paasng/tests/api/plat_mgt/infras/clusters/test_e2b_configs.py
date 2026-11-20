@@ -24,7 +24,7 @@ from paasng.platform.agent_sandbox.e2b.constants import E2BSandboxStatus
 from paasng.platform.agent_sandbox.e2b.template_sync.status import is_applied
 from paasng.platform.agent_sandbox.models import E2BSandbox
 from paasng.platform.applications.models import Application
-from tests.paasng.platform.agent_sandbox.e2b.helpers import make_builtin_template, mark_applied
+from tests.paasng.platform.agent_sandbox.e2b.test_utils import make_builtin_template, mark_applied
 from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

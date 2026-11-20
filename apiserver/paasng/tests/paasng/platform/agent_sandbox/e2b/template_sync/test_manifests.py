@@ -23,7 +23,7 @@ from paasng.platform.agent_sandbox.e2b.constants import (
     TEMPLATE_MANAGED_BY_VALUE,
 )
 from paasng.platform.agent_sandbox.e2b.template_sync import manifests
-from tests.paasng.platform.agent_sandbox.e2b.helpers import IMAGE, make_builtin_template, make_custom_template
+from tests.paasng.platform.agent_sandbox.e2b.test_utils import IMAGE, make_builtin_template, make_custom_template
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

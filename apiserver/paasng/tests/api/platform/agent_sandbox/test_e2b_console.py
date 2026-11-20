@@ -30,7 +30,7 @@ from paasng.platform.agent_sandbox.e2b.constants import MAX_ACTIVE_KEYS_PER_APP,
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BClusterNotConfigured, E2BGatewayTimeout
 from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandbox
 from paasng.platform.applications.models import Application
-from tests.paasng.platform.agent_sandbox.e2b.helpers import IMAGE, make_builtin_template
+from tests.paasng.platform.agent_sandbox.e2b.test_utils import IMAGE, make_builtin_template
 from tests.utils.auth import create_user
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

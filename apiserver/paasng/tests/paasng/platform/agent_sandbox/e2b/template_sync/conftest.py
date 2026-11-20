@@ -23,6 +23,7 @@ from django_dynamic_fixture import G
 from paas_wl.infras.cluster.models import Cluster, ClusterE2BConfig
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.agent_sandbox.e2b.template_sync import sync
+from paasng.platform.agent_sandbox.e2b.template_sync.resources import TemplateResources
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 from .fakes import NAMESPACE, OTHER_CLUSTER, FakeClusters, FakeLock
@@ -32,7 +33,7 @@ from .fakes import NAMESPACE, OTHER_CLUSTER, FakeClusters, FakeLock
 def clusters(monkeypatch) -> FakeClusters:
     fake = FakeClusters()
     monkeypatch.setattr(sync, "get_client_by_cluster_name", fake.client_for)
-    monkeypatch.setattr(sync, "_kres", fake.kres)
+    monkeypatch.setattr(TemplateResources, "_kres", lambda self, kres_cls: fake.kres(kres_cls, self.client))
     return fake
 
 
@@ -48,15 +49,15 @@ def race_after_first_apply(monkeypatch):
     """在第一次下发完成后插入一段操作，模拟锁过期后另一次下发与当前下发交错执行"""
 
     def _install(action):
-        original = sync._apply_resources
+        original = TemplateResources.apply
         pending = [action]
 
-        def _apply_resources(client, template, namespace):
-            original(client, template, namespace)
+        def apply(self, template):
+            original(self, template)
             if pending:
                 pending.pop()()
 
-        monkeypatch.setattr(sync, "_apply_resources", _apply_resources)
+        monkeypatch.setattr(TemplateResources, "apply", apply)
 
     return _install
 

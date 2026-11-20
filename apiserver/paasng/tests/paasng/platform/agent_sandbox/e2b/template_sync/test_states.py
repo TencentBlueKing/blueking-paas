@@ -20,7 +20,7 @@ import pytest
 from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateSyncStatus
 from paasng.platform.agent_sandbox.e2b.template_sync import states, sync
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplateSyncState
-from tests.paasng.platform.agent_sandbox.e2b.helpers import make_builtin_template, make_custom_template
+from tests.paasng.platform.agent_sandbox.e2b.test_utils import make_builtin_template, make_custom_template
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 from .fakes import OTHER_CLUSTER, status_of

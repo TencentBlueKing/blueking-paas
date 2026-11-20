@@ -33,7 +33,7 @@ from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BTemplateNotFound,
 )
 from paasng.platform.agent_sandbox.models import E2BApiKey
-from tests.paasng.platform.agent_sandbox.e2b.helpers import make_builtin_template
+from tests.paasng.platform.agent_sandbox.e2b.test_utils import make_builtin_template
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

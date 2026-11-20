@@ -31,7 +31,7 @@ from paasng.platform.agent_sandbox.e2b.constants import (
 )
 from paasng.platform.agent_sandbox.e2b.template_sync.sync import ClusterSyncResult
 from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate
-from tests.paasng.platform.agent_sandbox.e2b.helpers import IMAGE, make_builtin_template, make_custom_template
+from tests.paasng.platform.agent_sandbox.e2b.test_utils import IMAGE, make_builtin_template, make_custom_template
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

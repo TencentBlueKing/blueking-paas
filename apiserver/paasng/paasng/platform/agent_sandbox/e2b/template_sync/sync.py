@@ -22,24 +22,15 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Iterator
 
-from paas_wl.bk_app.agent_sandbox.constants import SANDBOX_INSTANCE_API_VERSION
 from paas_wl.infras.cluster.models import ClusterE2BConfig
-from paas_wl.infras.resources.base import kres
-from paas_wl.infras.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
-from paas_wl.infras.resources.base.exceptions import ResourceMissing
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paasng.platform.agent_sandbox.e2b.clusters import list_enabled_e2b_configs, resolve_template_targets
 from paasng.platform.agent_sandbox.e2b.constants import TEMPLATE_SYNC_LOCK_TIMEOUT_SECONDS, E2BTemplateSyncStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BTemplateSyncInProgress
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate
 from paasng.utils.lock import redis_lock
 
-from .manifests import (
-    build_pool_manifest,
-    build_template_manifest,
-    build_template_patch,
-    is_managed,
-    managed_labels,
-)
+from .resources import TemplateResources
 from .states import prune_sync_states, save_sync_state, truncate_message
 
 logger = logging.getLogger(__name__)
@@ -112,8 +103,9 @@ def _sync_cluster(
     result = ClusterSyncResult(cluster_name=cluster_name)
     try:
         with get_client_by_cluster_name(cluster_name) as client:
-            _apply_templates(client, config, templates, result)
-            result.pruned = _prune(client, config.namespace, prune_scope)
+            resources = TemplateResources(client, config.namespace)
+            _apply_templates(resources, cluster_name, templates, result)
+            result.pruned = _prune(resources, prune_scope)
     except Exception as exc:
         logger.exception("failed to sync e2b templates to cluster %s", cluster_name)
         result.error = truncate_message(str(exc))
@@ -125,8 +117,8 @@ def _sync_cluster(
 
 
 def _apply_templates(
-    client: EnhancedApiClient,
-    config: ClusterE2BConfig,
+    resources: TemplateResources,
+    cluster_name: str,
     templates: list[E2BSandboxTemplate],
     result: ClusterSyncResult,
 ) -> None:
@@ -134,14 +126,13 @@ def _apply_templates(
 
     边下发边写入 ``result``：中途连不上集群时，调用方据此判断哪些模板还没处理
     """
-    cluster_name = config.cluster.name
     for snapshot in templates:
         # 再读一遍库，避免中途被修改
         template = _reload(snapshot)
         if template is None:
             continue
         try:
-            _apply_resources(client, template, config.namespace)
+            resources.apply(template)
         except Exception as exc:
             logger.exception("failed to sync e2b template %s to cluster %s", template.resource_name, cluster_name)
             result.failed[template.resource_name] = truncate_message(str(exc))
@@ -168,59 +159,7 @@ def _reload(template: E2BSandboxTemplate) -> E2BSandboxTemplate | None:
     return E2BSandboxTemplate.objects.select_related("application").filter(pk=template.pk).first()
 
 
-# 集群资源操作
-
-
-def _apply_resources(client: EnhancedApiClient, template: E2BSandboxTemplate, namespace: str) -> None:
-    """创建或更新模板的 CR。先模板后池子，池子引用的模板必须先存在"""
-    name = template.resource_name
-    _create_or_patch(
-        _kres(kres.KSandboxTemplate, client),
-        name,
-        namespace,
-        manifest=build_template_manifest(template, namespace),
-        patch=build_template_patch(template, namespace),
-    )
-    pool = build_pool_manifest(template, namespace)
-    _create_or_patch(_kres(kres.KSandboxPool, client), name, namespace, manifest=pool, patch=pool)
-
-
-def _create_or_patch(res: kres.BaseKresource, name: str, namespace: str, manifest: dict, patch: dict) -> None:
-    """不存在时按清单创建，已存在时以 merge patch 更新。
-
-    不用 replace：整体覆盖会清掉控制器写在对象上的 finalizers、annotations 等元数据
-    """
-    try:
-        res.get(name, namespace=namespace)
-    except ResourceMissing:
-        res.create(name, body=manifest, namespace=namespace)
-    else:
-        res.patch(name, body=patch, namespace=namespace, ptype=kres.PatchType.MERGE)
-
-
-def _delete_managed(client: EnhancedApiClient, resource_name: str, namespace: str) -> bool:
-    """删除平台管理的同名 CR，先池子后模板。不带平台标签的 CR 原样保留。
-
-    :returns: 是否删除了任何 CR
-    """
-    deleted = False
-    for kres_cls in (kres.KSandboxPool, kres.KSandboxTemplate):
-        res = _kres(kres_cls, client)
-        try:
-            obj = res.get(resource_name, namespace=namespace)
-        except ResourceMissing:
-            continue
-        if not is_managed(obj.to_dict()):
-            logger.warning(
-                "%s %s/%s is not managed by platform, skip deleting", kres_cls.kind, namespace, resource_name
-            )
-            continue
-        res.delete(resource_name, namespace=namespace)
-        deleted = True
-    return deleted
-
-
-def _prune(client: EnhancedApiClient, namespace: str, scope: set[str] | None) -> list[str]:
+def _prune(resources: TemplateResources, scope: set[str] | None) -> list[str]:
     """清理由平台管理、但数据库中已不存在的模板留下的 CR。
 
     模板仍在、但集群已不再是它的目标（自定义模板的分配集群被下掉）时，CR 不会清理，需要手动删除
@@ -229,16 +168,7 @@ def _prune(client: EnhancedApiClient, namespace: str, scope: set[str] | None) ->
     :returns: 被清理的资源名
     """
     if scope is None:
-        selector = managed_labels()
-        scope = {
-            item.metadata.name
-            for kres_cls in (kres.KSandboxPool, kres.KSandboxTemplate)
-            for item in _kres(kres_cls, client).ops_batch.list(labels=selector, namespace=namespace).items
-        }
+        scope = resources.list_managed()
     # 先列出 CR 再查库：同步期间新建并下发完成的模板，查库时已能看到，不会被误删
     known = set(E2BSandboxTemplate.objects.filter(resource_name__in=scope).values_list("resource_name", flat=True))
-    return [name for name in sorted(scope - known) if _delete_managed(client, name, namespace)]
-
-
-def _kres(kres_cls: type[kres.BaseKresource], client: EnhancedApiClient) -> kres.BaseKresource:
-    return kres_cls(client, api_version=SANDBOX_INSTANCE_API_VERSION)
+    return [name for name in sorted(scope - known) if resources.delete(name)]

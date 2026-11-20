@@ -176,12 +176,13 @@
 import dayjs from '@/common/dayjs';
 import { RECENT_DATE_KEYS, createDateShortcuts } from '@/common/date';
 
-const STATUS_COLORS = new Map([
-  ['received', 'blue'],
-  ['skipped', 'gray'],
-  ['success', 'green'],
-  ['failure', 'red'],
-]);
+// 告警状态单一常量源：文案与颜色均由此派生
+const ALARM_STATUSES = [
+  { id: 'received', textKey: '已接收', color: 'blue' },
+  { id: 'skipped', textKey: '已忽略', color: 'gray' },
+  { id: 'success', textKey: '告警成功', color: 'green' },
+  { id: 'failure', textKey: '告警失败', color: 'red' },
+];
 
 export default {
   name: 'GatewayAlarmRecord',
@@ -217,12 +218,7 @@ export default {
       return createDateShortcuts(this.$i18n, RECENT_DATE_KEYS);
     },
     statusOptions() {
-      return [
-        { id: 'received', name: this.$t('已接收') },
-        { id: 'skipped', name: this.$t('已忽略') },
-        { id: 'success', name: this.$t('告警成功') },
-        { id: 'failure', name: this.$t('告警失败') },
-      ];
+      return ALARM_STATUSES.map(({ id, textKey }) => ({ id, name: this.$t(textKey) }));
     },
     statusFilters() {
       return this.statusOptions.map(({ id, name }) => ({ value: id, text: name }));
@@ -255,7 +251,7 @@ export default {
   },
   methods: {
     getStatusColor(status) {
-      return STATUS_COLORS.get(status) || 'gray';
+      return ALARM_STATUSES.find(item => item.id === status)?.color || 'gray';
     },
     getStatusLabel(status) {
       return this.statusOptions.find(({ id }) => id === status)?.name || status || '--';
@@ -309,12 +305,9 @@ export default {
     },
     getRequestParams() {
       const [start, end] = this.dateTimeRange || [];
-      if (!start || !end || !dayjs(start).isValid() || !dayjs(end).isValid()) {
-        this.dateError = this.$t('请选择完整的告警时间范围');
-        return null;
-      }
       const timeStart = dayjs(start).unix();
-      const timeEnd = Math.min(dayjs(end).unix(), dayjs().unix());
+      const timeEnd = dayjs(end).unix();
+      // 起止倒置即时提示；时间完整性（不可清空、有初始值）由选择器约束，未来时间截断由后端保证
       if (timeEnd <= timeStart) {
         this.dateError = this.$t('结束时间必须大于起始时间');
         return null;
@@ -350,9 +343,6 @@ export default {
       try {
         const res = await this.$store.dispatch('cloudApi/getAppAlarmRecords', params);
         if (sequence !== this.requestSequence) return;
-        if (!Array.isArray(res?.results) || !Number.isInteger(res.count) || res.count < 0) {
-          throw new Error('Invalid gateway alarm records response');
-        }
         this.records = res.results;
         this.pagination.count = res.count;
       } catch (error) {

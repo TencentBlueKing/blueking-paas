@@ -43,6 +43,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
 import AlarmRecord from './alarm-record';
 import GatewayAlarmRecord from './gateway-alarm-record.vue';
+import { APPLICATION_TYPE } from '@/common/constants';
 
 const APPLICATION_ALARM_QUERY_KEYS = ['record', 'start_after', 'start_before', 'env', 'search', 'genre'];
 
@@ -65,7 +66,7 @@ export default {
     tabPanels() {
       const gatewayTab = { name: 'gateway', label: this.$t('API 网关告警') };
       const appType = this.$store.state.appInfo[this.appCode]?.application?.type;
-      if (appType === 'engineless_app') {
+      if (appType === APPLICATION_TYPE.ENGINELESS_APP) {
         return [gatewayTab];
       }
       return [

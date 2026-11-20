@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-20 15:23+0800\n"
+"POT-Creation-Date: 2026-11-20 15:41+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1746,6 +1746,7 @@ msgid "普通用户"
 msgstr "General user"
 
 #: paasng/infras/accounts/constants.py:42
+#: paasng/platform/applications/constants.py:53
 msgid "管理员"
 msgstr "Admin"
 
@@ -3157,6 +3158,19 @@ msgstr "Plugin template must config Template code directory (source_dir)"
 msgid "超时时间: {timeout}s"
 msgstr "Timeout: {timeout}s"
 
+#: paasng/platform/applications/constants.py:25
+#: paasng/platform/templates/constants.py:25
+msgid "普通应用"
+msgstr "Normal Application"
+
+#: paasng/platform/applications/constants.py:27
+msgid "外链应用"
+msgstr "External Link Application"
+
+#: paasng/platform/applications/constants.py:31
+msgid "云原生应用"
+msgstr "Cloud-Native Application"
+
 #: paasng/platform/applications/constants.py:37
 msgid "默认"
 msgstr "Default"
@@ -3173,6 +3187,62 @@ msgstr "Not deployed"
 msgid "正常"
 msgstr "Normal"
 
+#: paasng/platform/applications/constants.py:51
+msgid "无身份用户"
+msgstr "Users without roles"
+
+#: paasng/platform/applications/constants.py:52
+msgid "协作者"
+msgstr "Collaborator"
+
+#: paasng/platform/applications/constants.py:54
+msgid "开发"
+msgstr "Developer"
+
+#: paasng/platform/applications/constants.py:55
+msgid "运营"
+msgstr "Operator"
+
+#: paasng/platform/applications/constants.py:94
+#: paasng/platform/engine/constants.py:33
+msgid "预发布环境"
+msgstr "Stag Env"
+
+#: paasng/platform/applications/constants.py:95
+#: paasng/platform/engine/constants.py:34
+msgid "生产环境"
+msgstr "Prod Env"
+
+#: paasng/platform/applications/constants.py:101
+msgid "发布移动端微信企业号(企业微信)"
+msgstr "Release to WeChat Work (Enterprise WeChat) on mobile"
+
+#: paasng/platform/applications/constants.py:102
+msgid "访问控制豁免模式"
+msgstr "Access control exemption mode"
+
+#: paasng/platform/applications/constants.py:104
+msgid "网站访问统计功能"
+msgstr "Website visit statistics"
+
+#: paasng/platform/applications/constants.py:105
+msgid "自定义事件统计功能"
+msgstr "Custom event statistics"
+
+#: paasng/platform/applications/constants.py:106
+msgid "访问日志统计功能"
+msgstr "Access log statistics"
+
+#: paasng/platform/applications/constants.py:108
+msgid "部署时使用应用描述文件"
+msgstr "Use the APP description file when deploying"
+
+#: paasng/platform/applications/constants.py:110
+msgid "修改环境变量，已迁移到插件开发者中心的应用不允许修改环境变量"
+msgstr ""
+"Modify environment variables (not allowed for apps migrated to the Plugin "
+"Developer Center)"
+
 #: paasng/platform/applications/constants.py:114
 msgid "开启出口 IP 管理"
 msgstr "Enable outbound IP management."
@@ -3188,6 +3258,14 @@ msgstr "Encrypt sensitive runtime environment variables"
 #: paasng/platform/applications/constants.py:123
 msgid "允许修改自动扩容阈值"
 msgstr "Allow modifying autoscaling threshold"
+
+#: paasng/platform/applications/constants.py:137
+msgid "基础"
+msgstr "Standard"
+
+#: paasng/platform/applications/constants.py:138
+msgid "高级别"
+msgstr "Premium"
 
 #: paasng/platform/applications/exceptions.py:23
 msgid "应用编码"
@@ -3743,14 +3821,6 @@ msgid "[不推荐使用] 基于规则拼接的应用访问子路径，仅适合�
 msgstr ""
 "[Deprecated] Rule-based application access sub-path, suitable for backward "
 "compatibility only"
-
-#: paasng/platform/engine/constants.py:33
-msgid "预发布环境"
-msgstr "Stag Env"
-
-#: paasng/platform/engine/constants.py:34
-msgid "生产环境"
-msgstr "Prod Env"
 
 #: paasng/platform/engine/constants.py:128
 msgid "当前用户无部署该环境的权限"
@@ -4761,10 +4831,6 @@ msgstr "{source_type} source code does not currently support packaging"
 #, python-brace-format
 msgid "{module} 的仓库信息查询异常"
 msgstr "{module} warehouse information query exception"
-
-#: paasng/platform/templates/constants.py:25
-msgid "普通应用"
-msgstr "Normal Application"
 
 #: paasng/platform/templates/constants.py:26
 msgid "插件应用"

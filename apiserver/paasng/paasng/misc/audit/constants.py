@@ -65,6 +65,7 @@ class OperationTarget(StrStructuredEnum):
     CLOUD_API = EnumField("cloud_api", label=_("云 API 权限"))
     SECRET = EnumField("secret", label=_("密钥"))
     APP_DOMAIN = EnumField("app_domain", label=_("访问地址"))
+    TXT_FILE = EnumField("txt_file", label=_("txt 校验文件"))
     APP_MEMBER = EnumField("app_member", label=_("应用成员"))
     BUILD_CONFIG = EnumField("build_config", label=_("构建配置"))
     VOLUME_MOUNT = EnumField("volume_mount", label=_("挂载卷"))

@@ -44,3 +44,31 @@ def test_on_plugin_member_updated_for_non_plugin(mock_task, bk_app):
     # 非插件应用不应触发任何网关同步动作
     on_plugin_member_updated(None, application=bk_app)
     mock_task.delay.assert_not_called()
+
+
+@patch("paasng.bk_plugins.bk_plugins.handlers.remove_plugin_apigw_maintainers")
+@patch("paasng.bk_plugins.bk_plugins.handlers.sync_plugin_apigw_maintainers")
+def test_on_plugin_member_updated_with_removed_usernames(mock_sync, mock_remove, bk_plugin_app):
+    # 成员减少时，除全量同步外还需异步投递维护者移除任务
+    on_plugin_member_updated(None, application=bk_plugin_app, removed_usernames=["leaver"])
+
+    mock_sync.delay.assert_called_once_with(bk_plugin_app.code)
+    mock_remove.delay.assert_called_once_with(bk_plugin_app.code, ["leaver"])
+
+
+@patch("paasng.bk_plugins.bk_plugins.handlers.remove_plugin_apigw_maintainers")
+@patch("paasng.bk_plugins.bk_plugins.handlers.sync_plugin_apigw_maintainers")
+def test_on_plugin_member_updated_without_removed_usernames(mock_sync, mock_remove, bk_plugin_app):
+    # 仅新增成员时不会传该参数，不应投递移除任务
+    on_plugin_member_updated(None, application=bk_plugin_app)
+
+    mock_sync.delay.assert_called_once_with(bk_plugin_app.code)
+    mock_remove.delay.assert_not_called()
+
+
+@patch("paasng.bk_plugins.bk_plugins.handlers.remove_plugin_apigw_maintainers")
+def test_on_plugin_member_updated_non_plugin_with_removed_usernames(mock_remove, bk_app):
+    # 非插件应用即使传了移除名单也不应投递任务
+    on_plugin_member_updated(None, application=bk_app, removed_usernames=["leaver"])
+
+    mock_remove.delay.assert_not_called()

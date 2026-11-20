@@ -133,6 +133,20 @@ class TestApplicationMemberViewSet:
         # 检查成员已被删除
         assert self._assert_user_in_role(bk_app, 2, test_user.username, should_exist=False)
 
+    def test_destroy_syncs_apigw_maintainers(self, plat_mgt_api_client, bk_app):
+        """平台管理删除成员后, 应触发网关维护人的清理"""
+        test_user = create_user()
+        ApplicationMembership.objects.create(application=bk_app, role=2, user=test_user)
+
+        user_id = user_id_encoder.encode(username=test_user.username, provider_type=settings.USER_TYPE)
+        url = reverse("plat_mgt.applications.members.detail", kwargs={"app_code": bk_app.code, "user_id": user_id})
+
+        with mock.patch("paasng.plat_mgt.applications.views.member.application_member_updated") as signal:
+            rsp = plat_mgt_api_client.delete(url)
+
+        assert rsp.status_code == 204
+        signal.send.assert_called_once_with(sender=bk_app, application=bk_app, removed_usernames=[test_user.username])
+
     def test_get_roles(self, plat_mgt_api_client):
         url = reverse("plat_mgt.applications.members.get_roles")
         rsp = plat_mgt_api_client.get(url)

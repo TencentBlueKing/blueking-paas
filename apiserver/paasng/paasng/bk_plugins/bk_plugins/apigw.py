@@ -25,6 +25,8 @@ from bkapi_client_core.exceptions import BKAPIError, RequestException
 from django.conf import settings
 from typing_extensions import Protocol
 
+from paasng.accessories.cloudapi_v2.apigateway.clients import ApiGatewayClient
+from paasng.accessories.cloudapi_v2.apigateway.exceptions import ApiGatewayServiceError
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.models import Application
@@ -73,6 +75,41 @@ def safe_sync_apigw_maintainers(plugin_app: Application):
         PluginDefaultAPIGateway(plugin_app).sync()
     except PluginApiGatewayServiceError:
         logger.exception('Unable to refresh API Gateway maintainers for "%s"', plugin_app.code)
+
+
+def safe_remove_apigw_maintainers(plugin_app: Application, usernames: Collection[str]):
+    """成员减少后, 从插件网关的维护者名单中移除这些成员, 忽略错误
+
+    网关的 sync 更新分支只对 maintainers 做并集, 无法通过 sync 完成 "移除",
+    因此成员减少的场景必须显式调用网关的删除接口.
+
+    网关维护人名单的唯一口径是 Application.get_developers(), 因此仍在该名单内的人
+    (例如更换角色, 或本来兼任开发者) 继续保留, 不做移除.
+
+    :param usernames: 本次被移除了部分角色的用户
+    """
+    profile = plugin_app.bk_plugin_profile
+    # 网关尚未创建时无需删除, 首次 sync 只会写入当时的名单
+    if not profile.is_synced:
+        logger.info("Gateway for %s is not synced yet, skip removing maintainers.", plugin_app.code)
+        return
+
+    maintainers = set(plugin_app.get_developers())
+    to_remove = [username for username in usernames if username not in maintainers]
+    if not to_remove:
+        return
+
+    try:
+        deleted = ApiGatewayClient(tenant_id=plugin_app.tenant_id).delete_gateway_maintainers(
+            gateway_name=profile.api_gw_name,
+            maintainers=to_remove,
+        )
+    except ApiGatewayServiceError:
+        # 兼容未升级的网关 (接口不存在时返回 404), 记录日志后放弃, 不阻塞成员变更主流程
+        logger.exception('Unable to remove API Gateway maintainers %s for "%s"', to_remove, plugin_app.code)
+        return
+
+    logger.info("Removed API Gateway maintainers %s of %s", deleted, plugin_app.code)
 
 
 def safe_update_gateway_status(plugin_app: Application, enabled: bool):

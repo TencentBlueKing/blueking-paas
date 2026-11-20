@@ -28,7 +28,7 @@ from paasng.platform.engine.signals import pre_appenv_deploy
 
 from .apigw import safe_sync_apigw
 from .models import BkPluginProfile, is_bk_plugin
-from .tasks import sync_plugin_apigw_maintainers
+from .tasks import remove_plugin_apigw_maintainers, sync_plugin_apigw_maintainers
 
 logger = logging.getLogger(__name__)
 
@@ -70,3 +70,8 @@ def on_plugin_member_updated(sender, application: Application, **kwargs):
 
     # 异步全量覆盖同步，不阻塞成员变更主流程
     sync_plugin_apigw_maintainers.delay(application.code)
+
+    # 网关 sync 只对 maintainers 做并集, 成员减少时无法移除, 需额外调用删除接口.
+    # 仅成员减少的调用方会传入该参数, 新增成员无需处理.
+    if removed_usernames := kwargs.get("removed_usernames"):
+        remove_plugin_apigw_maintainers.delay(application.code, removed_usernames)

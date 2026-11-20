@@ -117,7 +117,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
                 raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
             sync_developers_to_sentry.delay(application.id)
-            application_member_updated.send(sender=application, application=application)
+            application_member_updated.send(sender=application, application=application, removed_usernames=[username])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -140,7 +140,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         JustLeaveAppManager(username).add(application.code)
 
         sync_developers_to_sentry.delay(application.id)
-        application_member_updated.send(sender=application, application=application)
+        application_member_updated.send(sender=application, application=application, removed_usernames=[username])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(

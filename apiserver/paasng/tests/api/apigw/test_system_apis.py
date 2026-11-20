@@ -41,7 +41,7 @@ from paasng.plat_admin.system.applications import (
     query_uni_apps_by_keyword,
     str_username,
 )
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.operators import get_contact_info
 from paasng.platform.engine.constants import OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
@@ -426,3 +426,24 @@ class TestSysBkPluginAIGrantedDistributors:
             response = sys_api_client.delete(url)
         assert response.status_code == 200
         assert not any(item["code"] == distributor.code for item in response.json())
+
+
+class TestSysPluginMembersRoleSync:
+    """插件成员角色变更后, 需同步清理网关维护人"""
+
+    def test_delete_members_from_role(self, bk_plugin_app, sys_api_client):
+        from paasng.infras.iam.helpers import add_role_members
+
+        add_role_members(bk_plugin_app.code, ApplicationRole.DEVELOPER, "leaver")
+        url = reverse(
+            "sys.api.plugins_center.bk_plugins.role.members",
+            kwargs={"code": bk_plugin_app.code, "role": ApplicationRole.DEVELOPER.value},
+        )
+
+        with patch("paasng.bk_plugins.bk_plugins.views.pluginscenter_sys_api.application_member_updated") as signal:
+            response = sys_api_client.delete(url, data={"usernames": ["leaver"]}, format="json")
+
+        assert response.status_code == 204
+        signal.send.assert_called_once_with(
+            sender=bk_plugin_app, application=bk_plugin_app, removed_usernames=["leaver"]
+        )

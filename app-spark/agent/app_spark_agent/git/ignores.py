@@ -48,9 +48,12 @@ GITIGNORE_LANGUAGES: tuple[GitignoreLanguage, ...] = (
 )
 
 # OS / editor noise the language templates do not cover. Same intent as the old hand list.
+# .app-spark/ is where the Runtime downloads user attachments: never project history, never
+# part of a published package.
 PLATFORM_EXTRAS: tuple[str, ...] = (
     ".DS_Store",
     "Thumbs.db",
+    "/.app-spark/",
 )
 
 # Templates treat env files as secrets. This platform's restore contract keeps them: a

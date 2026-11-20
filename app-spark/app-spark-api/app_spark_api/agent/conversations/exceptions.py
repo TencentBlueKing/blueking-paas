@@ -38,3 +38,11 @@ class RunNotFoundError(Exception):
 
 class RunNotInProgressError(Exception):
     """这一轮属于这个会话，但此刻没有在跑：已经结束了，或者它所在的 Runtime 已经不在了。"""
+
+
+class AttachmentStorageError(Exception):
+    """附件存储写不进去或读不出来。与请求内容无关，稍后重试可能恢复。"""
+
+
+class ModelImageInputUnsupportedError(Exception):
+    """这一轮带了图片，但本轮所用的模型不支持图片输入。"""

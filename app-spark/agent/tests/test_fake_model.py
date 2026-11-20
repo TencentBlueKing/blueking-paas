@@ -8,12 +8,14 @@ from uuid import uuid4
 
 import pytest
 from pydantic_ai.messages import (
+    BinaryContent,
     ModelMessage,
     ModelRequest,
     ModelResponse,
     TextPart,
     ToolCallPart,
     ToolReturnPart,
+    UserContent,
     UserPromptPart,
 )
 from pydantic_ai.models.function import FunctionModel
@@ -29,6 +31,7 @@ from app_spark_agent.fake_model import (
     UnknownFakeScenarioError,
     build_fake_model,
     plan_step,
+    render_user_content,
 )
 from app_spark_agent.server import create_runtime_app
 from tests.api.support import RUNTIME_TOKEN, AuthedTestClient, run_turn
@@ -167,3 +170,9 @@ def test_a_fake_runtime_writes_a_real_file_and_reports_it(
     assert health["running"] is False
     assert health["log_seq"] > 0
     assert health["ui_event_seq"] > 0
+
+
+def test_an_image_prompt_is_echoed_as_a_summary_not_its_bytes() -> None:
+    content: list[UserContent] = ["look at", BinaryContent(data=b"\x89PNG" + b"\x00" * 6, media_type="image/png")]
+
+    assert render_user_content(content) == "look at [image image/png 10 bytes]"

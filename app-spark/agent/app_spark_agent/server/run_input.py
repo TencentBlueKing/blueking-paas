@@ -5,15 +5,32 @@ to act on: a single new user turn. The trusted history comes from the Runtime's 
 no display history, tool list, or system prompt submitted by the caller ever reaches the model.
 """
 
+import ipaddress
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
+from urllib.parse import urlsplit
 from uuid import UUID
 
-from ag_ui.core import PROTOCOL_VERSION, RunAgentInput, UserMessage
+from ag_ui.core import (
+    PROTOCOL_VERSION,
+    DocumentInputContent,
+    ImageInputContent,
+    InputContent,
+    InputContentUrlSource,
+    RunAgentInput,
+    TextInputContent,
+    UserMessage,
+)
 from fastapi import HTTPException, Request, status
 from starlette.types import Message
 
+from app_spark_agent.attachments import ATTACHMENT_URI_SCHEME, IMAGE_MEDIA_TYPES, parse_attachment_id
 from app_spark_agent.state import AppendLog, ConversationContext
+
+# 用户消息里除了附件引用，也接受外部链接：沙箱本来就能访问外网，模型需要时自己去取。
+EXTERNAL_URL_SCHEMES = frozenset({"http", "https"})
+ALLOWED_FILE_URL_SCHEMES = EXTERNAL_URL_SCHEMES | {ATTACHMENT_URI_SCHEME}
 
 
 @dataclass(frozen=True)
@@ -26,6 +43,8 @@ class PreparedRun:
     body: bytes
     # None runs the turn on the sandbox's default model.
     model_id: str | None = None
+    # False when the control plane says this turn's model cannot read images.
+    image_input: bool = True
 
 
 def prepare_run(
@@ -97,21 +116,22 @@ def prepare_run(
         )
 
     model_id = _read_model_id(typed_forwarded_props)
+    image_input = _read_image_input(typed_forwarded_props)
 
     user_message = next(
         (message for message in reversed(run_input.messages) if isinstance(message, UserMessage)),
         None,
     )
-    if user_message is None or not isinstance(user_message.content, str):
-        raise HTTPException(status_code=422, detail="A text user message is required.")
-    if not user_message.content.strip():
-        raise HTTPException(status_code=422, detail="The user message cannot be empty.")
+    if user_message is None:
+        raise HTTPException(status_code=422, detail="A user message is required.")
+
+    checked_message = user_message.model_copy(update={"content": _check_user_content(user_message.content)})
 
     filtered_input = run_input.model_copy(
         update={
             "thread_id": conversation_id,
             "run_id": run_id,
-            "messages": [user_message],
+            "messages": [checked_message],
             "state": {},
             "tools": [],
             "context": [],
@@ -125,7 +145,86 @@ def prepare_run(
         context_version=context_version,
         body=filtered_input.model_dump_json(by_alias=True).encode(),
         model_id=model_id,
+        image_input=image_input,
     )
+
+
+def _check_user_content(content: str | Sequence[InputContent]) -> str | list[InputContent]:
+    """Refuse user content other than text and image or document URLs, and return what is kept."""
+    if isinstance(content, str):
+        if not content.strip():
+            raise HTTPException(status_code=422, detail="The user message cannot be empty.")
+
+        return content
+
+    has_input = False
+    checked: list[InputContent] = []
+    for part in content:
+        if isinstance(part, TextInputContent):
+            has_input = has_input or bool(part.text.strip())
+            checked.append(part)
+            continue
+
+        if not _is_accepted_file(part):
+            raise HTTPException(
+                status_code=422,
+                detail="Only text, app-spark-attachment references and http(s) image or document URLs are accepted.",
+            )
+
+        # metadata 由客户端随意填写，其中的 force_download 会让 Agent 替调用方下载它给的地址，一律丢掉。
+        checked.append(part.model_copy(update={"metadata": None}))
+        has_input = True
+
+    if not has_input:
+        raise HTTPException(status_code=422, detail="The user message cannot be empty.")
+
+    return checked
+
+
+def _is_accepted_file(part: InputContent) -> bool:
+    """Return whether a non-text part is an image or document URL this Runtime can handle."""
+
+    # 内联 data 会把字节带进上下文，上游托管的 file 引用模型这边解析不了，只收 URL。
+    if not isinstance(part, ImageInputContent | DocumentInputContent) or not isinstance(
+        part.source, InputContentUrlSource
+    ):
+        return False
+
+    url = part.source.value
+    is_attachment = parse_attachment_id(url) is not None
+    if not is_attachment and not _is_public_web_url(url):
+        return False
+
+    # image 段在能看图的模型上会被当图发出（外链由网关去取），所以必须声明为模型能读的图片类型。
+    if isinstance(part, ImageInputContent):
+        return part.source.mime_type in IMAGE_MEDIA_TYPES
+
+    # 附件引用里的类型是控制面识别出来的：没有类型，模型侧也推断不出来。外链文档只会变成文字，不看类型。
+    return bool(part.source.mime_type) or not is_attachment
+
+
+def _is_public_web_url(url: str) -> bool:
+    """Return whether url is an http(s) address on a host that is not obviously internal."""
+    try:
+        parts = urlsplit(url)
+        hostname = parts.hostname
+    except ValueError:
+        return False
+
+    # 带账号密码的链接会把凭据交给网关；没有主机名的链接让模型调用直接失败。
+    if parts.scheme not in EXTERNAL_URL_SCHEMES or not hostname or parts.username or parts.password:
+        return False
+
+    # 外链图片由模型网关去取，网关可能在内网里：非公网 IP 一律拒绝。
+    try:
+        return ipaddress.ip_address(hostname).is_global
+    except ValueError:
+        pass
+
+    # 其余必须是带顶级域名的域名：挡住 localhost 这类单段主机名，也挡住 2130706433、0x7f.1 这类
+    # 会被 HTTP 客户端当成 IP 的写法。域名解析到内网的情况这里查不出来，只能靠网关自己的出网限制。
+    labels = hostname.rstrip(".").split(".")
+    return len(labels) > 1 and labels[-1].isalpha() and labels[-1] != "localhost"
 
 
 def _read_model_id(forwarded_props: dict[str, object]) -> str | None:
@@ -149,6 +248,20 @@ def _read_model_id(forwarded_props: dict[str, object]) -> str | None:
     # Stripped like MODEL_ID, or a padded default ID is neither recognised as the default nor
     # understood by the gateway.
     return model_id.strip()
+
+
+def _read_image_input(forwarded_props: dict[str, object]) -> bool:
+    """Return whether this turn's model may be sent images; absent means it may."""
+    image_input = forwarded_props.get("imageInput", True)
+
+    # 只认布尔值：把 "false" 之类读成真值，会把图片发给一个读不了图的模型。
+    if not isinstance(image_input, bool):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="forwardedProps.imageInput must be a boolean.",
+        )
+
+    return image_input
 
 
 def request_with_body(request: Request, body: bytes) -> Request:

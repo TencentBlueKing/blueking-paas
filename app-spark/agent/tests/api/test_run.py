@@ -14,13 +14,14 @@ from uuid import uuid4
 import httpx2
 import pytest
 from fastapi.testclient import TestClient
-from pydantic_ai.messages import ModelMessage, ToolReturnPart
+from pydantic_ai.messages import ImageUrl, ModelMessage, ToolReturnPart, UserPromptPart
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 
 from app_spark_agent import settings
 from app_spark_agent.agent import _build_gateway_model
 from app_spark_agent.app_arch.architecture import SYNC_FILENAMES
 from app_spark_agent.app_arch.python import PYTHON_PROJECT_FILES
+from app_spark_agent.attachments import ATTACHMENT_FETCH_FAILED_TEXT
 from app_spark_agent.tools import build_init_project_tool
 from tests.api.support import (
     ApiFactory,
@@ -32,6 +33,25 @@ from tests.api.support import (
 )
 from tests.support.ag_ui import SSE_HEADERS, run_body, sse_events
 from tests.support.fake_models import failing_model
+
+ATTACHMENT_REF = "app-spark-attachment://6f1c5c3e-5d5b-4e43-9a43-6a7d6c3c2e11"
+
+
+def make_image(value: str = ATTACHMENT_REF, *, mime_type: str = "image/png", kind: str = "url") -> dict[str, Any]:
+    return {"type": "image", "source": {"type": kind, "value": value, "mimeType": mime_type}}
+
+
+def make_document(value: str = ATTACHMENT_REF, *, mime_type: str | None = "text/csv") -> dict[str, Any]:
+    source: dict[str, Any] = {"type": "url", "value": value}
+    if mime_type is not None:
+        source["mimeType"] = mime_type
+
+    return {"type": "document", "source": source}
+
+
+def make_user_turn(*parts: dict[str, Any]) -> dict[str, Any]:
+    """Return a run body override whose only user message is the given multipart content."""
+    return {"messages": [{"id": str(uuid4()), "role": "user", "content": list(parts)}]}
 
 
 def test_a_run_streams_the_reply_as_ag_ui_events(api: TestClient) -> None:
@@ -145,11 +165,28 @@ def test_a_replayed_run_id_is_rejected(api: TestClient) -> None:
         pytest.param({"forwardedProps": {"contextVersion": 0, "modelId": ""}}, id="model-id-empty"),
         pytest.param({"forwardedProps": {"contextVersion": 0, "modelId": None}}, id="model-id-null"),
         pytest.param({"forwardedProps": {"contextVersion": 0, "modelId": 3}}, id="model-id-not-a-string"),
+        pytest.param({"forwardedProps": {"contextVersion": 0, "imageInput": "false"}}, id="image-input-not-a-bool"),
         pytest.param({"messages": []}, id="no-user-message"),
         pytest.param(
             {"messages": [{"id": "blank", "role": "user", "content": "   "}]},
             id="blank-user-message",
         ),
+        pytest.param(make_user_turn({"type": "text", "text": "   "}), id="only-blank-text-parts"),
+        pytest.param(make_user_turn(make_image("ftp://example.com/a.png")), id="url-scheme-not-http"),
+        pytest.param(make_user_turn(make_image("https://")), id="url-without-a-host"),
+        pytest.param(make_user_turn(make_image("http://169.254.169.254/latest")), id="url-to-link-local"),
+        pytest.param(make_user_turn(make_document("http://10.0.0.1/a.pdf")), id="url-to-private-network"),
+        pytest.param(make_user_turn(make_image("http://localhost/a.png")), id="url-to-localhost"),
+        pytest.param(make_user_turn(make_image("https://u:p@example.com/a.png")), id="url-with-credentials"),
+        pytest.param(
+            make_user_turn(make_image("https://example.com/page", mime_type="text/html")),
+            id="external-image-not-image",
+        ),
+        pytest.param(make_user_turn(make_image("file:///etc/passwd")), id="local-file-url"),
+        pytest.param(make_user_turn(make_image("iVBORw0KGgo=", kind="data")), id="inline-image-data"),
+        pytest.param(make_user_turn(make_image("app-spark-attachment://x")), id="reference-is-not-a-uuid"),
+        pytest.param(make_user_turn(make_image(mime_type="image/svg+xml")), id="image-part-not-a-model-image"),
+        pytest.param(make_user_turn(make_document(mime_type=None)), id="reference-without-a-type"),
     ],
 )
 def test_a_malformed_run_is_rejected(api: TestClient, mutation: dict[str, Any]) -> None:
@@ -159,6 +196,83 @@ def test_a_malformed_run_is_rejected(api: TestClient, mutation: dict[str, Any]) 
 
     assert response.status_code == 422, response.text
     assert get_transcript_messages(api) == [], "a rejected run must not reach the model"
+
+
+def post_turn_and_collect_sent(api: TestClient, seen: list[list[ModelMessage]], *parts: dict[str, Any], **props: Any):
+    """Run one multipart turn and return the user content the model was handed."""
+    body = run_body(conversation_id=str(uuid4()), run_id=str(uuid4()), context_version=0)
+    body["forwardedProps"] = {"contextVersion": 0, **props}
+
+    response = api.post("/runs", headers=SSE_HEADERS, json=body | make_user_turn(*parts))
+
+    assert response.status_code == 200, response.text
+    sent = seen[-1][-1].parts[-1]
+    assert isinstance(sent, UserPromptPart)
+    return sent.content
+
+
+@pytest.fixture()
+def seen() -> list[list[ModelMessage]]:
+    return []
+
+
+@pytest.fixture()
+def recording_api(make_api: ApiFactory, seen: list[list[ModelMessage]]) -> TestClient:
+    async def stream(messages: list[ModelMessage], info: AgentInfo) -> AsyncIterator[str]:
+        seen.append(messages)
+        yield "noted"
+
+    return make_api(model=FunctionModel(stream_function=stream))
+
+
+@pytest.mark.parametrize("part", [make_image(), make_document()], ids=["image", "document"])
+def test_an_attachment_reference_stays_a_reference_in_the_context(
+    recording_api: TestClient, seen: list[list[ModelMessage]], part: dict[str, Any]
+) -> None:
+    """Without a control plane the model is told the file is unavailable; the stored context keeps the reference."""
+    sent = post_turn_and_collect_sent(recording_api, seen, {"type": "text", "text": "copy this"}, part)
+
+    assert sent == ["copy this", ATTACHMENT_FETCH_FAILED_TEXT]
+    context = json.dumps(recording_api.get("/context").json(), ensure_ascii=False)
+    assert ATTACHMENT_REF in context
+    assert ATTACHMENT_FETCH_FAILED_TEXT not in context
+
+
+@pytest.mark.parametrize(
+    ("image_input", "expected"),
+    [
+        pytest.param(True, ImageUrl(url="https://example.com/a.png", media_type="image/png"), id="vision-model"),
+        pytest.param(False, "[Linked file: https://example.com/a.png]", id="text-only-model"),
+    ],
+)
+def test_an_external_image_link_reaches_only_a_model_that_reads_images(
+    recording_api: TestClient, seen: list[list[ModelMessage]], image_input: bool, expected: object
+) -> None:
+    sent = post_turn_and_collect_sent(
+        recording_api, seen, make_image("https://example.com/a.png"), imageInput=image_input
+    )
+
+    assert sent == [expected]
+
+
+def test_client_metadata_on_a_file_part_is_dropped(recording_api: TestClient, seen: list[list[ModelMessage]]) -> None:
+    """force_download in metadata would make the Runtime fetch whatever address the caller chose."""
+    image = make_image("https://example.com/a.png") | {"metadata": {"force_download": True}}
+
+    [sent] = post_turn_and_collect_sent(recording_api, seen, image)
+
+    assert isinstance(sent, ImageUrl)
+    assert sent.force_download is False
+
+
+def test_an_external_document_link_reaches_the_model_as_text(
+    recording_api: TestClient, seen: list[list[ModelMessage]]
+) -> None:
+    sent = post_turn_and_collect_sent(
+        recording_api, seen, make_document("https://example.com/a.pdf", mime_type="application/pdf")
+    )
+
+    assert sent == ["[Linked file: https://example.com/a.pdf]"]
 
 
 def test_a_body_that_is_not_json_is_rejected(api: TestClient) -> None:

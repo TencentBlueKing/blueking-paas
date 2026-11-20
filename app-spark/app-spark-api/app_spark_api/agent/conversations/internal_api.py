@@ -32,9 +32,11 @@ from typing import TYPE_CHECKING, Any
 # a type used in a path parameter cannot live in the TYPE_CHECKING block below.
 from uuid import UUID  # noqa: TC003
 
+from django.http import HttpResponse
 from ninja import Field, Path, Router, Schema
 
-from app_spark_api.agent.conversations import checkpoints, state
+from app_spark_api.agent.conversations import attachments, checkpoints, state
+from app_spark_api.agent.conversations.attachment_storage import AGENT_CONTENT_PATH
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.conversations.tokens import (
     InvalidStateToken,
@@ -62,6 +64,7 @@ MESSAGES_SEGMENT = "messages"
 UI_EVENTS_SEGMENT = "ui-events"
 CONTEXT_SEGMENT = "context"
 CHECKPOINT_SEGMENT = "checkpoint"
+ATTACHMENTS_SEGMENT = "attachments"
 
 APPEND_MESSAGES_URL_NAME = "internal-append-messages"
 
@@ -163,6 +166,22 @@ class CheckpointResponse(Schema):
     """检查点已登记。"""
 
 
+class AgentAttachmentSourceResponse(Schema):
+    """Runtime 取一个附件的来源。"""
+
+    url: str = Field(description="地址；相对地址相对 Runtime 的会话级 state 根")
+    authenticated: bool = Field(description="是否要带 Runtime token；预签名地址自带授权，不能带")
+
+
+class AgentAttachmentResponse(Schema):
+    """会话里的一个附件，以及 Runtime 从哪取它。"""
+
+    filename: str = Field(description="上传时的文件名")
+    mime_type: str = Field(description="识别出的文件类型")
+    size: int = Field(description="字节数")
+    source: AgentAttachmentSourceResponse
+
+
 @router.post(
     f"{{conversation_id}}/state/{MESSAGES_SEGMENT}",
     response={**ERROR_RESPONSES, HTTPStatus.OK: AppendResponse},
@@ -252,6 +271,49 @@ async def put_checkpoint(
         state_epoch=conversation.state_epoch,
     )
     return CheckpointResponse()
+
+
+@router.get(
+    f"{{conversation_id}}/state/{ATTACHMENTS_SEGMENT}/{{attachment_id}}/",
+    response={**ERROR_RESPONSES, HTTPStatus.OK: AgentAttachmentResponse},
+    url_name="internal-get-attachment",
+    summary="读取会话附件的元数据和下载地址",
+)
+async def get_attachment(
+    request: HttpRequest,
+    attachment_id: UUID,
+    conversation_id: UUID = CONVERSATION_ID,
+):
+    """告诉 Runtime 一个附件是什么、从哪取，供它在一轮开始前把附件放进工作区。
+
+    挂在 state 根下面：Runtime 手里只有这一个会话级根地址和 token，token 的校验这里本来就有。
+    """
+    conversation = await _authorized_conversation(request, conversation_id)
+    attachment = await attachments.aget_attachment(conversation, attachment_id)
+    source = await attachments.abuild_agent_attachment_source(attachment)
+    return AgentAttachmentResponse(
+        filename=attachment.filename,
+        mime_type=attachment.mime_type,
+        size=attachment.size,
+        source=AgentAttachmentSourceResponse(url=source.url, authenticated=source.authenticated),
+    )
+
+
+@router.get(
+    f"{{conversation_id}}/state/{AGENT_CONTENT_PATH}",
+    response={**ERROR_RESPONSES, HTTPStatus.OK: None},
+    url_name="internal-get-attachment-content",
+    summary="读取会话附件的内容",
+)
+async def get_attachment_content(
+    request: HttpRequest,
+    attachment_id: UUID,
+    conversation_id: UUID = CONVERSATION_ID,
+):
+    """把附件的字节交给 Runtime。只有存储后端给不出直连地址时，Runtime 才会被指到这里。"""
+    conversation = await _authorized_conversation(request, conversation_id)
+    attachment = await attachments.aget_attachment(conversation, attachment_id)
+    return HttpResponse(await attachments.aread_content(attachment), content_type=attachment.mime_type)
 
 
 async def _append(

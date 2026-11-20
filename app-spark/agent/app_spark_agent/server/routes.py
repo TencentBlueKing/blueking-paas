@@ -16,12 +16,13 @@ from starlette.responses import JSONResponse, Response
 from app_spark_agent import VERSION, settings
 from app_spark_agent.agent import build_run_model
 from app_spark_agent.app_supervisor import AppLaunchConflict, AppLaunchFailed
+from app_spark_agent.attachments import AttachmentResolver
 from app_spark_agent.git import GitError
 
 # Imported under a different name: `log` already means "append-only channel" in this module.
 from app_spark_agent.observability import log as logger
 from app_spark_agent.recorder import TranscriptRecorder, record_messages
-from app_spark_agent.server.run_input import PreparedRun, prepare_run, request_with_body
+from app_spark_agent.server.run_input import ALLOWED_FILE_URL_SCHEMES, PreparedRun, prepare_run, request_with_body
 from app_spark_agent.server.run_task import RunStopper, RuntimeClosingError
 from app_spark_agent.server.runtime import ConversationRuntime, RuntimeBusyError
 from app_spark_agent.state import (
@@ -409,7 +410,16 @@ async def _start_run(
         # `prepare_run` already reduces the request to a single trusted user turn, so no
         # client-supplied system prompt can reach the model.
         manage_system_prompt="client",
+        # The adapter drops client file URLs outside this set, and its default (http, https) would
+        # drop every attachment reference. prepare_run accepts exactly these three schemes.
+        allowed_file_url_schemes=ALLOWED_FILE_URL_SCHEMES,
     )
+
+    # 先把本轮和上下文里引用的附件放进工作区，模型从第一次请求起就能按说明里的路径去读；
+    # 换了沙箱时上下文里的附件也在这里补齐。放在写对话记录之前：下载是网络操作，这期间
+    # 被取消时还没有任何东西落盘，同一个 run_id 可以原样重试。
+    await runtime.attachments.ensure([*context.messages, *adapter.messages])
+
     # Recorded here rather than inferred from the run's history: the framework merges
     # this turn into a restored trailing request before any capability sees it, and the
     # adapter is the only place that still knows the turn on its own.
@@ -425,6 +435,13 @@ async def _start_run(
         run_id=prepared.run_id,
     )
     stopper = RunStopper()
+
+    # 本轮模型读不了图时一张图也不发：最近几轮的图本来会照发，换了纯文本模型之后发过去只会让
+    # 模型调用失败。说明照样给，模型仍知道文件在哪。
+    attachment_resolver = AttachmentResolver(
+        runtime.attachments, recent_turns=settings.ATTACHMENT_IMAGE_TURNS, send_images=prepared.image_input
+    )
+
     # Set by the agent itself, not inferred from the stop request: a stop that lands as the
     # turn is finishing anyway is a no-op, and that turn did complete.
     cancelled = False
@@ -476,7 +493,7 @@ async def _start_run(
         run_id=prepared.run_id,
         # None 时 pydantic-ai 用 agent 构造时的默认模型。
         model=run_model,
-        capabilities=[recorder, stopper],
+        capabilities=[recorder, stopper, attachment_resolver],
         on_complete=commit_context,
         on_cancel=commit_stopped_context,
     )

@@ -44,11 +44,14 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+import attrs
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from app_spark_api.agent.conversations import checkpoints
 from app_spark_api.agent.conversations import services as conversation_services
 from app_spark_api.agent.conversations.entities import MAX_MODEL_ID_LENGTH
+from app_spark_api.agent.conversations.lifecycle import start
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.model_catalog import services as model_catalog_services
@@ -853,6 +856,67 @@ async def test_a_turn_on_the_built_in_model_runs_like_one_without_a_model(aapi_c
 
     assert response.status_code == HTTPStatus.OK, response.content
     assert event_types(await collect_events(response))[-1] == "RUN_FINISHED"
+
+
+@pytest.mark.usefixtures("project", "chat_agent")
+async def test_an_attached_image_reaches_the_model_as_bytes(aapi_client, settings, tmp_path, monkeypatch):
+    """Upload, send, then the Runtime fetches the bytes back through the internal endpoint.
+
+    fake:chat echoes the prompt, and the fake model renders an image as its type and size, so
+    the reply says whether the model got the picture itself rather than a reference or a
+    placeholder.
+    """
+    settings.AGENT_ATTACHMENT_STORAGE = {"backend": "host_tmp_path", "root": str(tmp_path / "attachments")}
+
+    async def list_vision_models(credential: Any) -> model_catalog_services.ModelCatalog:
+        catalog = model_catalog_services._build_direct_catalog(
+            model_catalog_services.structure_direct_model_config(settings.AGENT_DIRECT_MODEL_CONFIG)
+        )
+        return attrs.evolve(catalog, models=[attrs.evolve(model, supports_vision=True) for model in catalog.models])
+
+    # direct 的内置模型不报 supports_vision，这里只放开图片校验，模型本身仍是 fake:chat。
+    monkeypatch.setattr(start, "list_models", list_vision_models)
+    state = await create_conversation(aapi_client)
+    reply = await send_attachment_and_collect_reply(aapi_client, state["number"], "shot.png", PNG_1X1)
+
+    assert f"[Attached file: shot.png (image/png, {len(PNG_1X1)} bytes) at .app-spark/attachments/" in reply
+    assert f"[image image/png {len(PNG_1X1)} bytes]" in reply
+
+
+@pytest.mark.usefixtures("project", "chat_agent")
+async def test_an_attached_document_reaches_the_model_as_a_workspace_file(aapi_client, settings, tmp_path):
+    """Any model takes a document: the Runtime downloads it and tells the model where it is."""
+    settings.AGENT_ATTACHMENT_STORAGE = {"backend": "host_tmp_path", "root": str(tmp_path / "attachments")}
+    state = await create_conversation(aapi_client)
+    csv = b"name,age\nbob,3\nal,4\n"
+
+    reply = await send_attachment_and_collect_reply(aapi_client, state["number"], "data.csv", csv)
+
+    assert f"[Attached file: data.csv (text/csv, {len(csv)} bytes) at .app-spark/attachments/" in reply
+
+
+PNG_1X1 = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+    "0000000d4944415478da63f8ffff3f0005fe02fe0dd1a2e60000000049454e44ae426082"
+)
+
+
+async def send_attachment_and_collect_reply(client: Any, number: int, filename: str, data: bytes) -> str:
+    """Upload one file, send it with a turn, and return what the fake model echoed back."""
+    uploaded = await client.post(
+        f"/api/projects/{PROJECT_ID}/conversations/{number}/attachments/",
+        {"file": SimpleUploadedFile(filename, data)},
+    )
+    assert uploaded.status_code == HTTPStatus.CREATED, uploaded.content
+
+    response = await client.post(
+        f"/api/projects/{PROJECT_ID}/conversations/{number}/runs/",
+        data={"content": "copy this", "attachment_ids": [json.loads(uploaded.content)["id"]]},
+        content_type="application/json",
+    )
+
+    assert response.status_code == HTTPStatus.OK, response.content
+    return assistant_reply(await collect_events(response))
 
 
 @pytest.fixture()

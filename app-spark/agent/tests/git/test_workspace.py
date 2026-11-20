@@ -143,6 +143,7 @@ class TestCommit:
         write(workspace, "app.py")
         write(workspace, "node_modules/left-pad/index.js")
         write(workspace, "__pycache__/app.cpython-314.pyc")
+        write(workspace, ".app-spark/attachments/6f1c5c3e-5d5b-4e43-9a43-6a7d6c3c2e11/data.csv")
         write(workspace, ".gitignore", "secret-notes.txt\n")
         write(workspace, "secret-notes.txt")
 

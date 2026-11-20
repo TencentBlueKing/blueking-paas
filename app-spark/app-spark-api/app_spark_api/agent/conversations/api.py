@@ -18,14 +18,20 @@ from __future__ import annotations
 
 import logging
 from http import HTTPStatus
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, BinaryIO, cast
 
-from django.http import StreamingHttpResponse
-from ninja import Path, Query, Router, Status
+# django-ninja resolves an operation's annotations at runtime to build its request parsers, so
+# a type used in a path parameter cannot live in the TYPE_CHECKING block below.
+from uuid import UUID  # noqa: TC003
+
+from django.http import HttpResponse, StreamingHttpResponse
+from django.utils.http import content_disposition_header
+from ninja import File, Path, Query, Router, Status, UploadedFile
 from ninja.pagination import paginate
 
-from app_spark_api.agent.conversations import history, preview, services
+from app_spark_api.agent.conversations import attachments, history, preview, services
 from app_spark_api.agent.conversations.entities import (
+    AttachmentResponse,
     ConversationHistoryResponse,
     ConversationResponse,
     PreviewResponse,
@@ -63,6 +69,11 @@ SSE_RESPONSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 # router was mounted under, so `project_id` has to say what it is. Left implicit it would be
 # classified as a query parameter and every request would fail validation.
 PROJECT_ID = Path(..., description="项目 ID")
+
+ATTACHMENT_FILE = File(..., description="任意类型的文件，不超过 5MB")
+
+# 附件内容的浏览器缓存时长：一年。内容按附件 ID 固定不变，没有需要提前失效的时候。
+ATTACHMENT_CACHE_SECONDS = 365 * 24 * 3600
 
 
 @router.post(
@@ -157,12 +168,94 @@ async def start_run(
         content=payload.content,
         credential=get_user_credential(request),
         model_id=payload.model_id,
+        attachment_ids=payload.attachment_ids,
     )
 
     return StreamingHttpResponse(
         services.stream_run(run, conversation.id),
         content_type="text/event-stream",
         headers=SSE_RESPONSE_HEADERS,
+    )
+
+
+@router.post(
+    "{number}/attachments/",
+    response={**ERROR_RESPONSES, HTTPStatus.CREATED: AttachmentResponse},
+    url_name="conversations-attachments-create",
+    summary="上传一个文件附件",
+)
+async def upload_attachment(
+    request: HttpRequest,
+    number: int,
+    file: UploadedFile = ATTACHMENT_FILE,
+    project_id: str = PROJECT_ID,
+):
+    """上传一个文件，返回附件 ID；发起一轮对话时把 ID 放进 attachment_ids 引用它。
+
+    - 添加文件时就上传；没发出去的附件留在会话里，没有删除接口；
+    - 不限类型，按内容识别为主、扩展名为辅得出 mime_type；超过 5MB 返回 413，已结束的会话返回 409。
+    """
+    conversation = await _get_conversation(request, project_id, number)
+    attachment = await attachments.asave_attachment(
+        conversation, handle=cast("BinaryIO", file.file), filename=file.name or ""
+    )
+    return Status(
+        HTTPStatus.CREATED,
+        attachments.build_attachment_response(attachment, project_id=project_id, number=number),
+    )
+
+
+@router.get(
+    "{number}/attachments/{attachment_id}/",
+    response={**ERROR_RESPONSES, HTTPStatus.OK: AttachmentResponse},
+    url_name="conversations-attachments-retrieve",
+    summary="查看一个文件附件",
+)
+async def get_attachment(
+    request: HttpRequest,
+    number: int,
+    attachment_id: UUID,
+    project_id: str = PROJECT_ID,
+):
+    """查看附件的元数据和读取内容的地址。"""
+    conversation = await _get_conversation(request, project_id, number)
+    attachment = await attachments.aget_attachment(conversation, attachment_id)
+    return attachments.build_attachment_response(attachment, project_id=project_id, number=number)
+
+
+@router.get(
+    "{number}/attachments/{attachment_id}/content/",
+    response={**ERROR_RESPONSES, HTTPStatus.OK: None},
+    url_name=attachments.ATTACHMENT_CONTENT_URL_NAME,
+    summary="读取文件附件的内容",
+)
+async def get_attachment_content(
+    request: HttpRequest,
+    number: int,
+    attachment_id: UUID,
+    project_id: str = PROJECT_ID,
+):
+    """返回文件本身：图片可直接用作 img 的 src，其他类型按下载处理；内容永远不变，浏览器会长期缓存。"""
+    conversation = await _get_conversation(request, project_id, number)
+    attachment = await attachments.aget_attachment(conversation, attachment_id)
+    inline = attachments.is_image(attachment.mime_type)
+    headers = {
+        # private：要登录才能看，共享缓存不能替别人存。内容按 ID 固定不变，可以长期缓存不回源。
+        "Cache-Control": f"private, max-age={ATTACHMENT_CACHE_SECONDS}, immutable",
+        # 只按声明的类型解释，防止伪装的附件被浏览器按 HTML 渲染。
+        "X-Content-Type-Options": "nosniff",
+        # 只有几种位图内联显示。HTML、SVG 这类在本服务的源下打开会执行里面的脚本，一律按下载处理。
+        # 文件名为空时 Django 给 inline 返回 None，原样塞进响应头会变成字面上的 "None"。
+        "Content-Disposition": content_disposition_header(as_attachment=not inline, filename=attachment.filename)
+        or "inline",
+    }
+
+    # 下载与否最终取决于浏览器是否遵守 Content-Disposition；再加一层沙箱，即便被直接打开也不执行脚本。
+    if not inline:
+        headers["Content-Security-Policy"] = "sandbox"
+
+    return HttpResponse(
+        await attachments.aread_content(attachment), content_type=attachment.mime_type, headers=headers
     )
 
 

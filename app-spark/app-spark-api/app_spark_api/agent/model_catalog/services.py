@@ -177,6 +177,7 @@ async def resolve_run_model_id(
     credential: UserCredential | None,
     *,
     transport: httpx2.AsyncBaseTransport | None = None,
+    catalog: ModelCatalog | None = None,
 ) -> str | None:
     """Check the model a turn asked for against the model list and return the ID to forward.
 
@@ -189,6 +190,8 @@ async def resolve_run_model_id(
     :param credential: The user's BlueKing login, None when the request carried none.
     :param transport: httpx transport for the token service and the gateway; tests inject
         MockTransport.
+    :param catalog: A model list the caller already holds, so one turn checks everything
+        against the same list; fetched here when omitted.
     :return: The ID to send as forwardedProps.modelId, or None to let the Runtime use its
         default model.
     :raises ModelNotAvailableError: If the model list does not offer the model.
@@ -201,7 +204,8 @@ async def resolve_run_model_id(
     if model_id is None:
         return None
 
-    catalog = await list_models(credential, transport=transport)
+    if catalog is None:
+        catalog = await list_models(credential, transport=transport)
 
     # 和前端拿到的是同一份列表：列表里有的提交上来一定放行，列表里没有的一定拒绝。
     if model_id not in {model.id for model in catalog.models}:

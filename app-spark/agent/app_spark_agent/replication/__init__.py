@@ -9,10 +9,19 @@ behaves exactly as it did before -- which is what keeps the agent runnable, and 
 its own.
 """
 
-from app_spark_agent.replication.client import ControlPlaneClient, ControlPlaneError
+from app_spark_agent.replication.client import (
+    AttachmentMeta,
+    AttachmentSource,
+    AttachmentTooLargeError,
+    ControlPlaneClient,
+    ControlPlaneError,
+)
 from app_spark_agent.replication.replicator import StateReplicator
 
 __all__ = [
+    "AttachmentMeta",
+    "AttachmentSource",
+    "AttachmentTooLargeError",
     "ControlPlaneClient",
     "ControlPlaneError",
     "StateReplicator",

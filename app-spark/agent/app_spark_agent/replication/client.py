@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
+from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any, cast
 
@@ -33,6 +34,31 @@ _CHANNEL_PATHS = {
 
 CONTEXT_PATH = "context"
 CHECKPOINT_PATH = "checkpoint"
+# Read rather than written, but hung off the same conversation-scoped root: the Runtime holds one
+# address and one token, and the control plane checks the token against that conversation here too.
+ATTACHMENTS_PATH = "attachments"
+
+
+@dataclass(frozen=True)
+class AttachmentSource:
+    """Where one attachment comes from, as the control plane decides.
+
+    :param url: Absolute, or relative to the conversation-scoped base URL.
+    :param authenticated: Whether the request carries this Runtime's token.
+    """
+
+    url: str
+    authenticated: bool
+
+
+@dataclass(frozen=True)
+class AttachmentMeta:
+    """What one attachment is, and where it comes from."""
+
+    filename: str
+    mime_type: str
+    size: int
+    source: AttachmentSource
 
 
 class ControlPlaneError(RuntimeError):
@@ -56,6 +82,10 @@ class ControlPlaneError(RuntimeError):
         self.status_code = status_code
         self.code = code
         self.detail = detail
+
+
+class AttachmentTooLargeError(ControlPlaneError):
+    """An attachment download was longer than the caller accepts; downloading it again changes nothing."""
 
 
 class ControlPlaneClient:
@@ -94,6 +124,8 @@ class ControlPlaneClient:
             timeout=timeout_seconds,
             transport=transport,
         )
+        # 下载预签名地址用：不带任何凭据。与上面那个一样保持 httpx 默认的不跟随跳转，免得被引去别处。
+        self._anonymous_client = httpx2.AsyncClient(timeout=timeout_seconds, transport=transport)
 
     async def append(self, channel: Channel, records: Sequence[dict[str, Any]]) -> int:
         """Hand one batch of channel entries to the control plane.
@@ -139,9 +171,66 @@ class ControlPlaneClient:
         """
         await self._send("PUT", CHECKPOINT_PATH, checkpoint)
 
+    async def get_attachment(self, attachment_id: str) -> AttachmentMeta:
+        """Return what one of the conversation's attachments is and where it comes from.
+
+        :param attachment_id: The attachment's ID, as carried by an app-spark-attachment:// reference.
+        :raises ControlPlaneError: If the control plane cannot be reached or refused, with
+            status_code set when it answered; 404 means the conversation has no such attachment.
+        """
+        path = f"{ATTACHMENTS_PATH}/{attachment_id}/"
+        try:
+            response = await self._client.get(path)
+        except httpx2.HTTPError as exc:
+            raise ControlPlaneError(f"could not reach the control plane at {path}: {exc}") from exc
+
+        if response.status_code != HTTPStatus.OK:
+            raise _response_error(path, response)
+
+        try:
+            payload = response.json()
+            source = payload["source"]
+            return AttachmentMeta(
+                filename=str(payload["filename"]),
+                mime_type=str(payload["mime_type"]),
+                size=int(payload["size"]),
+                source=AttachmentSource(url=str(source["url"]), authenticated=bool(source["authenticated"])),
+            )
+        except (ValueError, UnicodeDecodeError, KeyError, TypeError) as exc:
+            raise ControlPlaneError(f"unreadable attachment response from {path}: {exc}") from exc
+
+    async def download_attachment(self, source: AttachmentSource, *, max_bytes: int) -> bytes:
+        """Download an attachment from where the control plane said it is.
+
+        :param max_bytes: Largest body accepted; a longer one is refused rather than cut short.
+        :raises AttachmentTooLargeError: If the body is longer than max_bytes.
+        :raises ControlPlaneError: If the download failed, with status_code set when the server
+            answered.
+        """
+        # 只按 authenticated 选客户端，不认存储后端：带 token 的那个只该发给控制面，
+        # 预签名地址自带授权，带上 token 等于把它交给存储服务。
+        client = self._client if source.authenticated else self._anonymous_client
+        try:
+            async with client.stream("GET", source.url) as response:
+                if response.status_code != HTTPStatus.OK:
+                    await response.aread()
+                    raise _response_error("an attachment download", response)
+
+                body = bytearray()
+                async for chunk in response.aiter_bytes():
+                    body.extend(chunk)
+                    # 边收边量：Content-Length 可能缺失或不实，超限就断开，不先把整份收进内存。
+                    if len(body) > max_bytes:
+                        raise AttachmentTooLargeError(f"an attachment download exceeded {max_bytes} bytes")
+        except httpx2.HTTPError as exc:
+            raise ControlPlaneError(f"could not download an attachment: {exc}") from exc
+
+        return bytes(body)
+
     async def aclose(self) -> None:
-        """Release the underlying connection pool."""
+        """Release the underlying connection pools."""
         await self._client.aclose()
+        await self._anonymous_client.aclose()
 
     async def _send(self, method: str, path: str, body: dict[str, Any]) -> dict[str, Any]:
         """Perform one ingest call and return its decoded body."""

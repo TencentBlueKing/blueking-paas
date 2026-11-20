@@ -36,7 +36,7 @@ import pytest
 
 from app_spark_api.agent.runtime.client import AgentRuntimeClient
 from app_spark_api.agent.runtime.constants import PreviewStartOutcome
-from app_spark_api.agent.runtime.entities import AgentRuntimeHandle
+from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, AttachmentInput
 from app_spark_api.agent.runtime.exceptions import (
     AgentBusyError,
     AgentPreviewPortTakenError,
@@ -126,6 +126,36 @@ async def test_a_turn_names_its_model_in_forwarded_props():
 
     body = json.loads(sent[0].content)
     assert body["forwardedProps"] == {"contextVersion": 3, "modelId": "hy3"}
+
+
+async def test_a_turn_on_a_text_only_model_tells_the_runtime_to_send_no_images():
+    sent: list[httpx2.Request] = []
+    client = runtime_answering({"/runs": (200, b"data: {}\n\n")}, recorder=sent)
+
+    run = await client.start_run(content="hello", context_version=3, image_input=False)
+    await run.aclose()
+
+    body = json.loads(sent[0].content)
+    assert body["forwardedProps"] == {"contextVersion": 3, "imageInput": False}
+
+
+async def test_images_are_sent_as_image_parts_and_other_files_as_documents():
+    """Only an image part can reach the model as an image; every other file goes through the workspace."""
+    sent: list[httpx2.Request] = []
+    client = runtime_answering({"/runs": (200, b"data: {}\n\n")}, recorder=sent)
+    attachments = [
+        AttachmentInput(url="app-spark-attachment://a", mime_type="image/png", is_image=True),
+        AttachmentInput(url="app-spark-attachment://b", mime_type="text/csv"),
+    ]
+
+    run = await client.start_run(content="", context_version=3, attachments=attachments)
+    await run.aclose()
+
+    [message] = json.loads(sent[0].content)["messages"]
+    assert message["content"] == [
+        {"type": "image", "source": {"type": "url", "value": "app-spark-attachment://a", "mimeType": "image/png"}},
+        {"type": "document", "source": {"type": "url", "value": "app-spark-attachment://b", "mimeType": "text/csv"}},
+    ]
 
 
 async def test_every_runtime_client_request_uses_the_handle_bearer():

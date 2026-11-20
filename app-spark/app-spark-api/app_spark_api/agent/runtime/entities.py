@@ -194,6 +194,23 @@ class StateCallback:
 
 
 @attrs.frozen
+class AttachmentInput:
+    """One file sent with a turn, as a reference the Runtime resolves rather than its bytes.
+
+    :param url: A stable reference such as app-spark-attachment://<id>. Never a downloadable
+        address: it is kept in the conversation context and must still mean something long
+        after any signed link would have expired.
+    :param mime_type: The file's MIME type.
+    :param is_image: Whether a model that reads images may be handed it as an image; every
+        other file reaches the model through the Runtime's workspace.
+    """
+
+    url: str
+    mime_type: str
+    is_image: bool = False
+
+
+@attrs.frozen
 class GitRemote:
     """How a Runtime is told to persist its workspace into the Project's repository.
 

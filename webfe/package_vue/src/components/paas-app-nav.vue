@@ -306,6 +306,10 @@ export default {
             continue;
           }
           const children = nav.children.filter((sub) => {
+            // 外链应用的可观测性入口展示的是网关告警，不依赖 MONITORING 平台开关
+            if (this.isEnginelessApp && sub.destRoute.name === 'monitorAlarm') {
+              return true;
+            }
             const key = subFeatureMaps[sub.destRoute.name];
             // 如果有相应key，根据key来处理是否启用
             if (key && Object.prototype.hasOwnProperty.call(this.curAppInfo.feature, key)) {

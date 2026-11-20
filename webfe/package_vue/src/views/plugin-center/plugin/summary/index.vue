@@ -176,6 +176,7 @@ import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import chartOption from '@/json/plugin-overview-options';
 import { formatDate } from '@/common/tools';
+import { createDateShortcuts, getRecentDateRange } from '@/common/date';
 import dayjs from '@/common/dayjs';
 import CodeQuality from './code-quality.vue';
 import BaseInfo from './base-info.vue';
@@ -219,35 +220,7 @@ export default {
       dashboardList: [],
       displayDashboardData: {},
       dashboardLink: '',
-      shortcuts: [
-        {
-          text: this.$t('最近7天'),
-          value() {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-            return [start, end];
-          },
-        },
-        {
-          text: this.$t('最近30天'),
-          value() {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
-            return [start, end];
-          },
-        },
-        {
-          text: this.$t('最近半年'),
-          value() {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 180);
-            return [start, end];
-          },
-        },
-      ],
+      shortcuts: createDateShortcuts(this.$i18n, ['7d', '30d', '6m']),
     };
   },
   computed: {
@@ -303,9 +276,7 @@ export default {
     },
 
     initTime() {
-      const end = new Date();
-      const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+      const [start, end] = getRecentDateRange(7);
       this.initDateTimeRange = [start, end];
 
       this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');

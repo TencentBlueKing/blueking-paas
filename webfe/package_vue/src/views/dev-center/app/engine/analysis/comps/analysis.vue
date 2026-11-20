@@ -286,6 +286,7 @@ import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import RenderSideslider from './access-guide-sideslider';
 import chartOption from '@/json/analysis-chart-option';
+import { createDateShortcuts, getRecentDateRange } from '@/common/date';
 import { exportJsonToExcel } from '@/common/export2-excel';
 import { formatDate } from '@/common/tools';
 
@@ -360,34 +361,7 @@ export default {
       chartOption: chartOption.pv_uv,
       dimensionList: [],
       dimensionType: 'path',
-      shortcuts: [
-        {
-          text: this.$t('今天'),
-          value() {
-            const end = new Date();
-            const start = new Date();
-            return [start, end];
-          },
-        },
-        {
-          text: this.$t('最近7天'),
-          value() {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-            return [start, end];
-          },
-        },
-        {
-          text: this.$t('最近30天'),
-          value() {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
-            return [start, end];
-          },
-        },
-      ],
+      shortcuts: createDateShortcuts(this.$i18n, ['today', '7d', '30d']),
       exportLoading: false,
       isLogEnabled: true,
       isEditLoading: false,
@@ -514,9 +488,7 @@ export default {
   },
   mounted() {
     this.isLoading = true;
-    const end = new Date();
-    const start = new Date();
-    start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+    const [start, end] = getRecentDateRange(7);
     this.initDateTimeRange = [start, end];
 
     this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');

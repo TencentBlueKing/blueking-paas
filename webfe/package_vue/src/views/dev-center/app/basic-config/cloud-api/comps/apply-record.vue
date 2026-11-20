@@ -343,6 +343,7 @@
 
 <script>
 import dayjs from '@/common/dayjs';
+import { RECENT_DATE_KEYS, createDateShortcuts, getRecentDateRange } from '@/common/date';
 import { mapState, mapGetters } from 'vuex';
 import { copy } from '@/common/tools';
 import UserDisplay from '@/components/user/user-display.vue';
@@ -397,43 +398,6 @@ export default {
       statusValue: '',
       initDateTimeRange: [],
       daterange: [new Date(), new Date()],
-      shortcuts: [
-        {
-          text: this.$t('今天'),
-          value() {
-            const end = new Date();
-            const start = new Date();
-            return [start, end];
-          },
-        },
-        {
-          text: this.$t('最近7天'),
-          value() {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-            return [start, end];
-          },
-        },
-        {
-          text: this.$t('最近30天'),
-          value() {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
-            return [start, end];
-          },
-        },
-        {
-          text: this.$t('最近半年'),
-          value() {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 180);
-            return [start, end];
-          },
-        },
-      ],
       dateOptions: {
         // 大于今天的都不能选
         disabledDate(date) {
@@ -454,6 +418,9 @@ export default {
   computed: {
     ...mapState(['localLanguage']),
     ...mapGetters(['tenantId', 'isMultiTenantDisplayMode']),
+    shortcuts() {
+      return createDateShortcuts(this.$i18n, RECENT_DATE_KEYS);
+    },
     isComponentApi() {
       return this.typeValue === 'component';
     },
@@ -635,14 +602,7 @@ export default {
   },
   watch: {
     $route() {
-      const end = new Date();
-      const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-      this.initDateTimeRange = [start, end];
-      this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');
-      this.dateRange.endTime = dayjs(end).format('YYYY-MM-DD');
-      this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
-      this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
+      this.initTimeRange();
       this.init();
     },
     'pagination.current'(value) {
@@ -658,18 +618,19 @@ export default {
     this.isFilter = false;
   },
   mounted() {
-    const end = new Date();
-    const start = new Date();
-    start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-    this.initDateTimeRange = [start, end];
-    this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');
-    this.dateRange.endTime = dayjs(end).format('YYYY-MM-DD');
-    this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
-    this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
+    this.initTimeRange();
     this.initTypeFromQuery();
     this.init();
   },
   methods: {
+    // 默认展示最近7天
+    initTimeRange() {
+      const [start, end] = getRecentDateRange(7);
+      this.initDateTimeRange = [start, end];
+      this.dateRange.startTime = `${dayjs(start).format('YYYY-MM-DD')} 00:00:00`;
+      this.dateRange.endTime = `${dayjs(end).format('YYYY-MM-DD')} 23:59:59`;
+    },
+
     // 通过 URL query 参数初始化类型
     initTypeFromQuery() {
       const queryType = this.$route.query.type;

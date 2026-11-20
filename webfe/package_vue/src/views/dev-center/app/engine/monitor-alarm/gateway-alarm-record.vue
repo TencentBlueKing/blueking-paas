@@ -43,16 +43,13 @@
           @change="handleDateChange"
         />
         <bk-search-select
-          :key="searchInputKey"
           class="alarm-search"
           :values="searchValues"
           :data="searchFields"
           :show-condition="false"
           clearable
-          :validate-message="searchError"
           :placeholder="$t('搜索网关名称、资源名称、告警状态')"
           @change="handleSearchChange"
-          @input-change="searchError = ''"
         />
       </div>
       <p
@@ -177,7 +174,7 @@
 
 <script>
 import dayjs from '@/common/dayjs';
-import { createLongTermDatePresets, createTimeShortcuts } from '@/common/date';
+import { RECENT_DATE_KEYS, createDateShortcuts } from '@/common/date';
 
 const STATUS_COLORS = new Map([
   ['received', 'blue'],
@@ -204,8 +201,6 @@ export default {
       },
       isCustomTime: false,
       dateError: '',
-      searchInputKey: 0,
-      searchError: '',
       filters: { gateway_name: '', resource_name: '', status: '' },
       pagination: { current: 1, limit: 10, count: 0, limitList: [10, 20, 50, 100] },
       records: [],
@@ -218,8 +213,8 @@ export default {
   },
   computed: {
     dateShortcuts() {
-      const week = createLongTermDatePresets(this.$i18n).find(item => item.text === this.$t('最近7天'));
-      return [...createTimeShortcuts(this.$i18n), week];
+      // 与云 API 申请记录保持一致：今天、最近7天、最近30天、最近半年
+      return createDateShortcuts(this.$i18n, RECENT_DATE_KEYS);
     },
     statusOptions() {
       return [
@@ -277,18 +272,12 @@ export default {
     },
     handleSearchChange(values) {
       const next = { gateway_name: '', resource_name: '', status: '' };
-      const invalid = values.some(({ id, values: selected }) => !Object.prototype.hasOwnProperty.call(next, id)
-        || !Array.isArray(selected) || selected.length !== 1);
-      if (invalid) {
-        this.searchError = this.$t('请先选择搜索字段，再输入关键词');
-        this.searchInputKey += 1;
-        return;
-      }
-      values.forEach(({ id, values: [value] }) => {
-        next[id] = String(value.id).trim();
+      values.forEach(({ id, values: selected }) => {
+        if (!Object.prototype.hasOwnProperty.call(next, id)
+          || !Array.isArray(selected) || selected.length !== 1) return;
+        next[id] = String(selected[0].id).trim();
       });
       if (!next.gateway_name || next.gateway_name !== this.filters.gateway_name) next.resource_name = '';
-      this.searchError = '';
       this.applyFilters(next);
     },
     handleFilterChange({ status }) {
@@ -302,7 +291,6 @@ export default {
     clearSearchFilters() {
       // table-empty 的刷新事件先触发 clear-filter，重试时保留原条件。
       if (this.isTableError) return;
-      this.searchError = '';
       this.applyFilters({ gateway_name: '', resource_name: '', status: '' });
     },
     handlePageChange(page) {

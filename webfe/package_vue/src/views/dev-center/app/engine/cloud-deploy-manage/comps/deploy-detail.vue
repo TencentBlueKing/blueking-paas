@@ -550,6 +550,7 @@ import chartOption from '@/json/instance-chart-option';
 import ECharts from 'vue-echarts/components/ECharts.vue';
 import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
+import { TIME_SHORTCUT_KEYS, createDateShortcuts } from '@/common/date';
 import { bus } from '@/common/bus';
 import eventDetail from './event-detail.vue';
 import { downloadTxt, createSSE } from '@/common/tools';
@@ -598,73 +599,16 @@ export default {
     },
   },
   data() {
-    const dateShortCut = [
-      {
-        text: i18n.t('最近5分钟'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 60 * 1000 * 5);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '5m';
-          timeShortCutText = i18n.t('最近5分钟');
-        },
+    const dateShortCut = createDateShortcuts(
+      i18n,
+      TIME_SHORTCUT_KEYS,
+      (value) => {
+        timeRangeCache = value;
       },
-      {
-        text: i18n.t('最近1小时'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 3600 * 1000 * 1);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '1h';
-          timeShortCutText = i18n.t('最近1小时');
-        },
+      (text) => {
+        timeShortCutText = text;
       },
-      {
-        text: i18n.t('最近3小时'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 3600 * 1000 * 3);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '3h';
-          timeShortCutText = i18n.t('最近3小时');
-        },
-      },
-      {
-        text: i18n.t('最近12小时'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 3600 * 1000 * 12);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '12h';
-          timeShortCutText = i18n.t('最近12小时');
-        },
-      },
-      {
-        text: i18n.t('最近1天'),
-        value() {
-          const end = new Date();
-          const start = new Date();
-          start.setTime(start.getTime() - 3600 * 1000 * 24);
-          return [start, end];
-        },
-        onClick() {
-          timeRangeCache = '1d';
-          timeShortCutText = i18n.t('最近1天');
-        },
-      },
-    ];
+    );
     return {
       tableminusSvg: require('@static/images/tableminus.svg'),
       tableplusSvg: require('@static/images/tableplus.svg'),

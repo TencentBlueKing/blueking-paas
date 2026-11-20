@@ -150,23 +150,37 @@ class LegacyAppProxy:
     def get_logo_filename(self):
         return "%s.png" % self.legacy_app.code
 
-    def get_logo_file(self):
+    def get_logo_file(self) -> ContentFile | None:
         logo_url = self.get_logo_url()
         try:
             response = requests.get(logo_url, stream=True, timeout=DEFAULT_TIMEOUT)
+            logger.info(
+                "获取旧版 PaaS 应用 Logo 响应，url=%r, final_url=%r, status_code=%s",
+                logo_url,
+                response.url,
+                response.status_code,
+            )
             if response.ok:
                 return ContentFile(response.raw.data)
         except Exception:
-            logger.exception("从旧版本Paas获取应用Logo失败.")
+            logger.exception("从旧版本Paas获取应用Logo失败，url=%r", logo_url)
 
         logger.info("尝试返回默认logo")
+        default_logo_url = settings.APPLICATION_DEFAULT_LOGO
         try:
-            # 参考老版本开发者中心的应用列表页面，如果加载不到应用的logo，则使用默认的logo
-            response = requests.get(settings.APPLICATION_DEFAULT_LOGO, stream=True, timeout=DEFAULT_TIMEOUT)
+            response = requests.get(default_logo_url, stream=True, timeout=DEFAULT_TIMEOUT)
+            logger.info(
+                "获取默认 Logo 响应，url=%r, final_url=%r, status_code=%s",
+                default_logo_url,
+                response.url,
+                response.status_code,
+            )
             if response.ok:
                 return ContentFile(response.raw.data)
         except Exception:
-            logger.exception("从旧版本Paas获取应用默认Logo失败.")
+            logger.exception("从旧版本Paas获取应用默认Logo失败，url=%r", default_logo_url)
+
+        return None
 
     def is_prod_deployed(self):
         """已经部署到正式环境，且没有下架"""

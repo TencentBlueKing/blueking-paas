@@ -101,6 +101,10 @@ TEMPLATE_MANAGED_BY_VALUE = "bkpaas-e2b-template"
 # 底层 E2B 网关按这个标签回填沙箱的 templateID，值为资源名
 GATEWAY_TEMPLATE_LABEL = "advanced.bkbcs.tencent.com/e2b-template"
 
+# 模板下发锁的过期时间，按全量同步的最坏耗时给：每个模板在每个集群上约 6 次 k8s 调用，
+# 上千个模板时要跑十几分钟。锁提前过期时互斥失效，下发前会重新读库兜底
+TEMPLATE_SYNC_LOCK_TIMEOUT_SECONDS = 1800
+
 
 class E2BSandboxStatus(StrStructuredEnum):
     """E2B 标准沙箱状态"""
@@ -114,6 +118,25 @@ class E2BSandboxStatus(StrStructuredEnum):
     def active_values(cls) -> list[str]:
         """仍占用底层资源、需要参与对账的状态。"""
         return [cls.RUNNING.value, cls.PAUSED.value]
+
+
+class E2BTemplateSyncStatus(StrStructuredEnum):
+    """模板下发到单个集群的状态"""
+
+    # 模板已保存、下发任务还没跑完
+    PENDING = EnumField("pending", label="待同步")
+    SUCCEEDED = EnumField("succeeded", label="同步成功")
+    FAILED = EnumField("failed", label="同步失败")
+
+
+class E2BTemplateStatus(StrStructuredEnum):
+    """应用视角下模板能否用来创建沙箱，按应用的首选 e2b 集群判断"""
+
+    AVAILABLE = EnumField("available", label="可用")
+    # 集群里还没有当前配置的模板：刚创建或修改过、还没下发完，或者首选集群是新接入的、还没做过全量同步
+    SYNCING = EnumField("syncing", label="下发中")
+    SYNC_FAILED = EnumField("sync_failed", label="下发失败")
+    NO_CLUSTER = EnumField("no_cluster", label="无可用集群")
 
 
 class E2BReconcileOutcome(StrStructuredEnum):

@@ -44,6 +44,7 @@ from .e2b.constants import (
     MAX_ACTIVE_KEYS_PER_APP,
     RESOURCE_NAME_MAX_LENGTH,
     E2BSandboxStatus,
+    E2BTemplateSyncStatus,
 )
 from .e2b.exceptions import (
     E2BApiKeyGenerateError,
@@ -580,3 +581,30 @@ class E2BSandboxTemplate(UuidAuditedModel):
     @property
     def is_builtin(self) -> bool:
         return self.application_id is None
+
+
+class E2BSandboxTemplateSyncState(UuidAuditedModel):
+    """模板在单个集群上的下发状态。
+
+    每个目标集群恰好一条：保存模板时即为所有目标集群写入待同步，因此状态齐全即可据此判断模板或集群是否同步完成。
+    不再是目标的集群（如已停用 e2b）可能还留着旧状态，读取时只看目标集群，由同步收尾时清理。
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
+
+    template = models.ForeignKey(
+        E2BSandboxTemplate, on_delete=models.CASCADE, db_constraint=False, related_name="sync_states"
+    )
+    cluster_name = models.CharField(verbose_name="集群名称", max_length=64)
+    status = models.CharField(
+        verbose_name="同步状态", max_length=16, choices=E2BTemplateSyncStatus.get_django_choices()
+    )
+    message = models.TextField(verbose_name="失败原因", blank=True, default="")
+    # 置为待同步时不动，下发完成（无论成败）时写入
+    digest = models.CharField(
+        verbose_name="下发的配置摘要", max_length=64, blank=True, default="", help_text="为空表示还没有下发过"
+    )
+
+    class Meta:
+        unique_together = ("template", "cluster_name")
+        ordering = ["cluster_name"]

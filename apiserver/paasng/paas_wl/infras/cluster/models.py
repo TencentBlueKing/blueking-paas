@@ -273,6 +273,12 @@ class ClusterE2BConfig(UuidAuditedModel):
         max_length=256,
     )
     api_key = EncryptField(help_text="该集群 gateway 的真实凭证，仅 apiserver 持有，不下发给用户")
+    # api_key 和集群内的命名空间绑定
+    namespace = models.CharField(
+        help_text="e2b 沙箱模板（SandboxTemplate / SandboxPool）下发的命名空间，须与底层 E2B 网关绑定的一致",
+        max_length=63,
+        default="default",
+    )
     enabled = models.BooleanField(help_text="是否参与 e2b 沙箱调度", default=True)
 
     tenant_id = tenant_id_field_factory()

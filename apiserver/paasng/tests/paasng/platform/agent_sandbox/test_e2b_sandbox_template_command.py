@@ -17,6 +17,7 @@
 
 from io import StringIO
 from pathlib import Path
+from unittest import mock
 
 import pytest
 from django.conf import settings
@@ -28,19 +29,28 @@ from paasng.platform.agent_sandbox.e2b.constants import (
     DEFAULT_TEMPLATE_MEMORY_MB,
     E2BSandboxStatus,
 )
+from paasng.platform.agent_sandbox.e2b.template_sync.sync import ClusterSyncResult
 from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate
-from tests.paasng.platform.agent_sandbox.e2b.helpers import IMAGE, make_builtin_template, make_custom_template
+from tests.paasng.platform.agent_sandbox.e2b.test_utils import IMAGE, make_builtin_template, make_custom_template
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 TEMPLATE_ID = "e2b-envd"
 EXAMPLE_FILE = Path(settings.BASE_DIR) / "support-files" / "agent_sandbox" / "e2b_templates.yaml"
+COMMAND_MODULE = "paasng.platform.agent_sandbox.management.commands.e2b_sandbox_template"
 
 
 def _run(*args: str) -> str:
     out = StringIO()
     call_command("e2b_sandbox_template", *args, stdout=out)
     return out.getvalue()
+
+
+@pytest.fixture(autouse=True)
+def sync_task():
+    """保存模板会在事务提交后投递下发任务，命令测试里不真的投递"""
+    with mock.patch("paasng.platform.agent_sandbox.e2b.templates.sync_e2b_templates_task") as task:
+        yield task
 
 
 @pytest.fixture()
@@ -164,8 +174,10 @@ class TestApply:
 
         assert not E2BSandboxTemplate.objects.builtins().exists()
 
-    def test_failure_rolls_back_whole_file(self, write_file, template, bk_app):
-        """入库时才发现的冲突也要整份回滚，已处理的项不能留下"""
+    def test_failure_rolls_back_whole_file(
+        self, write_file, template, bk_app, django_capture_on_commit_callbacks, sync_task
+    ):
+        """入库时才发现的冲突也要整份回滚，已处理的项不能留下，也不能投递下发任务"""
         make_custom_template(bk_app, "e2b-browser")
         path = write_file(
             f"- {{template_id: e2b-envd, name: Renamed, image: {IMAGE}, cpu_count: 4}}\n"
@@ -174,12 +186,13 @@ class TestApply:
         )
         out = StringIO()
 
-        with pytest.raises(CommandError, match="e2b-browser"):
+        with django_capture_on_commit_callbacks(execute=True), pytest.raises(CommandError, match="e2b-browser"):
             call_command("e2b_sandbox_template", "apply", "-f", path, stdout=out)
 
         template.refresh_from_db()
         assert (template.name, template.cpu_count) == ("Base", 2)
         assert not E2BSandboxTemplate.objects.filter(template_id="e2b-new").exists()
+        sync_task.delay.assert_not_called()
         assert out.getvalue() == ""
 
     @pytest.mark.parametrize(
@@ -308,3 +321,18 @@ class TestList:
 
     def test_empty(self):
         assert "No templates registered" in _run("list")
+
+
+class TestSync:
+    def test_prints_per_cluster_results(self):
+        results = [
+            ClusterSyncResult(cluster_name="c1", synced=["a", "b"], failed={"c": "boom"}, pruned=["old"]),
+            ClusterSyncResult(cluster_name="c2", error="unreachable"),
+        ]
+
+        with mock.patch(f"{COMMAND_MODULE}.sync_templates", return_value=results):
+            out = _run("sync")
+
+        assert "[c1] synced=2 failed=1 pruned=old" in out
+        assert "  c: boom" in out
+        assert "[c2] failed: unreachable" in out

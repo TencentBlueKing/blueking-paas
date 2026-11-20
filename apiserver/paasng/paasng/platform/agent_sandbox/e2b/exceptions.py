@@ -63,6 +63,13 @@ class E2BTemplateInUse(E2BError):
     """
 
 
+class E2BTemplateSyncInProgress(E2BError):
+    """另一次模板下发还没结束
+
+    每次下发都会覆盖、清理集群里的 CR，并发执行时旧状态会盖掉新状态，因此互斥(全局维度互斥)。
+    """
+
+
 class E2BClusterUnavailable(E2BError):
     """没有可用于 e2b 沙箱的集群"""
 

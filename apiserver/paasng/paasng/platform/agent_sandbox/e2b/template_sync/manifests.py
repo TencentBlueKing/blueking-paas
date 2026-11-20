@@ -20,6 +20,8 @@
 平台下发的 CR 都带 managed-by 标签。删除与清理只动带标签的 CR，集群里手工创建的不受影响。
 """
 
+import hashlib
+import json
 import math
 from typing import Any
 
@@ -38,6 +40,11 @@ from paasng.platform.agent_sandbox.e2b.constants import (
     TEMPLATE_PVC_SIZE_RATIO,
 )
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate
+
+# 决定沙箱规格的字段，即 SandboxTemplate 里来自模板的部分
+SPEC_DIGEST_FIELDS = ("image", "cpu_count", "memory_mb", "disk_size_mb", "env_vars", "workdir")
+# 会写进 CR 的全部模板字段，其余字段（名称、描述、启用、公开）只在平台内使用，改了不必重新下发
+MANIFEST_FIELDS = (*SPEC_DIGEST_FIELDS, "prewarm_count")
 
 
 def build_template_manifest(template: E2BSandboxTemplate, namespace: str) -> dict[str, Any]:
@@ -104,6 +111,20 @@ def _add_rootfs_disk(spec: dict[str, Any], disk_size_mb: int) -> None:
     ]
 
 
+def build_template_patch(template: E2BSandboxTemplate, namespace: str) -> dict[str, Any]:
+    """更新已有 SandboxTemplate 用的 merge patch。
+
+    merge patch 不会删掉清单里缺的键，去掉系统盘时须把 ``_add_rootfs_disk`` 加的字段显式置空
+    """
+    patch = build_template_manifest(template, namespace)
+    if not template.disk_size_mb:
+        spec = patch["spec"]["template"]["spec"]
+        spec["domain"]["devices"] = None
+        spec["podTemplate"]["volumes"] = None
+        spec["volumeClaimTemplates"] = None
+    return patch
+
+
 def build_pool_manifest(template: E2BSandboxTemplate, namespace: str) -> dict[str, Any]:
     """生成模板对应的 SandboxPool"""
     replicas = template.prewarm_count if template.is_builtin else 0
@@ -113,6 +134,16 @@ def build_pool_manifest(template: E2BSandboxTemplate, namespace: str) -> dict[st
         "metadata": {"name": template.resource_name, "namespace": namespace, "labels": managed_labels()},
         "spec": {"replicas": replicas, "templateRef": {"name": template.resource_name}},
     }
+
+
+def spec_digest(template: E2BSandboxTemplate) -> str:
+    """模板当前规格的摘要，记录上的摘要与它相同且下发成功，即集群里的 SandboxTemplate 已是当前配置。
+
+    只算模板字段，不算整份清单：平台生成清单的方式变了（标签、存储类等），集群里的旧 CR 照样能用，
+    不该因此拦住所有创建。增删这里的字段会让全部记录对不上，上线后须做一次全量同步
+    """
+    spec = {f: getattr(template, f) for f in SPEC_DIGEST_FIELDS}
+    return hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()
 
 
 def managed_labels() -> dict[str, str]:

@@ -28,6 +28,7 @@ class ClusterE2BConfigRetrieveOutputSLZ(serializers.Serializer):
 
     control_plane_url = serializers.CharField(help_text="e2b-gateway 控制面地址")
     data_plane_address = serializers.CharField(help_text="供 SDK 直连的数据面对外地址")
+    namespace = serializers.CharField(help_text="e2b 沙箱模板下发的命名空间")
     enabled = serializers.BooleanField(help_text="是否参与 e2b 沙箱调度")
 
 
@@ -50,6 +51,14 @@ class ClusterE2BConfigUpsertInputSLZ(serializers.Serializer):
         allow_blank=True,
         trim_whitespace=True,
     )
+    # 模板 CR 与存量沙箱都在原命名空间里，改了底层 E2B 网关就找不到它们，因此只能在新建时填写
+    namespace = serializers.RegexField(
+        help_text="e2b 沙箱模板下发的命名空间，须与底层 E2B 网关绑定的一致。新建时不填则为 default，创建后不能修改",
+        regex=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+        max_length=63,
+        required=False,
+        error_messages={"invalid": _("命名空间须由小写字母、数字和 - 组成，且以字母或数字开头和结尾")},
+    )
     enabled = serializers.BooleanField(help_text="是否参与 e2b 沙箱调度", default=True)
 
     def validate_control_plane_url(self, url: str) -> str:
@@ -60,10 +69,14 @@ class ClusterE2BConfigUpsertInputSLZ(serializers.Serializer):
         return url
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        cur_config = self.context.get("cur_config")
+        if cur_config is not None and attrs.get("namespace", cur_config.namespace) != cur_config.namespace:
+            raise ValidationError({"namespace": _("命名空间创建后不能修改，如需更换请先删除 e2b 沙箱配置再重新创建")})
+
         if attrs.get("api_key"):
             return attrs
 
-        if self.context.get("cur_config") is None:
+        if cur_config is None:
             raise ValidationError({"api_key": _("新建 e2b 沙箱配置时，api_key 必须提供")})
 
         attrs.pop("api_key", None)

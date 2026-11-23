@@ -18,10 +18,12 @@
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from os import PathLike
 from pathlib import Path
 from typing import Callable, List, Set
 
+from django.conf import settings
 from moby_distribution import ImageJSON, ImageRef, LayerRef
 
 from paasng.infras.accounts.models import User
@@ -37,6 +39,7 @@ from paasng.platform.smart_app.services.patcher import patch_smart_tarball
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
+from paasng.utils.dictx import get_items
 from paasng.utils.file import safe_resolve_subpath
 from paasng.utils.text import remove_prefix
 
@@ -60,7 +63,7 @@ def dispatch_package_to_modules(
         if builder_flag.exists():
             version = builder_flag.read_text().strip()
             if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
-                handler = dispatch_cnb_image_to_registry
+                handler = partial(dispatch_cnb_image_to_registry, base_image_id=read_cnb_base_image_id(workplace))
             else:
                 handler = dispatch_slug_image_to_registry
             tasks = [(module, workplace, stat, operator) for module in application.modules.filter(name__in=modules)]
@@ -81,6 +84,30 @@ def dispatch_package_to_modules(
             for task in tasks:
                 packages.append(handler(*task))
             return packages
+
+
+def read_cnb_base_image_id(workplace: Path) -> str:
+    """从 S-Mart 包的 artifact.json 中读取基础镜像 ID, 不存在时使用默认基础镜像
+
+    artifact.json 格式为:
+    {"version": "1.0", "runtime": {"base_image_id": "heroku-24", "architecture": "amd64"}}
+
+    :raises ValueError: 包含 app_artifacts(多模块共享镜像的新打包方案), 或基础镜像 ID 未配置
+    """
+    artifact_json_file = workplace / "artifact.json"
+    if not artifact_json_file.exists():
+        return settings.SMART_CNB_DEFAULT_IMAGE_ID
+
+    artifact = json.loads(artifact_json_file.read_text())
+    if "app_artifacts" in artifact:
+        raise ValueError(
+            "S-Mart package with app_artifacts in artifact.json is not supported, please use packaging v1"
+        )
+
+    base_image_id = get_items(artifact, "runtime.base_image_id") or settings.SMART_CNB_DEFAULT_IMAGE_ID
+    if base_image_id not in bksmart_settings.cnb_base_image.image_conf:
+        raise ValueError(f"Unsupported S-Mart base image id: {base_image_id}")
+    return base_image_id
 
 
 def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat, operator: User) -> SourcePackage:
@@ -147,12 +174,26 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     return source_package
 
 
-def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User) -> SourcePackage:
-    """Merge image layer to base image, then push the new image to registry"""
-    logger.debug("dispatching cnb-image for module '%s', working at '%s'", module.name, workplace)
+def dispatch_cnb_image_to_registry(
+    module: Module,
+    workplace: Path,
+    stat: SPStat,
+    operator: User,
+    base_image_id: str = settings.SMART_CNB_DEFAULT_IMAGE_ID,
+) -> SourcePackage:
+    """Merge image layer to base image, then push the new image to registry
+
+    :param base_image_id: 基础镜像 ID, 决定镜像层合并到哪个 run image 上
+    """
+    logger.debug(
+        "dispatching cnb-image for module '%s', working at '%s', base image id '%s'",
+        module.name,
+        workplace,
+        base_image_id,
+    )
 
     mgr = SMartImageManager(module)
-    base_image = mgr.get_cnb_runner_image_info()
+    base_image = mgr.get_cnb_runner_image_info(base_image_id=base_image_id)
     new_image_info = mgr.get_image_info(tag=stat.version)
 
     image_tarball = (workplace / module.name).with_suffix(".tgz")

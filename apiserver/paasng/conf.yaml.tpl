@@ -675,6 +675,14 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # SMART_IMAGE_TAG: v0.0.1-smart
 # SMART_CNB_IMAGE_TAG: v0.0.1-smart
 
+## S-Mart CNB 基础镜像, key 为 S-Mart 包 artifact.json 中的 runtime.base_image_id
+## 默认根据 HEROKU_RUNNER_IMAGE(default) 和 HEROKU_NOBLE_RUNNER_IMAGE(heroku-24) 生成, 此处配置会覆盖同名条目
+# HEROKU_NOBLE_RUNNER_IMAGE: hub.bktencent.com/blueking/run-heroku-noble:v2.5.0
+# SMART_CNB_IMAGE_CONF:
+#   heroku-24:
+#     name: bkpaas/docker/run-heroku-noble
+#     tag: v2.5.0-smart
+
 ## ------------------------------------ 插件开发中心配置 ------------------------------------
 
 ## 插件中心「源码仓库」相关配置

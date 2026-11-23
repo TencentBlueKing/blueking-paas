@@ -15,6 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import copy
+from typing import Dict
+
 from django.conf import settings
 from moby_distribution import APIEndpoint, DockerRegistryV2Client
 from pydantic import BaseModel, Field
@@ -50,8 +53,24 @@ class BaseImageConf(BaseModel):
 class CNBBaseImageConf(BaseModel):
     """cloud native S-Mart 基础镜像配置, 用于配置合并镜像层时的基础镜像"""
 
-    name: str = Field(default=settings.SMART_CNB_IMAGE_NAME, description="云原生基础镜像的名称")
-    tag: str = Field(default=settings.SMART_CNB_IMAGE_TAG, description="云原生基础镜像的标签")
+    image_conf: Dict[str, Dict[str, str]] = Field(
+        default_factory=lambda: copy.deepcopy(settings.SMART_CNB_IMAGE_CONF),
+        description="云原生基础镜像配置, key 为基础镜像 ID",
+    )
+
+    def get_name(self, image_id: str = settings.SMART_CNB_DEFAULT_IMAGE_ID) -> str:
+        """根据基础镜像 ID, 获取云原生基础镜像名称"""
+        return self._get_field(image_id, "name")
+
+    def get_tag(self, image_id: str = settings.SMART_CNB_DEFAULT_IMAGE_ID) -> str:
+        """根据基础镜像 ID, 获取云原生基础镜像标签"""
+        return self._get_field(image_id, "tag")
+
+    def _get_field(self, image_id: str, field: str) -> str:
+        try:
+            return self.image_conf[image_id][field]
+        except KeyError:
+            raise ValueError(f"Unsupported S-Mart base image id: {image_id}, failed to get image {field}")
 
 
 class Settings(BaseModel):

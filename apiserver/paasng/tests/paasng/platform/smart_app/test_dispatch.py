@@ -18,6 +18,7 @@
 import hashlib
 import json
 import re
+import shutil
 from itertools import chain
 from unittest import mock
 
@@ -31,6 +32,7 @@ from paasng.platform.smart_app.services.dispatch import (
     dispatch_cnb_image_to_registry,
     dispatch_package_to_modules,
     dispatch_slug_image_to_registry,
+    read_cnb_base_image_id,
 )
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, uncompress_directory
@@ -216,8 +218,17 @@ def test_dispatch_slug_image_to_registry(
             assert expected_url == req.url
 
 
+@pytest.fixture()
+def _with_heroku_24_image_conf():
+    conf = {"heroku-24": {"name": "bkpaas/docker/run-heroku-noble", "tag": "v2.5.0-smart"}}
+    with mock.patch.dict(bksmart_settings.cnb_base_image.image_conf, conf):
+        yield
+
+
+@pytest.mark.usefixtures("_with_heroku_24_image_conf")
+@pytest.mark.parametrize("base_image_id", ["default", "heroku-24"])
 def test_dispatch_cnb_image_to_registry(
-    bk_module, bk_user, assets_rootpath, mock_adapter, image_manifest_content, image_config_content
+    bk_module, bk_user, assets_rootpath, mock_adapter, image_manifest_content, image_config_content, base_image_id
 ):
     """测试将 slug runner 镜像分发到 registry, 涉及多次网络请求, 要保证顺序正确。
 
@@ -234,7 +245,8 @@ def test_dispatch_cnb_image_to_registry(
     bk_module.name = "main"
     bk_module.save()
     mgr = SMartImageManager(bk_module)
-    cnb_runner_image = mgr.get_cnb_runner_image_info()
+    cnb_runner_image = mgr.get_cnb_runner_image_info(base_image_id=base_image_id)
+    assert cnb_runner_image.name == bksmart_settings.cnb_base_image.get_name(base_image_id)
     module_image = mgr.get_image_info()
 
     base_url = bksmart_settings.registry.get_client().api_base_url
@@ -300,7 +312,9 @@ def test_dispatch_cnb_image_to_registry(
         stat = SourcePackageStatReader(tarball_path).read()
         workplace.mkdir()
         uncompress_directory(tarball_path, workplace)
-        dispatch_cnb_image_to_registry(module=bk_module, workplace=workplace, stat=stat, operator=bk_user)
+        dispatch_cnb_image_to_registry(
+            module=bk_module, workplace=workplace, stat=stat, operator=bk_user, base_image_id=base_image_id
+        )
 
     # expected request url history
     expected_request_url_history = [
@@ -358,3 +372,54 @@ def test_dispatch_package_to_modules(bk_app, bk_module, bk_user, assets_rootpath
         with mock.patch(dispatcher_uri) as dispatcher:
             dispatch_package_to_modules(bk_app, tarball_path, stat, bk_user, {"main"})
         assert dispatcher.called
+
+
+@pytest.mark.usefixtures("_with_heroku_24_image_conf")
+@pytest.mark.parametrize(
+    ("artifact", "expected_base_image_id"),
+    [
+        (None, "default"),
+        ({"version": "1.0", "runtime": {"architecture": "amd64"}}, "default"),
+        ({"version": "1.0", "runtime": {"base_image_id": "default", "architecture": "amd64"}}, "default"),
+        ({"version": "1.0", "runtime": {"base_image_id": "heroku-24", "architecture": "amd64"}}, "heroku-24"),
+    ],
+)
+def test_dispatch_cnb_package_with_base_image_id(
+    bk_app, bk_module, bk_user, assets_rootpath, artifact, expected_base_image_id
+):
+    bk_module.name = "main"
+    bk_module.save()
+
+    with generate_temp_dir() as tempdir:
+        package_dir = tempdir / "package"
+        shutil.copytree(assets_rootpath / "cnb-image", package_dir)
+        if artifact is not None:
+            (package_dir / "artifact.json").write_text(json.dumps(artifact))
+        tarball_path = tempdir / "tar.gz"
+        compress_directory(package_dir, tarball_path)
+        stat = SourcePackageStatReader(tarball_path).read()
+        with mock.patch("paasng.platform.smart_app.services.dispatch.dispatch_cnb_image_to_registry") as dispatcher:
+            dispatch_package_to_modules(bk_app, tarball_path, stat, bk_user, {"main"})
+
+    assert dispatcher.call_count == 1
+    assert dispatcher.call_args.kwargs["base_image_id"] == expected_base_image_id
+
+
+@pytest.mark.parametrize(
+    "artifact",
+    [
+        {"version": "1.0", "runtime": {"base_image_id": "heroku-24", "architecture": "amd64"}},
+        {"version": "1.0", "runtime": {"base_image_id": "ts4", "architecture": "amd64"}},
+        {
+            "version": "1.0",
+            "runtime": {"base_image_id": "default", "architecture": "amd64"},
+            "app_artifacts": {"main": {"image_tar": "main.tar", "proc_entrypoints": {}}},
+        },
+    ],
+)
+def test_read_cnb_base_image_id_unsupported(artifact):
+    """未配置的基础镜像(此处未配置 heroku-24)和新打包方案, 都应直接报错, 而不是合并到默认基础镜像上"""
+    with generate_temp_dir() as workplace:
+        (workplace / "artifact.json").write_text(json.dumps(artifact))
+        with pytest.raises(ValueError, match="not supported|Unsupported"):
+            read_cnb_base_image_id(workplace)

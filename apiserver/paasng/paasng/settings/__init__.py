@@ -1316,6 +1316,19 @@ SMART_IMAGE_TAG = f"{parse_image(settings.get('APP_IMAGE', '')).tag or 'latest'}
 SMART_CNB_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic"
 SMART_CNB_IMAGE_TAG = f"{parse_image(settings.get('HEROKU_RUNNER_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
 
+# S-Mart CNB 基础镜像配置, key 为 S-Mart 包 artifact.json 中的 runtime.base_image_id
+SMART_CNB_DEFAULT_IMAGE_ID = "default"
+SMART_CNB_HEROKU_24_IMAGE_ID = "heroku-24"
+SMART_CNB_IMAGE_CONF: Dict[str, Dict[str, str]] = {
+    SMART_CNB_DEFAULT_IMAGE_ID: {"name": SMART_CNB_IMAGE_NAME, "tag": SMART_CNB_IMAGE_TAG},
+}
+if _heroku_noble_runner_image := settings.get("HEROKU_NOBLE_RUNNER_IMAGE", ""):
+    SMART_CNB_IMAGE_CONF[SMART_CNB_HEROKU_24_IMAGE_ID] = {
+        "name": f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-noble",
+        "tag": f"{parse_image(_heroku_noble_runner_image).tag or 'latest'}-{_SMART_TAG_SUFFIX}",
+    }
+SMART_CNB_IMAGE_CONF.update(settings.get("SMART_CNB_IMAGE_CONF", {}))
+
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
 

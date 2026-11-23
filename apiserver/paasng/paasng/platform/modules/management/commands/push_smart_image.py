@@ -21,10 +21,10 @@ import os
 import pathlib
 import shutil
 import tempfile
-import urllib3
-import requests
 from typing import Dict
 
+import requests
+import urllib3
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from moby_distribution import APIEndpoint, DockerRegistryV2Client, ImageRef
@@ -50,11 +50,11 @@ def patch_ssl_verification(skip_verify: bool):
 
         # 创建新的request方法，强制设置verify=False
         def patched_request(*args, **kwargs):
-            kwargs['verify'] = False
+            kwargs["verify"] = False
             return original_request(*args, **kwargs)
 
         def patched_session_request(self, *args, **kwargs):
-            kwargs['verify'] = False
+            kwargs["verify"] = False
             return original_session_request(self, *args, **kwargs)
 
         try:
@@ -70,16 +70,20 @@ def patch_ssl_verification(skip_verify: bool):
         yield
 
 
-DEST_IMAGE_CONFIGS: Dict[str, Dict] = {
-    AppImageType.CNB.value: {
-        "repo": bksmart_settings.cnb_base_image.name,
-        "reference": bksmart_settings.cnb_base_image.tag,
-    },
-    AppImageType.LEGACY.value: {
-        "repo": bksmart_settings.base_image.name,
-        "reference": bksmart_settings.base_image.tag,
-    },
-}
+def get_dest_image(image_type: str, base_image_id: str) -> Dict[str, str]:
+    if image_type == AppImageType.LEGACY.value:
+        return {
+            "repo": bksmart_settings.base_image.name,
+            "reference": bksmart_settings.base_image.tag,
+        }
+
+    if image_type == AppImageType.CNB.value:
+        return {
+            "repo": bksmart_settings.cnb_base_image.get_name(base_image_id),
+            "reference": bksmart_settings.cnb_base_image.get_tag(base_image_id),
+        }
+
+    raise ValueError(f"Unsupported image type: {image_type}")
 
 
 class Command(BaseCommand):
@@ -93,17 +97,27 @@ class Command(BaseCommand):
             dest="type_",
             help="image type can be either cnb or legacy",
         )
+        parser.add_argument(
+            "--base-image-id",
+            dest="base_image_id",
+            default=settings.SMART_CNB_DEFAULT_IMAGE_ID,
+            help="dest cnb base image id, only works when type is cnb",
+        )
         parser.add_argument("--dry-run", dest="dry_run", type=str2bool, help="dry run", default=False)
-        parser.add_argument("--skip-verify", dest="skip_verify", type=str2bool, help="skip SSL certificate verification", default=False)
+        parser.add_argument(
+            "--skip-verify", dest="skip_verify", type=str2bool, help="skip SSL certificate verification", default=False
+        )
 
-    def handle(self, image: str, type_: str, dry_run: bool, skip_verify: bool, *args, **options):
+    def handle(self, image: str, type_: str, base_image_id: str, dry_run: bool, skip_verify: bool, *args, **options):
         if dry_run:
             logger.warning("Skipped the step of pushing S-Mart base image to bkrepo!")
             return
 
+        dest_image = get_dest_image(type_, base_image_id)
+
         with patch_ssl_verification(skip_verify):
             from_image = parse_image(image)
-            _file = tempfile.NamedTemporaryFile(delete=False) # noqa: SIM115
+            _file = tempfile.NamedTemporaryFile(delete=False)  # noqa: SIM115
             image_tarball_path = pathlib.Path(_file.name)
             try:
                 ref = ImageRef.from_image(
@@ -118,14 +132,13 @@ class Command(BaseCommand):
                 raise
 
             workplace = tempfile.mkdtemp()
-            to_config = DEST_IMAGE_CONFIGS[type_]
 
             try:
                 ref = ImageRef.from_tarball(
                     workplace=pathlib.Path(workplace),
                     src=image_tarball_path,
-                    to_repo=to_config["repo"],
-                    to_reference=to_config["reference"],
+                    to_repo=dest_image["repo"],
+                    to_reference=dest_image["reference"],
                     client=bksmart_settings.registry.get_client(),
                 )
                 ref.push()

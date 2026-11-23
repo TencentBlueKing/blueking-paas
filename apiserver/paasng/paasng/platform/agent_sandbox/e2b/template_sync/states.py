@@ -27,7 +27,7 @@ from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateSyncStatus
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate, E2BSandboxTemplateSyncState
 
 from .manifests import spec_digest
-from .status import is_current
+from .status import is_up_to_date
 
 
 def mark_pending(template: E2BSandboxTemplate) -> None:
@@ -51,7 +51,7 @@ def reset_unsynced_to_pending(cluster_names: set[str] | None = None, resource_na
         states = states.filter(cluster_name__in=cluster_names)
     if resource_names is not None:
         states = states.filter(template__resource_name__in=resource_names)
-    unsynced_pks = [s.pk for s in states if not is_current(s, s.template)]
+    unsynced_pks = [s.pk for s in states if not is_up_to_date(s, s.template)]
     E2BSandboxTemplateSyncState.objects.filter(pk__in=unsynced_pks).update(
         status=E2BTemplateSyncStatus.PENDING.value, message=""
     )

@@ -25,7 +25,6 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from paasng.platform.agent_sandbox.e2b import sandboxes
 from paasng.platform.agent_sandbox.e2b.constants import MAX_ACTIVE_KEYS_PER_APP, E2BSandboxStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BClusterNotConfigured, E2BGatewayTimeout
 from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandbox
@@ -146,7 +145,7 @@ class TestApiKeys:
 
 class TestSandboxList:
     def test_outputs_whitelisted_fields(self, api_client, bk_app):
-        with mock.patch.object(sandboxes, "list_sandboxes", return_value=[_gateway_item()]):
+        with mock.patch("paasng.platform.agent_sandbox.e2b.views.list_sandboxes", return_value=[_gateway_item()]):
             resp = api_client.get(_sandbox_list_url(bk_app))
 
         assert resp.status_code == status.HTTP_200_OK
@@ -166,13 +165,13 @@ class TestSandboxList:
     def test_filters_by_template(self, api_client, bk_app):
         items = [_gateway_item("sb-1", "code"), _gateway_item("sb-2", "browser")]
 
-        with mock.patch.object(sandboxes, "list_sandboxes", return_value=items):
+        with mock.patch("paasng.platform.agent_sandbox.e2b.views.list_sandboxes", return_value=items):
             resp = api_client.get(_sandbox_list_url(bk_app), data={"template_id": "browser"})
 
         assert [item["sandbox_id"] for item in resp.json()] == ["sb-2"]
 
     def test_scoped_to_application(self, api_client, bk_app):
-        with mock.patch.object(sandboxes, "list_sandboxes", return_value=[]) as list_sandboxes:
+        with mock.patch("paasng.platform.agent_sandbox.e2b.views.list_sandboxes", return_value=[]) as list_sandboxes:
             api_client.get(_sandbox_list_url(bk_app))
 
         assert list_sandboxes.call_args.args[0] == bk_app
@@ -180,7 +179,7 @@ class TestSandboxList:
 
 class TestSandboxDestroy:
     def test_kills_owned_sandbox(self, api_client, bk_app, e2b_sandbox):
-        with mock.patch.object(sandboxes, "kill_sandbox") as kill:
+        with mock.patch("paasng.platform.agent_sandbox.e2b.views.kill_sandbox") as kill:
             resp = api_client.delete(_sandbox_detail_url(bk_app, SANDBOX_ID))
 
         assert resp.status_code == status.HTTP_204_NO_CONTENT
@@ -210,7 +209,7 @@ class TestSandboxDestroy:
         ],
     )
     def test_service_errors_do_not_leak_internals(self, api_client, bk_app, e2b_sandbox, exc):
-        with mock.patch.object(sandboxes, "kill_sandbox", side_effect=exc):
+        with mock.patch("paasng.platform.agent_sandbox.e2b.views.kill_sandbox", side_effect=exc):
             resp = api_client.delete(_sandbox_detail_url(bk_app, SANDBOX_ID))
 
         assert resp.status_code == status.HTTP_503_SERVICE_UNAVAILABLE

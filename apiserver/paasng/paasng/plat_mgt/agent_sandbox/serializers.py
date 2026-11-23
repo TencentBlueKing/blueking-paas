@@ -19,7 +19,7 @@ from rest_framework import serializers
 
 from paas_wl.infras.cluster.models import ClusterE2BConfig
 from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateSyncStatus
-from paasng.platform.agent_sandbox.e2b.template_sync.status import get_sync_status, is_current
+from paasng.platform.agent_sandbox.e2b.template_sync.status import get_sync_status, is_up_to_date
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate
 
 
@@ -93,7 +93,7 @@ class TemplateSyncStateOutputSLZ(serializers.Serializer):
         return get_sync_status(obj, obj.template).value
 
     def get_up_to_date(self, obj) -> bool:
-        return is_current(obj, obj.template)
+        return is_up_to_date(obj, obj.template)
 
 
 class TemplateSyncOverviewOutputSLZ(serializers.Serializer):

@@ -28,8 +28,15 @@ import logging
 from rest_framework import status
 from rest_framework.response import Response
 
-from . import sandboxes
 from .base_views import E2BProtocolViewSet
+from .sandboxes import (
+    connect_sandbox,
+    create_sandbox,
+    get_sandbox,
+    kill_sandbox,
+    list_sandboxes,
+    set_sandbox_timeout,
+)
 from .serializers import E2BSandboxCreateInputSLZ, E2BSandboxTimeoutInputSLZ
 
 logger = logging.getLogger(__name__)
@@ -43,20 +50,20 @@ class E2BSandboxViewSet(E2BProtocolViewSet):
         slz = E2BSandboxCreateInputSLZ(data=request.data, context={"application": self.application})
         slz.is_valid(raise_exception=True)
 
-        resp = sandboxes.create_sandbox(self.application, slz.validated_data["template"], dict(request.data))
+        resp = create_sandbox(self.application, slz.validated_data["template"], dict(request.data))
         return Response(resp, status=status.HTTP_201_CREATED)
 
     def list(self, request):
         """列出本应用名下存活的沙箱"""
-        return Response(sandboxes.list_sandboxes(self.application))
+        return Response(list_sandboxes(self.application))
 
     def retrieve(self, request, sandbox_id):
         """查询沙箱详情"""
-        return Response(sandboxes.get_sandbox(self.application, sandbox_id))
+        return Response(get_sandbox(self.application, sandbox_id))
 
     def destroy(self, request, sandbox_id):
         """销毁沙箱，重复调用幂等。"""
-        sandboxes.kill_sandbox(self.application, sandbox_id)
+        kill_sandbox(self.application, sandbox_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def set_timeout(self, request, sandbox_id):
@@ -64,7 +71,7 @@ class E2BSandboxViewSet(E2BProtocolViewSet):
         slz = E2BSandboxTimeoutInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        sandboxes.set_sandbox_timeout(self.application, sandbox_id, slz.validated_data["timeout"])
+        set_sandbox_timeout(self.application, sandbox_id, slz.validated_data["timeout"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def connect(self, request, sandbox_id):
@@ -72,4 +79,4 @@ class E2BSandboxViewSet(E2BProtocolViewSet):
         slz = E2BSandboxTimeoutInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        return Response(sandboxes.connect_sandbox(self.application, sandbox_id, slz.validated_data["timeout"]))
+        return Response(connect_sandbox(self.application, sandbox_id, slz.validated_data["timeout"]))

@@ -43,7 +43,6 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
-from . import sandboxes, templates
 from .exceptions import (
     E2BApiKeyGenerateError,
     E2BApiKeyQuotaExceeded,
@@ -55,6 +54,7 @@ from .exceptions import (
     E2BTemplateInUse,
     E2BTemplateQuotaExceeded,
 )
+from .sandboxes import kill_sandbox, list_sandboxes
 from .serializers import (
     E2BApiKeyCreateInputSLZ,
     E2BApiKeyCreateOutputSLZ,
@@ -68,6 +68,7 @@ from .serializers import (
     E2BTemplateSpecInputSLZ,
 )
 from .template_sync.status import get_template_statuses
+from .templates import create_custom_template, delete_template, update_template
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +161,7 @@ class E2BConsoleSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMix
         slz = E2BConsoleSandboxListInputSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
 
-        items = sandboxes.list_sandboxes(application)
+        items = list_sandboxes(application)
         if template_id := slz.validated_data.get("template_id"):
             items = [item for item in items if item.get("templateID") == template_id]
         return Response(E2BConsoleSandboxOutputSLZ(items, many=True).data)
@@ -170,7 +171,7 @@ class E2BConsoleSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMix
         """销毁沙箱，重复调用幂等。"""
         application = self.get_application()
         try:
-            sandboxes.kill_sandbox(application, sandbox_id)
+            kill_sandbox(application, sandbox_id)
         except E2BSandboxNotFound:
             raise error_codes.AGENT_SANDBOX_E2B_SANDBOX_NOT_FOUND
         except E2BError as exc:
@@ -221,7 +222,7 @@ class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMi
         slz.is_valid(raise_exception=True)
 
         try:
-            template = templates.create_custom_template(application, **slz.validated_data)
+            template = create_custom_template(application, **slz.validated_data)
         except E2BTemplateIDTooLong as exc:
             raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_ID_TOO_LONG.format(max_length=exc.max_length)
         except E2BAppCodeTooLong:
@@ -252,7 +253,7 @@ class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMi
         slz.is_valid(raise_exception=True)
         data_before = self._audit_data(template)
 
-        templates.update_template(template, **slz.validated_data)
+        update_template(template, **slz.validated_data)
 
         self._add_audit_record(
             request,
@@ -272,7 +273,7 @@ class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMi
         data_before = self._audit_data(template)
 
         try:
-            templates.delete_template(template)
+            delete_template(template)
         except E2BTemplateInUse:
             raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_IN_USE
 

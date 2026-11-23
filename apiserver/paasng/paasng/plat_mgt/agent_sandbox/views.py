@@ -24,7 +24,6 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
-from paasng.platform.agent_sandbox.e2b import templates
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BTemplateAlreadyExists, E2BTemplateInUse
 from paasng.platform.agent_sandbox.e2b.serializers import (
     E2BBuiltinTemplateCreateInputSLZ,
@@ -33,6 +32,11 @@ from paasng.platform.agent_sandbox.e2b.serializers import (
 from paasng.platform.agent_sandbox.e2b.tasks import sync_e2b_templates_task
 from paasng.platform.agent_sandbox.e2b.template_sync.states import reset_unsynced_to_pending
 from paasng.platform.agent_sandbox.e2b.template_sync.status import get_cluster_overviews, get_template_overviews
+from paasng.platform.agent_sandbox.e2b.templates import (
+    create_builtin_template,
+    delete_template,
+    update_template,
+)
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate
 from paasng.utils.error_codes import error_codes
 
@@ -82,7 +86,7 @@ class E2BBuiltinTemplateViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         try:
-            template = templates.create_builtin_template(**data)
+            template = create_builtin_template(**data)
         except E2BTemplateAlreadyExists:
             raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_ALREADY_EXISTS
 
@@ -107,7 +111,7 @@ class E2BBuiltinTemplateViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data_before = DataDetail(data=self._audit_data(template))
 
-        templates.update_template(template, **slz.validated_data)
+        update_template(template, **slz.validated_data)
 
         add_plat_mgt_audit_record(
             user=request.user.pk,
@@ -129,7 +133,7 @@ class E2BBuiltinTemplateViewSet(viewsets.GenericViewSet):
         data_before = DataDetail(data=self._audit_data(template))
 
         try:
-            templates.delete_template(template)
+            delete_template(template)
         except E2BTemplateInUse:
             raise error_codes.AGENT_SANDBOX_E2B_TEMPLATE_IN_USE
 

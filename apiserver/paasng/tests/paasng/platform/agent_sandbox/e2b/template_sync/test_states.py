@@ -55,7 +55,7 @@ class TestMarkPending:
 
 
 class TestResetUnsyncedToPending:
-    def test_resets_states_not_current(self, clusters):
+    def test_resets_states_not_up_to_date(self, clusters):
         """已成功下发当前配置的不动，同步期间要保持可用"""
         template = make_builtin_template("e2b-envd")
         changed = make_builtin_template("e2b-changed")

@@ -27,7 +27,6 @@ from rest_framework import status
 from paas_wl.infras.cluster.models import Cluster, ClusterE2BConfig
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.models import AppOperationRecord
-from paasng.platform.agent_sandbox.e2b import templates
 from paasng.platform.agent_sandbox.e2b.constants import E2BSandboxStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BAppCodeTooLong, E2BTemplateIDTooLong
 from paasng.platform.agent_sandbox.models import E2BSandbox, E2BSandboxTemplate
@@ -186,7 +185,7 @@ class TestCreate:
     )
     def test_rejects_too_long_resource_name(self, api_client, bk_app, exc, code):
         """资源名的长度上限取决于应用 code，由服务层计算，规则见服务层的用例"""
-        with mock.patch.object(templates, "create_custom_template", side_effect=exc):
+        with mock.patch("paasng.platform.agent_sandbox.e2b.views.create_custom_template", side_effect=exc):
             resp = api_client.post(
                 _list_url(bk_app), data={"template_id": "my-tpl", "name": "x", "image": IMAGE}, format="json"
             )

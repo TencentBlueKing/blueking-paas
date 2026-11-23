@@ -24,7 +24,6 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from rest_framework import serializers
 
-from paasng.platform.agent_sandbox.e2b import templates
 from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BTemplateAlreadyExists,
     E2BTemplateInUse,
@@ -32,6 +31,11 @@ from paasng.platform.agent_sandbox.e2b.exceptions import (
 )
 from paasng.platform.agent_sandbox.e2b.serializers import E2BBuiltinTemplateCreateInputSLZ
 from paasng.platform.agent_sandbox.e2b.template_sync.sync import sync_templates
+from paasng.platform.agent_sandbox.e2b.templates import (
+    create_builtin_template,
+    delete_template,
+    update_template,
+)
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate
 
 
@@ -134,13 +138,13 @@ class Command(BaseCommand):
                 template = existing.get(template_id)
                 if template is None:
                     try:
-                        templates.create_builtin_template(template_id, **spec)
+                        create_builtin_template(template_id, **spec)
                     except E2BTemplateAlreadyExists:
                         raise CommandError(f"template_id '{template_id}' is already used by a custom template")
                     messages.append(self.style.SUCCESS(f"Created template '{template_id}'"))
                     continue
 
-                changed = templates.update_template(template, **spec)
+                changed = update_template(template, **spec)
                 if not changed:
                     messages.append(f"Template '{template_id}' unchanged")
                     continue
@@ -150,7 +154,7 @@ class Command(BaseCommand):
                 for template_id, template in existing.items():
                     if template_id in specs or not template.enabled:
                         continue
-                    templates.update_template(template, enabled=False)
+                    update_template(template, enabled=False)
                     messages.append(self.style.WARNING(f"Disabled template '{template_id}' (not in file)"))
 
         for message in messages:
@@ -185,7 +189,7 @@ class Command(BaseCommand):
 
     def _set_enabled(self, template_id: str, enabled: bool):
         template = self._get_template(template_id)
-        templates.update_template(template, enabled=enabled)
+        update_template(template, enabled=enabled)
         state = "enabled" if enabled else "disabled"
         self.stdout.write(self.style.SUCCESS(f"Template '{template_id}' is {state}"))
 
@@ -194,7 +198,7 @@ class Command(BaseCommand):
         if not confirmed:
             raise CommandError(f"deleting template '{template_id}' needs --yes to confirm")
         try:
-            templates.delete_template(template)
+            delete_template(template)
         except E2BTemplateInUse:
             raise CommandError(f"template '{template_id}' still has active sandboxes, destroy them first")
         self.stdout.write(self.style.SUCCESS(f"Deleted template '{template_id}'"))

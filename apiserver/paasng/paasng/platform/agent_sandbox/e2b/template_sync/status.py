@@ -121,7 +121,7 @@ def get_cluster_overviews() -> list[ClusterSyncOverview]:
 def is_applied(template: E2BSandboxTemplate, cluster_name: str) -> bool:
     """集群里的 SandboxTemplate 是否已是模板的当前配置"""
     state = E2BSandboxTemplateSyncState.objects.filter(template=template, cluster_name=cluster_name).first()
-    return state is not None and is_current(state, template)
+    return state is not None and is_up_to_date(state, template)
 
 
 def get_template_statuses(
@@ -144,7 +144,7 @@ def get_template_statuses(
     return {t.resource_name: _template_status(t, states.get(t.pk)) for t in templates}
 
 
-def is_current(state: E2BSandboxTemplateSyncState, template: E2BSandboxTemplate) -> bool:
+def is_up_to_date(state: E2BSandboxTemplateSyncState, template: E2BSandboxTemplate) -> bool:
     """最近一次下发成功，且下发的就是模板当前配置"""
     return state.status == E2BTemplateSyncStatus.SUCCEEDED.value and state.digest == spec_digest(template)
 
@@ -155,7 +155,7 @@ def get_sync_status(state: E2BSandboxTemplateSyncState, template: E2BSandboxTemp
     成功但摘要与模板当前配置不一致的按待同步算：集群里不是当前配置，创建沙箱会被拦下。
     正常保存模板时状态会先被置为待同步，绕过 templates 直接改库、或改了参与摘要的字段时才会出现
     """
-    if is_current(state, template):
+    if is_up_to_date(state, template):
         return E2BTemplateSyncStatus.SUCCEEDED
     if state.status == E2BTemplateSyncStatus.FAILED.value:
         return E2BTemplateSyncStatus.FAILED

@@ -41,7 +41,6 @@ from paasng.platform.applications.models import (
     UserMarkedApplication,
 )
 from paasng.platform.engine.models import EngineApp
-from tests.utils.helpers import override_settings
 
 pytestmark = pytest.mark.django_db
 
@@ -280,22 +279,22 @@ class TestApplicationDetailView:
         url = reverse("plat_mgt.applications.retrieve_app_name", kwargs={"app_code": app_with_market_product.code})
 
         # 测试中文环境下修改
-        with override_settings(LANGUAGE_CODE="zh-hans"):
-            rsp = plat_mgt_api_client.post(url, data={"name": "新中文名"})
-            assert rsp.status_code == 204
-            app_with_market_product.refresh_from_db()
-            assert app_with_market_product.name == "新中文名"
-            product = Product.objects.filter(code=app_with_market_product.code).first()
-            assert product.name_zh_cn == app_with_market_product.name
+        plat_mgt_api_client.cookies["blueking_language"] = "zh-cn"
+        rsp = plat_mgt_api_client.post(url, data={"name": "新中文名"})
+        assert rsp.status_code == 204
+        app_with_market_product.refresh_from_db()
+        assert app_with_market_product.name == "新中文名"
+        product = Product.objects.filter(code=app_with_market_product.code).first()
+        assert product.name_zh_cn == app_with_market_product.name
 
         # 测试英文环境下修改
-        with override_settings(LANGUAGE_CODE="en"):
-            rsp = plat_mgt_api_client.post(url, data={"name": "new_name"})
-            assert rsp.status_code == 204
-            app_with_market_product.refresh_from_db()
-            assert app_with_market_product.name_en == "new_name"
-            product = Product.objects.get(code=app_with_market_product.code)
-            assert product.name_en == app_with_market_product.name_en
+        plat_mgt_api_client.cookies["blueking_language"] = "en"
+        rsp = plat_mgt_api_client.post(url, data={"name": "new_name"})
+        assert rsp.status_code == 204
+        app_with_market_product.refresh_from_db()
+        assert app_with_market_product.name_en == "new_name"
+        product = Product.objects.get(code=app_with_market_product.code)
+        assert product.name_en == app_with_market_product.name_en
 
     def test_update_app_category(self, bk_app, plat_mgt_api_client):
         """测试更新应用分类"""

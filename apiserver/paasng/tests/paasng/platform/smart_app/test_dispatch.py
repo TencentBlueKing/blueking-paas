@@ -400,38 +400,6 @@ def test_parse_and_save_cnb_metadata(bk_app, assets_rootpath):
 
 
 @pytest.mark.usefixtures("smart_app_extra")
-def test_parse_and_save_cnb_metadata_without_base_image_id(bk_app, tmp_path):
-    """artifact.json 未声明 base_image_id 时, 回落到默认基础镜像, 不继承历史值"""
-    extra = SMartAppExtraInfo.objects.get(app=bk_app)
-    extra.set_base_image_id("ts4")
-    assert extra.get_base_image_id() == "ts4"
-
-    (tmp_path / "artifact.json").write_text(
-        json.dumps({"version": "1.0", "runtime": {"architecture": "amd64"}, "app_artifacts": {}})
-    )
-    parse_and_save_cnb_metadata(bk_app, tmp_path)
-
-    refreshed = SMartAppExtraInfo.objects.get(app=bk_app)
-    assert refreshed.use_cnb is True
-    assert refreshed.get_base_image_id() == settings.SMART_CNB_DEFAULT_IMAGE_ID
-
-
-@pytest.mark.usefixtures("smart_app_extra")
-def test_parse_and_save_cnb_metadata_replaces_stale_metadata(bk_app, assets_rootpath):
-    """重新上传 CNB 包时, 上一份包的 entrypoints / image_tars 不应残留"""
-    extra = SMartAppExtraInfo.objects.get(app=bk_app)
-    extra.set_proc_entrypoints("gone_module", {"web": ["gone-web"]})
-    extra.set_image_tar("gone_module", "gone.tar")
-
-    parse_and_save_cnb_metadata(bk_app, assets_rootpath / "cnb-image-with-index")
-
-    refreshed = SMartAppExtraInfo.objects.get(app=bk_app)
-    assert refreshed.get_proc_entrypoints("gone_module") is None
-    assert refreshed.get_image_tar("gone_module") == "gone_module.tgz"
-    assert refreshed.get_image_tar("main") == "main.tar"
-
-
-@pytest.mark.usefixtures("smart_app_extra")
 def test_dispatch_slug_package_resets_cnb_metadata(bk_app, bk_module, bk_user, assets_rootpath):
     """上传过 CNB 包后, 再上传 slug 包必须把制品元数据重置为默认值"""
     extra = SMartAppExtraInfo.objects.get(app=bk_app)

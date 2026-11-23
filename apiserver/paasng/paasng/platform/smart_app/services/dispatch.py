@@ -67,8 +67,7 @@ def dispatch_package_to_modules(
                 smart_app_extra = parse_and_save_cnb_metadata(application, workplace)
                 handler = dispatch_cnb_image_to_registry
             else:
-                # 非 CNB 制品: 元数据必须重置, 否则上一次上传的 CNB 包残留的 use_cnb / base_image_id
-                # 等信息会让本次 slug 部署仍然走 CNB 的启动逻辑
+                # 非 CNB 制品: 重置制品元数据
                 reset_artifact_metadata(application)
                 handler = dispatch_slug_image_to_registry
 
@@ -77,7 +76,7 @@ def dispatch_package_to_modules(
                 for module in application.modules.filter(name__in=modules)
             ]
         else:
-            # 历史源码包 (无 .Version 标记): 同样需要清理制品元数据
+            # 历史源码包 (无 .Version 标记): 同样需要重置制品元数据
             reset_artifact_metadata(application)
             tasks = [
                 (module, Path(tarball_filepath), stat, operator, None)
@@ -244,7 +243,7 @@ def reset_artifact_metadata(application: Application) -> None:
     影响后续部署.
     """
     smart_app_extra = SMartAppExtraInfo.objects.get(app=application)
-    smart_app_extra.replace_artifact_metadata(SMartAppArtifactMetadata())
+    smart_app_extra.set_artifact_metadata(SMartAppArtifactMetadata())
 
 
 def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SMartAppExtraInfo:
@@ -278,14 +277,14 @@ def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SM
     if artifact_json_file.exists():
         artifact_json = json.loads(artifact_json_file.read_text())
         app_artifacts = artifact_json.get("app_artifacts", {})
-        for module_name, app_artifact in app_artifacts.items():
-            metadata.module_proc_entrypoints[module_name] = app_artifact["proc_entrypoints"]
-            metadata.module_image_tars[module_name] = app_artifact["image_tar"]
+        for module_name in app_artifacts:
+            metadata.module_proc_entrypoints[module_name] = app_artifacts[module_name]["proc_entrypoints"]
+            metadata.module_image_tars[module_name] = app_artifacts[module_name]["image_tar"]
 
         if base_image_id := get_items(artifact_json, "runtime.base_image_id"):
             metadata.base_image_id = base_image_id
 
-    smart_app_extra.replace_artifact_metadata(metadata)
+    smart_app_extra.set_artifact_metadata(metadata)
     return smart_app_extra
 
 

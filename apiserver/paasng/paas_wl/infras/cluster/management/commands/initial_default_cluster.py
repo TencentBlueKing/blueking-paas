@@ -54,7 +54,6 @@ CLUSTER_NAME_MAX_LENGTH = 32
 class EnvVarKey(StrStructuredEnum):
     """环境变量键名"""
 
-    # 集群唯一标识，多机房（或多套环境共享 DB）部署时需显式配置以区分不同集群
     UUID = "PAAS_WL_CLUSTER_UUID"
     NAME = "PAAS_WL_CLUSTER_NAME"
 
@@ -182,8 +181,8 @@ class Command(BaseCommand):
     ) -> InitialClusterData:
         """根据环境变量 / 项目配置构建集群数据
 
-        :param cluster_uuid: 命令行指定的集群 UUID, 未指定时读取环境变量, 仍无值则使用默认值
-        :param cluster_name: 命令行指定的集群名称, 未指定时读取环境变量, 仍无值则使用默认值
+        :param cluster_uuid: 命令行指定的集群 UUID, 为空时读取环境变量
+        :param cluster_name: 命令行指定的集群名称, 为空时读取环境变量
         """
         # 集群唯一标识, 多机房部署共享同一套 DB 时需分别配置
         resolved_uuid = self._resolve_cluster_uuid(cluster_uuid)
@@ -285,14 +284,14 @@ class Command(BaseCommand):
         该值是集群在数据库中的主键, 同一次部署后续的初始化 (迁移 Job) 都依赖它来识别集群,
         因此多套环境共享同一套 DB 时必须分别配置, 避免相互覆盖.
         """
-        raw = cluster_uuid or env.str(EnvVarKey.UUID, "")
+        raw = (cluster_uuid or env.str(EnvVarKey.UUID, "")).strip()
         if not raw:
             return DEFAULT_CLUSTER_UUID
 
         try:
-            return str(UUID(raw.strip()))
+            return str(UUID(raw))
         except ValueError:
-            raise ValueError(
+            raise CommandError(
                 f"{EnvVarKey.UUID} (or --cluster-uuid) is not a valid UUID: {raw!r}, "
                 "supported formats: 332d740b-03ed-40f2-aa6b-c90cc5f1e89c / 332d740b03ed40f2aa6bc90cc5f1e89c"
             ) from None
@@ -309,14 +308,14 @@ class Command(BaseCommand):
         if not (CLUSTER_NAME_MIN_LENGTH <= len(name) <= CLUSTER_NAME_MAX_LENGTH) or not re.fullmatch(
             CLUSTER_NAME_PATTERN, name
         ):
-            raise ValueError(
+            raise CommandError(
                 f"{EnvVarKey.NAME} (or --cluster-name) must be {CLUSTER_NAME_MIN_LENGTH}-"
                 f"{CLUSTER_NAME_MAX_LENGTH} characters of {CLUSTER_NAME_PATTERN}: {name!r}"
             )
         return name
 
     def _upsert_cluster_and_related_configs(self, data: InitialClusterData):
-        # 1. 创建 / 更新集群，以 uuid（主键）识别集群；名称已由 _check_cluster_identity 校验不会再被改动
+        # 1. 创建 / 更新集群, 以 uuid (主键) 识别集群, 名称已由 _find_name_conflicts 校验不会被改动
         cluster, _ = Cluster.objects.update_or_create(
             uuid=data.uuid,
             defaults={

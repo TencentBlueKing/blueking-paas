@@ -127,17 +127,23 @@ class Command(BaseCommand):
             cluster_uuid=options.get("cluster_uuid"), cluster_name=options.get("cluster_name")
         )
 
-        existing = self._check_cluster_identity(data)
+        existing = Cluster.objects.filter(pk=data.uuid).first()
 
         if dry_run:
             self.stdout.write(f"DRY-RUN: preparing to initialize the cluster, data: {data}")
+            for conflict in self._find_name_conflicts(data, existing):
+                self.stderr.write(f"DRY-RUN WARNING: {conflict}")
             return
 
         if existing and not overwrite:
-            self.stderr.write(
-                f"Cluster (uuid: {data.uuid}, name: {data.name}) exists and not allow to overwrite, skip"
-            )
+            msg = f"Cluster (uuid: {data.uuid}, name: {existing.name}) exists and not allow to overwrite, skip"
+            if existing.name != data.name:
+                msg += f" (configured name: {data.name}, not applied)"
+            self.stderr.write(msg)
             return
+
+        if conflicts := self._find_name_conflicts(data, existing):
+            raise CommandError("\n".join(conflicts))
 
         # 更新 / 创建集群及相关资源配置
         with transaction.atomic(using="workloads"):
@@ -148,28 +154,28 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Successfully initialized the cluster {data.name} in tenant {data.tenant_id}")
 
-    def _check_cluster_identity(self, data: InitialClusterData) -> Cluster | None:
-        """校验集群标识, 返回已存在的集群 (若不存在则返回 None)
+    def _find_name_conflicts(self, data: InitialClusterData, existing: Cluster | None) -> List[str]:
+        """检查将要写入的集群名称是否会引发问题，返回问题描述列表 (为空表示没有问题)
 
         集群以 uuid (主键) 作为唯一标识; 名称在库中唯一, 且被集群分配策略, 应用配置引用,
         所以本命令只允许通过 uuid 识别到既有集群后覆盖其配置, 不允许借覆盖动作改名.
         """
-        existing = Cluster.objects.filter(pk=data.uuid).first()
+        conflicts = []
 
-        if (conflict := Cluster.objects.filter(name=data.name).exclude(pk=data.uuid).first()) is not None:
-            raise CommandError(
-                f"Cluster name {data.name} is already used by cluster {conflict.uuid}, "
+        if (holder := Cluster.objects.filter(name=data.name).exclude(pk=data.uuid).first()) is not None:
+            conflicts.append(
+                f"Cluster name {data.name} is already used by cluster {holder.uuid}, "
                 f"please configure another {EnvVarKey.NAME} (or --cluster-name)"
             )
 
         if existing is not None and existing.name != data.name:
-            raise CommandError(
+            conflicts.append(
                 f"Cluster name can not be changed by this command, cluster {data.uuid} is named "
                 f"{existing.name}, but {data.name} was configured by {EnvVarKey.NAME} (or --cluster-name). "
                 "Keep the original name, or create a new cluster with another uuid"
             )
 
-        return existing
+        return conflicts
 
     def _build_cluster_data(
         self, cluster_uuid: str | None = None, cluster_name: str | None = None

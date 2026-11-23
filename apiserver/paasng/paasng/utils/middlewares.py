@@ -18,7 +18,6 @@
 import logging
 
 from django.conf import settings
-from django.conf.urls.i18n import is_language_prefix_patterns_used
 from django.utils import translation
 from django.utils.cache import patch_vary_headers
 from django.utils.deprecation import MiddlewareMixin
@@ -91,8 +90,7 @@ class BkLocaleMiddleware(MiddlewareMixin):
         response.headers.setdefault("Content-Language", language)
 
         # 语言只取决于 cookie, 因此缓存必须按 Cookie 区分 (不能按 Accept-Language)
-        if not (is_language_prefix_patterns_used(settings.ROOT_URLCONF)[0]):
-            patch_vary_headers(response, ("Cookie",))
+        patch_vary_headers(response, ("Cookie",))
         return response
 
     @staticmethod

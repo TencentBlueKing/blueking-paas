@@ -20,6 +20,7 @@ from typing import Dict, List
 import arrow
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.utils.translation import get_language
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -104,7 +105,7 @@ class ApplicationProcessSpecManageView(GenericTemplateView):
                 "name": app.name,
                 "app_type": ApplicationType.get_choice_label(app.type),
                 "app_status": app.app_status,
-                "created": arrow.get(app.created).humanize(locale="zh"),
+                "created": arrow.get(app.created).humanize(locale=get_language()),
                 "creator": app.creator.username,
             }
             app_data_list.append(app_data)

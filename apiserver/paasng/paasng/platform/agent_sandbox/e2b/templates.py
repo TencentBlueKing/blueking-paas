@@ -107,7 +107,7 @@ def create_custom_template(application: Application, template_id: str, **spec: A
     if max_length < TEMPLATE_ID_MIN_LENGTH:
         raise E2BAppCodeTooLong(f"app code {application.code} is too long to create custom templates")
     if len(template_id) > max_length:
-        raise E2BTemplateIDTooLong(f"template id of app {application.code} must be at most {max_length} characters")
+        raise E2BTemplateIDTooLong(application.code, max_length)
     resource_name = make_custom_resource_name(application, template_id)
 
     # 校验应用下的自定义模板数量是否已达上限

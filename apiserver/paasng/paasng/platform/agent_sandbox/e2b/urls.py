@@ -50,12 +50,12 @@ urlpatterns = [
     ),
     path(
         E2B_CONSOLE_PREFIX + "templates/",
-        E2BConsoleTemplateViewSet.as_view({"get": "list"}),
+        E2BConsoleTemplateViewSet.as_view({"get": "list", "post": "create"}),
         name="agent_sandbox.e2b.console.templates",
     ),
     path(
         E2B_CONSOLE_PREFIX + "templates/<str:template_id>",
-        E2BConsoleTemplateViewSet.as_view({"get": "retrieve"}),
+        E2BConsoleTemplateViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="agent_sandbox.e2b.console.templates.detail",
     ),
     path(

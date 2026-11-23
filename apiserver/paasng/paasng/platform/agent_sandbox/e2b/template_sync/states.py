@@ -27,12 +27,34 @@ from paasng.platform.agent_sandbox.e2b.constants import E2BTemplateSyncStatus
 from paasng.platform.agent_sandbox.models import E2BSandboxTemplate, E2BSandboxTemplateSyncState
 
 from .manifests import spec_digest
+from .status import is_up_to_date
 
 
 def mark_pending(template: E2BSandboxTemplate) -> None:
     """模板保存后、下发前调用：目标集群全部置为待同步"""
     for cluster_name in resolve_template_targets([template])[template.resource_name]:
         save_sync_state(template, cluster_name, E2BTemplateSyncStatus.PENDING)
+
+
+def reset_unsynced_to_pending(cluster_names: set[str] | None = None, resource_names: set[str] | None = None) -> None:
+    """手动触发异步同步前调用：将范围内尚未同步到当前配置的已有记录（上次失败或配置落后）重置为待同步并清空报错。
+
+    - Q: 为什么要重置
+      A: 手动同步是异步执行的，若不清掉旧的失败结果，调用方刷新时无法区分「任务还没跑」和「重试后仍然失败」。
+    - Q: 为什么跳过已同步记录
+      A: 已是当前配置的 ``succeeded`` 记录保持不变，避免重同步期间模板短暂不可用（真失败了再由任务改为失败）。
+    - Q: 为什么只改已有记录
+      A: 尚无记录的新集群在概览中本就显示为 ``missing``，无需提前建记录；已下线集群的旧记录不计入概览，由同步收尾清理。
+    """
+    states = E2BSandboxTemplateSyncState.objects.select_related("template")
+    if cluster_names is not None:
+        states = states.filter(cluster_name__in=cluster_names)
+    if resource_names is not None:
+        states = states.filter(template__resource_name__in=resource_names)
+    unsynced_pks = [s.pk for s in states if not is_up_to_date(s, s.template)]
+    E2BSandboxTemplateSyncState.objects.filter(pk__in=unsynced_pks).update(
+        status=E2BTemplateSyncStatus.PENDING.value, message=""
+    )
 
 
 def delete_cluster_sync_states(cluster_name: str) -> None:

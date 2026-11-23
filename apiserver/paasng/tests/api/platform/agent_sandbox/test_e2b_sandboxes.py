@@ -23,7 +23,6 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from paasng.platform.agent_sandbox.e2b import sandboxes
 from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BClusterUnavailable,
     E2BGatewayError,
@@ -31,9 +30,10 @@ from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BGatewayUnavailable,
     E2BSandboxNotFound,
     E2BTemplateNotFound,
+    E2BTemplateNotReady,
 )
-from paasng.platform.agent_sandbox.models import E2BApiKey
-from tests.paasng.platform.agent_sandbox.e2b.test_utils import make_builtin_template
+from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandboxTemplate
+from tests.paasng.platform.agent_sandbox.e2b.test_utils import make_builtin_template, make_custom_template
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -59,9 +59,9 @@ def e2b_client(bk_app, bk_user) -> APIClient:
 
 
 @pytest.fixture(autouse=True)
-def _registered_template():
-    """创建沙箱要求模板已登记且启用，用例里统一用 e2b-envd。"""
-    make_builtin_template("e2b-envd")
+def builtin_template() -> E2BSandboxTemplate:
+    """创建沙箱要求模板存在且启用，用例里统一用 e2b-envd。"""
+    return make_builtin_template("e2b-envd")
 
 
 class TestAuthentication:
@@ -84,7 +84,7 @@ class TestCreate:
         """响应体就是网关那份报文，不能被平台的规范包装层套一层。"""
         payload = {"sandboxID": SANDBOX_ID, "domain": "e2b.example.com", "envdAccessToken": "tok"}
 
-        with mock.patch.object(sandboxes, "create_sandbox", return_value=payload):
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.create_sandbox", return_value=payload):
             resp = e2b_client.post(CREATE_URL, data={"templateID": "e2b-envd"}, format="json")
 
         assert resp.status_code == status.HTTP_201_CREATED
@@ -95,21 +95,22 @@ class TestCreate:
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_forwards_full_request_body(self, e2b_client):
+    def test_forwards_full_request_body(self, e2b_client, builtin_template):
         """序列化器只认 templateID，但转发的必须是原始请求体。"""
         body = {"templateID": "e2b-envd", "timeout": 600, "metadata": {"owner": "a"}}
 
-        with mock.patch.object(sandboxes, "create_sandbox", return_value={}) as create:
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.create_sandbox", return_value={}) as create:
             e2b_client.post(CREATE_URL, data=body, format="json")
 
-        assert create.call_args.args[1] == body
+        assert create.call_args.args[1:] == (builtin_template, body)
 
-    @pytest.mark.parametrize("template_id", ["not-registered", "e2b-legacy"])
-    def test_rejects_unavailable_template(self, e2b_client, template_id):
-        """未登记与已下线的模板都不能用，且不能走到网关。"""
+    @pytest.mark.parametrize("template_id", ["not-registered", "e2b-legacy", "other-tpl"])
+    def test_rejects_unavailable_template(self, e2b_client, bk_app_full, template_id):
+        """不存在、已停用、属于其他应用的模板都不能用，且不能走到网关。"""
         make_builtin_template("e2b-legacy", enabled=False)
+        make_custom_template(bk_app_full, "other-tpl")
 
-        with mock.patch.object(sandboxes, "create_sandbox") as create:
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.create_sandbox") as create:
             resp = e2b_client.post(CREATE_URL, data={"templateID": template_id}, format="json")
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -120,11 +121,20 @@ class TestCreate:
         """不公开只影响页面展示，服务自用的模板仍要能通过 SDK 创建沙箱。"""
         make_builtin_template("e2b-internal", is_public=False)
 
-        with mock.patch.object(sandboxes, "create_sandbox", return_value={}) as create:
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.create_sandbox", return_value={}) as create:
             resp = e2b_client.post(CREATE_URL, data={"templateID": "e2b-internal"}, format="json")
 
         assert resp.status_code == status.HTTP_201_CREATED
         create.assert_called_once()
+
+    def test_accepts_own_custom_template(self, e2b_client, bk_app):
+        template = make_custom_template(bk_app, "my-tpl")
+
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.create_sandbox", return_value={}) as create:
+            resp = e2b_client.post(CREATE_URL, data={"templateID": "my-tpl"}, format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert create.call_args.args[1] == template
 
 
 class TestList:
@@ -132,7 +142,7 @@ class TestList:
         """e2b 的列表响应没有分页包装，套上 SDK 就反序列化不了。"""
         items = [{"sandboxID": SANDBOX_ID}]
 
-        with mock.patch.object(sandboxes, "list_sandboxes", return_value=items):
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.list_sandboxes", return_value=items):
             resp = e2b_client.get(LIST_URL)
 
         assert resp.status_code == status.HTTP_200_OK
@@ -143,14 +153,14 @@ class TestRetrieveAndDestroy:
     def test_retrieve_returns_gateway_response(self, e2b_client):
         detail = {"sandboxID": SANDBOX_ID, "envdAccessToken": "refreshed"}
 
-        with mock.patch.object(sandboxes, "get_sandbox", return_value=detail):
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.get_sandbox", return_value=detail):
             resp = e2b_client.get(DETAIL_URL)
 
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json() == detail
 
     def test_destroy_returns_no_content(self, e2b_client):
-        with mock.patch.object(sandboxes, "kill_sandbox") as kill:
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.kill_sandbox") as kill:
             resp = e2b_client.delete(DETAIL_URL)
 
         assert resp.status_code == status.HTTP_204_NO_CONTENT
@@ -167,7 +177,9 @@ class TestConnect:
         """SDK 按 200 反序列化成沙箱详情，响应体不能被包装。"""
         detail = {"sandboxID": SANDBOX_ID, "domain": "e2b.example.com", "envdAccessToken": "refreshed"}
 
-        with mock.patch.object(sandboxes, "connect_sandbox", return_value=detail) as connect:
+        with mock.patch(
+            "paasng.platform.agent_sandbox.e2b.sandbox_views.connect_sandbox", return_value=detail
+        ) as connect:
             resp = e2b_client.post(CONNECT_URL, data={"timeout": 600}, format="json")
 
         assert resp.status_code == status.HTTP_200_OK
@@ -176,14 +188,16 @@ class TestConnect:
 
     @pytest.mark.parametrize("body", [{}, {"timeout": 0}])
     def test_requires_positive_timeout(self, e2b_client, body):
-        with mock.patch.object(sandboxes, "connect_sandbox") as connect:
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.connect_sandbox") as connect:
             resp = e2b_client.post(CONNECT_URL, data=body, format="json")
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         connect.assert_not_called()
 
     def test_missing_sandbox_is_404(self, e2b_client):
-        with mock.patch.object(sandboxes, "connect_sandbox", side_effect=E2BSandboxNotFound("gone")):
+        with mock.patch(
+            "paasng.platform.agent_sandbox.e2b.sandbox_views.connect_sandbox", side_effect=E2BSandboxNotFound("gone")
+        ):
             resp = e2b_client.post(CONNECT_URL, data={"timeout": 600}, format="json")
 
         assert resp.status_code == status.HTTP_404_NOT_FOUND
@@ -201,7 +215,7 @@ class TestErrorMapping:
         ],
     )
     def test_maps_to_sdk_status_codes(self, e2b_client, exc, expected_status):
-        with mock.patch.object(sandboxes, "create_sandbox", side_effect=exc):
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.create_sandbox", side_effect=exc):
             resp = e2b_client.post(CREATE_URL, data={"templateID": "e2b-envd"}, format="json")
 
         assert resp.status_code == expected_status
@@ -209,17 +223,32 @@ class TestErrorMapping:
 
     def test_template_not_found_reports_template(self, e2b_client):
         """创建时缺的是模板，文案不能写成沙箱不存在。"""
-        with mock.patch.object(sandboxes, "create_sandbox", side_effect=E2BTemplateNotFound("drift")):
+        with mock.patch(
+            "paasng.platform.agent_sandbox.e2b.sandbox_views.create_sandbox", side_effect=E2BTemplateNotFound("drift")
+        ):
             resp = e2b_client.post(CREATE_URL, data={"templateID": "e2b-envd"}, format="json")
 
         assert resp.status_code == status.HTTP_404_NOT_FOUND
         assert resp.json() == {"code": 404, "message": "Template not found"}
 
+    def test_template_not_ready_asks_to_retry(self, e2b_client):
+        with mock.patch(
+            "paasng.platform.agent_sandbox.e2b.sandbox_views.create_sandbox",
+            side_effect=E2BTemplateNotReady("syncing"),
+        ):
+            resp = e2b_client.post(CREATE_URL, data={"templateID": "e2b-envd"}, format="json")
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.json() == {
+            "code": 409,
+            "message": "Template is not ready yet, check its status in the developer center and retry later",
+        }
+
     def test_does_not_leak_internal_details(self, e2b_client):
         """异常自带的信息里有集群名、网关地址这类内部拓扑，不该出现在响应里。"""
         exc = E2BClusterUnavailable("no cluster with e2b config for tenant acme in region ieod")
 
-        with mock.patch.object(sandboxes, "create_sandbox", side_effect=exc):
+        with mock.patch("paasng.platform.agent_sandbox.e2b.sandbox_views.create_sandbox", side_effect=exc):
             resp = e2b_client.post(CREATE_URL, data={"templateID": "e2b-envd"}, format="json")
 
         assert "acme" not in resp.content.decode()

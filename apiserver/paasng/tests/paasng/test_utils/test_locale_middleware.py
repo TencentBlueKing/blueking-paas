@@ -23,6 +23,13 @@ from django.utils import translation
 from paasng.utils.middlewares import BkLocaleMiddleware
 
 
+@pytest.fixture(autouse=True)
+def restore_language():
+    """中间件会 activate 请求语言, 用例结束后还原, 避免污染同进程中后续用例"""
+    yield
+    translation.deactivate()
+
+
 @pytest.fixture
 def factory() -> RequestFactory:
     return RequestFactory()

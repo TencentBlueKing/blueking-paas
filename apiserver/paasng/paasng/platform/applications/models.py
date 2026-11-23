@@ -753,6 +753,15 @@ class SMartAppExtraInfo(models.Model):
     def use_cnb(self) -> bool:
         return self.artifact_metadata.use_cnb
 
+    def replace_artifact_metadata(self, metadata: SMartAppArtifactMetadata):
+        """整份替换制品元数据
+
+        上传 S-Mart 包时, 元数据必须完全由当前包推导, 不能继承历史值(例如上一次上传的 CNB 包
+        残留的 use_cnb / base_image_id / module_proc_entrypoints), 否则会错误地影响后续部署.
+        """
+        self.artifact_metadata = metadata
+        self.save(update_fields=["artifact_metadata"])
+
     def set_use_cnb_flag(self, use_cnb: bool):
         self.artifact_metadata.use_cnb = use_cnb
         self.save(update_fields=["artifact_metadata"])

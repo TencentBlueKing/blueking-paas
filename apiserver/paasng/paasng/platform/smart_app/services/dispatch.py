@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Callable, List, Set, Tuple, cast
 
 from paasng.infras.accounts.models import User
+from paasng.platform.applications.entities import SMartAppArtifactMetadata
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
 from paasng.platform.declarative.handlers import get_source_dir_from_desc
 from paasng.platform.modules.models import Module
@@ -66,6 +67,9 @@ def dispatch_package_to_modules(
                 smart_app_extra = parse_and_save_cnb_metadata(application, workplace)
                 handler = dispatch_cnb_image_to_registry
             else:
+                # 非 CNB 制品: 元数据必须重置, 否则上一次上传的 CNB 包残留的 use_cnb / base_image_id
+                # 等信息会让本次 slug 部署仍然走 CNB 的启动逻辑
+                reset_artifact_metadata(application)
                 handler = dispatch_slug_image_to_registry
 
             tasks = [
@@ -73,6 +77,8 @@ def dispatch_package_to_modules(
                 for module in application.modules.filter(name__in=modules)
             ]
         else:
+            # 历史源码包 (无 .Version 标记): 同样需要清理制品元数据
+            reset_artifact_metadata(application)
             tasks = [
                 (module, Path(tarball_filepath), stat, operator, None)
                 for module in application.modules.filter(name__in=modules)
@@ -230,6 +236,17 @@ def dispatch_cnb_image_to_registry(
     return source_package
 
 
+def reset_artifact_metadata(application: Application) -> None:
+    """将 S-Mart 应用的制品元数据重置为默认值
+
+    部署方式与基础镜像必须由 "当前部署的包" 决定. 每次上传包时, 无论包是 CNB 制品还是 slug 制品,
+    都要先把元数据整份重置, 避免历史上传操作残留的 use_cnb / base_image_id / proc_entrypoints
+    影响后续部署.
+    """
+    smart_app_extra = SMartAppExtraInfo.objects.get(app=application)
+    smart_app_extra.replace_artifact_metadata(SMartAppArtifactMetadata())
+
+
 def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SMartAppExtraInfo:
     """解析 cnb 制品的元数据, 并将相关构建元数据写入 SMartAppExtraInfo
 
@@ -238,6 +255,8 @@ def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SM
     - base_image_id 基础镜像 ID. 用于区分不同的基础镜像(run image)
     - 各模块进程的 entrypoints(如果有, 从 artifact.json 解析)
     - 各模块使用的 image_tar(如果有, 从 artifact.json 解析)
+
+    元数据总是由当前包完整推导: 包内未提供的信息一律回落到默认值, 不会继承上一次上传的包留下的值.
 
     artifact.json 格式为:
     {
@@ -253,21 +272,20 @@ def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SM
     }
     """
     smart_app_extra = SMartAppExtraInfo.objects.get(app=application)
-    smart_app_extra.set_use_cnb_flag(True)
+    metadata = SMartAppArtifactMetadata(use_cnb=True)
 
     artifact_json_file = workplace / "artifact.json"
-    if not artifact_json_file.exists():
-        return smart_app_extra
+    if artifact_json_file.exists():
+        artifact_json = json.loads(artifact_json_file.read_text())
+        app_artifacts = artifact_json.get("app_artifacts", {})
+        for module_name, app_artifact in app_artifacts.items():
+            metadata.module_proc_entrypoints[module_name] = app_artifact["proc_entrypoints"]
+            metadata.module_image_tars[module_name] = app_artifact["image_tar"]
 
-    artifact_json = json.loads(artifact_json_file.read_text())
-    app_artifacts = artifact_json.get("app_artifacts", {})
-    for module_name in app_artifacts:
-        smart_app_extra.set_proc_entrypoints(module_name, app_artifacts[module_name]["proc_entrypoints"])
-        smart_app_extra.set_image_tar(module_name, app_artifacts[module_name]["image_tar"])
+        if base_image_id := get_items(artifact_json, "runtime.base_image_id"):
+            metadata.base_image_id = base_image_id
 
-    if base_image_id := get_items(artifact_json, "runtime.base_image_id"):
-        smart_app_extra.set_base_image_id(base_image_id)
-
+    smart_app_extra.replace_artifact_metadata(metadata)
     return smart_app_extra
 
 

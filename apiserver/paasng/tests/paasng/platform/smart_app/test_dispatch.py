@@ -23,6 +23,7 @@ from unittest import mock
 
 import pytest
 import requests
+from django.conf import settings
 from requests_mock import Adapter
 
 from paasng.platform.applications.models import SMartAppExtraInfo
@@ -396,3 +397,83 @@ def test_parse_and_save_cnb_metadata(bk_app, assets_rootpath):
     assert expected_app_extra.use_cnb is True
     assert expected_app_extra.get_image_tar("main") == "main.tar"
     assert expected_app_extra.get_proc_entrypoints("main") == {"web": ["main-web"]}
+
+
+@pytest.mark.usefixtures("smart_app_extra")
+def test_parse_and_save_cnb_metadata_without_base_image_id(bk_app, tmp_path):
+    """artifact.json 未声明 base_image_id 时, 回落到默认基础镜像, 不继承历史值"""
+    extra = SMartAppExtraInfo.objects.get(app=bk_app)
+    extra.set_base_image_id("ts4")
+    assert extra.get_base_image_id() == "ts4"
+
+    (tmp_path / "artifact.json").write_text(
+        json.dumps({"version": "1.0", "runtime": {"architecture": "amd64"}, "app_artifacts": {}})
+    )
+    parse_and_save_cnb_metadata(bk_app, tmp_path)
+
+    refreshed = SMartAppExtraInfo.objects.get(app=bk_app)
+    assert refreshed.use_cnb is True
+    assert refreshed.get_base_image_id() == settings.SMART_CNB_DEFAULT_IMAGE_ID
+
+
+@pytest.mark.usefixtures("smart_app_extra")
+def test_parse_and_save_cnb_metadata_replaces_stale_metadata(bk_app, assets_rootpath):
+    """重新上传 CNB 包时, 上一份包的 entrypoints / image_tars 不应残留"""
+    extra = SMartAppExtraInfo.objects.get(app=bk_app)
+    extra.set_proc_entrypoints("gone_module", {"web": ["gone-web"]})
+    extra.set_image_tar("gone_module", "gone.tar")
+
+    parse_and_save_cnb_metadata(bk_app, assets_rootpath / "cnb-image-with-index")
+
+    refreshed = SMartAppExtraInfo.objects.get(app=bk_app)
+    assert refreshed.get_proc_entrypoints("gone_module") is None
+    assert refreshed.get_image_tar("gone_module") == "gone_module.tgz"
+    assert refreshed.get_image_tar("main") == "main.tar"
+
+
+@pytest.mark.usefixtures("smart_app_extra")
+def test_dispatch_slug_package_resets_cnb_metadata(bk_app, bk_module, bk_user, assets_rootpath):
+    """上传过 CNB 包后, 再上传 slug 包必须把制品元数据重置为默认值"""
+    extra = SMartAppExtraInfo.objects.get(app=bk_app)
+    extra.set_use_cnb_flag(True)
+    extra.set_base_image_id("ts4")
+    extra.set_proc_entrypoints("main", {"web": ["main-web"]})
+    extra.set_image_tar("main", "main.tar")
+
+    bk_module.name = "main"
+    bk_module.save()
+
+    smart_asserts_path = assets_rootpath / "slugrunner-image"
+    with generate_temp_dir() as tempdir:
+        tarball_path = tempdir / "tar.gz"
+        compress_directory(smart_asserts_path, tarball_path)
+        stat = SourcePackageStatReader(tarball_path).read()
+        with mock.patch("paasng.platform.smart_app.services.dispatch.dispatch_slug_image_to_registry"):
+            dispatch_package_to_modules(bk_app, tarball_path, stat, bk_user, {"main"})
+
+    refreshed = SMartAppExtraInfo.objects.get(app=bk_app)
+    assert refreshed.use_cnb is False
+    assert refreshed.get_base_image_id() == settings.SMART_CNB_DEFAULT_IMAGE_ID
+    assert refreshed.get_proc_entrypoints("main") is None
+    assert refreshed.get_image_tar("main") == "main.tgz"
+
+
+@pytest.mark.usefixtures("smart_app_extra")
+def test_dispatch_cnb_package_overrides_slug_metadata(bk_app, bk_module, bk_user, assets_rootpath):
+    """上传过 slug 包后, 再上传 CNB 包必须完整写入 CNB 包的元数据"""
+    bk_module.name = "main"
+    bk_module.save()
+
+    smart_asserts_path = assets_rootpath / "cnb-image-with-index"
+    with generate_temp_dir() as tempdir:
+        tarball_path = tempdir / "tar.gz"
+        compress_directory(smart_asserts_path, tarball_path)
+        stat = SourcePackageStatReader(tarball_path).read()
+        with mock.patch("paasng.platform.smart_app.services.dispatch.dispatch_cnb_image_to_registry"):
+            dispatch_package_to_modules(bk_app, tarball_path, stat, bk_user, {"main"})
+
+    refreshed = SMartAppExtraInfo.objects.get(app=bk_app)
+    assert refreshed.use_cnb is True
+    assert refreshed.get_base_image_id() == "default"
+    assert refreshed.get_proc_entrypoints("main") == {"web": ["main-web"]}
+    assert refreshed.get_image_tar("main") == "main.tar"

@@ -238,9 +238,8 @@ def dispatch_cnb_image_to_registry(
 def reset_artifact_metadata(application: Application) -> None:
     """将 S-Mart 应用的制品元数据重置为默认值
 
-    部署方式与基础镜像必须由 "当前部署的包" 决定. 每次上传包时, 无论包是 CNB 制品还是 slug 制品,
-    都要先把元数据整份重置, 避免历史上传操作残留的 use_cnb / base_image_id / proc_entrypoints
-    影响后续部署.
+    制品元数据挂在应用级 (每个应用一份), 实际记录的是 "最近一次上传的包" 的构建信息. 上传制品时把它重置为默认值,
+    避免上一次上传残留的 use_cnb / base_image_id / module_proc_entrypoints影响后续部署.
     """
     smart_app_extra = SMartAppExtraInfo.objects.get(app=application)
     smart_app_extra.set_artifact_metadata(SMartAppArtifactMetadata())

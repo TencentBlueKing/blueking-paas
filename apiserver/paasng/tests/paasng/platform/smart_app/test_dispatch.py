@@ -23,10 +23,12 @@ from unittest import mock
 
 import pytest
 import requests
+import yaml
 from django.conf import settings
 from requests_mock import Adapter
 
 from paasng.platform.applications.models import SMartAppExtraInfo
+from paasng.platform.smart_app.constants import SMartPackageBuilderVersionFlag
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.dispatch import (
     bksmart_settings,
@@ -37,6 +39,7 @@ from paasng.platform.smart_app.services.dispatch import (
 )
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, uncompress_directory
+from tests.paasng.platform.sourcectl.packages.utils import V2_APP_DESC_EXAMPLE, gen_tar
 
 pytestmark = pytest.mark.django_db
 
@@ -91,6 +94,17 @@ def image_config_content():
 @pytest.fixture()
 def smart_app_extra(bk_module):
     return SMartAppExtraInfo.objects.create(app=bk_module.application)
+
+
+@pytest.fixture()
+def stale_cnb_metadata(smart_app_extra):
+    """预置 "上一次上传留下的" CNB 制品元数据"""
+    extra = smart_app_extra
+    extra.set_use_cnb_flag(True)
+    extra.set_base_image_id("ts4")
+    extra.set_proc_entrypoints("main", {"web": ["main-web"]})
+    extra.set_image_tar("main", "main.tar")
+    return extra
 
 
 def test_dispatch_slug_image_to_registry(
@@ -399,15 +413,9 @@ def test_parse_and_save_cnb_metadata(bk_app, assets_rootpath):
     assert expected_app_extra.get_proc_entrypoints("main") == {"web": ["main-web"]}
 
 
-@pytest.mark.usefixtures("smart_app_extra")
+@pytest.mark.usefixtures("smart_app_extra", "stale_cnb_metadata")
 def test_dispatch_slug_package_resets_cnb_metadata(bk_app, bk_module, bk_user, assets_rootpath):
     """上传过 CNB 包后, 再上传 slug 包必须把制品元数据重置为默认值"""
-    extra = SMartAppExtraInfo.objects.get(app=bk_app)
-    extra.set_use_cnb_flag(True)
-    extra.set_base_image_id("ts4")
-    extra.set_proc_entrypoints("main", {"web": ["main-web"]})
-    extra.set_image_tar("main", "main.tar")
-
     bk_module.name = "main"
     bk_module.save()
 
@@ -426,9 +434,17 @@ def test_dispatch_slug_package_resets_cnb_metadata(bk_app, bk_module, bk_user, a
     assert refreshed.get_image_tar("main") == "main.tgz"
 
 
-@pytest.mark.usefixtures("smart_app_extra")
+@pytest.mark.usefixtures("smart_app_extra", "stale_cnb_metadata")
 def test_dispatch_cnb_package_overrides_slug_metadata(bk_app, bk_module, bk_user, assets_rootpath):
     """上传过 slug 包后, 再上传 CNB 包必须完整写入 CNB 包的元数据"""
+    # 在上一次上传留下的残留基础上, 再补一个本包未声明的模块, 验证它会被清掉
+    extra = SMartAppExtraInfo.objects.get(app=bk_app)
+    extra.set_use_cnb_flag(False)
+    extra.set_proc_entrypoints("main", {"web": ["stale-web"]})
+    extra.set_image_tar("main", "stale.tar")
+    extra.set_proc_entrypoints("other", {"web": ["other-web"]})
+    extra.set_image_tar("other", "other.tar")
+
     bk_module.name = "main"
     bk_module.save()
 
@@ -442,6 +458,54 @@ def test_dispatch_cnb_package_overrides_slug_metadata(bk_app, bk_module, bk_user
 
     refreshed = SMartAppExtraInfo.objects.get(app=bk_app)
     assert refreshed.use_cnb is True
-    assert refreshed.get_base_image_id() == "default"
+    # 本包声明的模块: 以本包为准 (而非残留的 stale-*)
     assert refreshed.get_proc_entrypoints("main") == {"web": ["main-web"]}
     assert refreshed.get_image_tar("main") == "main.tar"
+    # 本包未声明的模块: 残留必须被清掉, 否则会误用其它包的元数据
+    assert refreshed.get_proc_entrypoints("other") is None
+    assert refreshed.get_image_tar("other") == "other.tgz"
+
+
+@pytest.mark.usefixtures("smart_app_extra", "stale_cnb_metadata")
+def test_dispatch_cnb_package_without_artifact_json_resets_metadata(bk_app, bk_module, bk_user, tmp_path):
+    """包内没有 artifact.json 时, 元数据必须回到默认值 (仅保留 use_cnb=True)"""
+    bk_module.name = "main"
+    bk_module.save()
+
+    # 构造无 artifact.json 的 cnb-image-layers 包
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / ".Version").write_text(SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS.value)
+    tarball_path = tmp_path / "tar.gz"
+    compress_directory(pkg_dir, tarball_path)
+    stat = SourcePackageStatReader(tarball_path).read()
+
+    with mock.patch("paasng.platform.smart_app.services.dispatch.dispatch_cnb_image_to_registry"):
+        dispatch_package_to_modules(bk_app, tarball_path, stat, bk_user, {"main"})
+
+    refreshed = SMartAppExtraInfo.objects.get(app=bk_app)
+    assert refreshed.use_cnb is True
+    assert refreshed.get_base_image_id() == settings.SMART_CNB_DEFAULT_IMAGE_ID
+    assert refreshed.get_proc_entrypoints("main") is None
+    assert refreshed.get_image_tar("main") == "main.tgz"
+
+
+@pytest.mark.usefixtures("smart_app_extra", "stale_cnb_metadata")
+def test_dispatch_legacy_package_resets_cnb_metadata(bk_app, bk_module, bk_user, tmp_path):
+    """上传无 .Version 标记的历史源码包时, 同样必须重置制品元数据"""
+    bk_module.name = "main"
+    bk_module.save()
+
+    # 历史源码包: 只有 app_desc.yaml, 没有 .Version 标记
+    tarball_path = tmp_path / "legacy.tar.gz"
+    gen_tar(tarball_path, {"app_desc.yaml": yaml.safe_dump(V2_APP_DESC_EXAMPLE)})
+    stat = SourcePackageStatReader(tarball_path).read()
+
+    with mock.patch("paasng.platform.smart_app.services.dispatch.patch_and_store_package"):
+        dispatch_package_to_modules(bk_app, tarball_path, stat, bk_user, {"main"})
+
+    refreshed = SMartAppExtraInfo.objects.get(app=bk_app)
+    assert refreshed.use_cnb is False
+    assert refreshed.get_base_image_id() == settings.SMART_CNB_DEFAULT_IMAGE_ID
+    assert refreshed.get_proc_entrypoints("main") is None
+    assert refreshed.get_image_tar("main") == "main.tgz"

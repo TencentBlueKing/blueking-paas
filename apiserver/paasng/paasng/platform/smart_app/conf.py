@@ -58,11 +58,16 @@ class CNBBaseImageConf(BaseModel):
         description="云原生基础镜像配置, key 为基础镜像 ID",
     )
 
-    def get_name(self, image_id: str = settings.SMART_CNB_DEFAULT_IMAGE_ID) -> str:
+    def is_supported(self, image_id: str) -> bool:
+        """基础镜像 ID 是否已配置完整的镜像名称和标签"""
+        conf = self.image_conf.get(image_id) or {}
+        return bool(conf.get("name") and conf.get("tag"))
+
+    def get_name(self, image_id: str) -> str:
         """根据基础镜像 ID, 获取云原生基础镜像名称"""
         return self._get_field(image_id, "name")
 
-    def get_tag(self, image_id: str = settings.SMART_CNB_DEFAULT_IMAGE_ID) -> str:
+    def get_tag(self, image_id: str) -> str:
         """根据基础镜像 ID, 获取云原生基础镜像标签"""
         return self._get_field(image_id, "tag")
 

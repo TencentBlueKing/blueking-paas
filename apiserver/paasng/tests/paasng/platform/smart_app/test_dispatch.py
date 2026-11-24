@@ -19,6 +19,7 @@ import hashlib
 import json
 import re
 import shutil
+import tarfile
 from itertools import chain
 from unittest import mock
 
@@ -26,6 +27,7 @@ import pytest
 import requests
 from requests_mock import Adapter
 
+from paasng.platform.smart_app.exceptions import UnsupportedSMartPackageError
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.dispatch import (
     bksmart_settings,
@@ -33,6 +35,7 @@ from paasng.platform.smart_app.services.dispatch import (
     dispatch_package_to_modules,
     dispatch_slug_image_to_registry,
     read_cnb_base_image_id,
+    validate_smart_package,
 )
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, uncompress_directory
@@ -405,21 +408,116 @@ def test_dispatch_cnb_package_with_base_image_id(
     assert dispatcher.call_args.kwargs["base_image_id"] == expected_base_image_id
 
 
-@pytest.mark.parametrize(
-    "artifact",
-    [
+@pytest.fixture()
+def _with_default_image_conf_only():
+    conf = {"default": {"name": "bkpaas/docker/run-heroku-bionic", "tag": "v1.0.0-smart"}}
+    with mock.patch.dict(bksmart_settings.cnb_base_image.image_conf, conf, clear=True):
+        yield
+
+
+_UNSUPPORTED_ARTIFACTS = [
+    pytest.param(
         {"version": "1.0", "runtime": {"base_image_id": "heroku-24", "architecture": "amd64"}},
-        {"version": "1.0", "runtime": {"base_image_id": "ts4", "architecture": "amd64"}},
+        id="unconfigured-heroku-24",
+    ),
+    pytest.param({"version": "1.0", "runtime": {"base_image_id": "ts4", "architecture": "amd64"}}, id="unknown-id"),
+    pytest.param(
         {
             "version": "1.0",
             "runtime": {"base_image_id": "default", "architecture": "amd64"},
             "app_artifacts": {"main": {"image_tar": "main.tar", "proc_entrypoints": {}}},
         },
-    ],
-)
+        id="packaging-v2",
+    ),
+    pytest.param("not-a-json", id="invalid-json"),
+    pytest.param(["default"], id="not-an-object"),
+]
+
+
+def _dump_artifact(artifact) -> str:
+    return artifact if isinstance(artifact, str) else json.dumps(artifact)
+
+
+@pytest.mark.usefixtures("_with_default_image_conf_only")
+@pytest.mark.parametrize("artifact", _UNSUPPORTED_ARTIFACTS)
 def test_read_cnb_base_image_id_unsupported(artifact):
-    """未配置的基础镜像(此处未配置 heroku-24)和新打包方案, 都应直接报错, 而不是合并到默认基础镜像上"""
+    """未配置的基础镜像和新打包方案, 都应直接报错, 而不是合并到默认基础镜像上"""
     with generate_temp_dir() as workplace:
-        (workplace / "artifact.json").write_text(json.dumps(artifact))
-        with pytest.raises(ValueError, match="not supported|Unsupported"):
+        (workplace / "artifact.json").write_text(_dump_artifact(artifact))
+        with pytest.raises(UnsupportedSMartPackageError):
             read_cnb_base_image_id(workplace)
+
+
+def test_read_cnb_base_image_id_incomplete_conf():
+    """覆盖配置只提供了 tag 而缺失 name 时, 视为未配置"""
+    with (
+        mock.patch.dict(bksmart_settings.cnb_base_image.image_conf, {"heroku-24": {"tag": "v2.5.0-smart"}}),
+        generate_temp_dir() as workplace,
+    ):
+        (workplace / "artifact.json").write_text(json.dumps({"runtime": {"base_image_id": "heroku-24"}}))
+        with pytest.raises(UnsupportedSMartPackageError):
+            read_cnb_base_image_id(workplace)
+
+
+def _make_tarball(tempdir, files: dict, prefix: str = "./"):
+    """生成 tarball, prefix 用于模拟成员名是否带 "./" 前缀"""
+    tarball_path = tempdir / "package.tar.gz"
+    with tarfile.open(tarball_path, mode="w:gz") as tar:
+        for name, content in files.items():
+            path = tempdir / name.replace("/", "_")
+            path.write_text(content)
+            tar.add(path, arcname=f"{prefix}{name}")
+    return tarball_path
+
+
+_HEROKU_24_ARTIFACT = json.dumps({"version": "1.0", "runtime": {"base_image_id": "heroku-24"}})
+
+
+class TestValidateSMartPackage:
+    @pytest.mark.usefixtures("_with_default_image_conf_only")
+    @pytest.mark.parametrize("prefix", ["./", ""])
+    @pytest.mark.parametrize("artifact", _UNSUPPORTED_ARTIFACTS)
+    def test_unsupported(self, artifact, prefix):
+        with generate_temp_dir() as tempdir:
+            tarball_path = _make_tarball(
+                tempdir,
+                {".Version": "cnb-image-layers\n", "artifact.json": _dump_artifact(artifact), "app_desc.yaml": ""},
+                prefix=prefix,
+            )
+            with pytest.raises(UnsupportedSMartPackageError):
+                validate_smart_package(tarball_path)
+
+    @pytest.mark.usefixtures("_with_default_image_conf_only")
+    @pytest.mark.parametrize(
+        "files",
+        [
+            pytest.param({"app_desc.yaml": ""}, id="source-package"),
+            pytest.param({".Version": "cnb-image-layers", "app_desc.yaml": ""}, id="cnb-without-artifact"),
+            pytest.param(
+                {".Version": "slug-layers", "artifact.json": _HEROKU_24_ARTIFACT}, id="slug-ignores-artifact"
+            ),
+            pytest.param(
+                {"app_desc.yaml": "", "artifact.json": _HEROKU_24_ARTIFACT}, id="no-version-flag-ignores-artifact"
+            ),
+            pytest.param(
+                {".Version": "cnb-image-layers", "artifact.json": json.dumps({"runtime": {"architecture": "amd64"}})},
+                id="cnb-without-base-image-id",
+            ),
+        ],
+    )
+    def test_supported(self, files):
+        with generate_temp_dir() as tempdir:
+            validate_smart_package(_make_tarball(tempdir, files))
+
+    @pytest.mark.usefixtures("_with_heroku_24_image_conf")
+    def test_heroku_24_configured(self):
+        with generate_temp_dir() as tempdir:
+            files = {".Version": "cnb-image-layers", "artifact.json": _HEROKU_24_ARTIFACT}
+            validate_smart_package(_make_tarball(tempdir, files))
+
+    def test_cnb_image_assets(self, assets_rootpath):
+        """仓库中的 cnb-image 样例包(无 artifact.json)应能通过校验"""
+        with generate_temp_dir() as tempdir:
+            tarball_path = tempdir / "tar.gz"
+            compress_directory(assets_rootpath / "cnb-image", tarball_path)
+            validate_smart_package(tarball_path)

@@ -18,3 +18,11 @@
 
 class PreparedPackageNotFound(Exception):
     """raised when prepared package was not found"""
+
+
+class UnsupportedSMartPackageError(Exception):
+    """raised when the S-Mart package can not be deployed by current platform, e.g. the base image is not configured"""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message

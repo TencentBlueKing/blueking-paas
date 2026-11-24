@@ -31,9 +31,10 @@ from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.smart_app.exceptions import UnsupportedSMartPackageError
 from paasng.platform.smart_app.services.app_desc import get_app_description
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
-from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
+from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules, validate_smart_package
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger("commands")
@@ -44,7 +45,7 @@ def handle_error(func):
     def wrapper(self, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
-        except (ControllerError, DescriptionValidationError, APIError) as e:
+        except (ControllerError, DescriptionValidationError, UnsupportedSMartPackageError, APIError) as e:
             self.stderr.write(f"{type(e)}: {e.message}")
         except Exception:
             logger.exception("command error")
@@ -86,6 +87,7 @@ class Command(BaseCommand):
 
         # Step 1. create application, module
         validate_app_desc(get_app_description(stat))
+        validate_smart_package(filepath)
         handler = get_desc_handler(stat.meta_info)
         with atomic():
             # 由于创建应用需要操作 v2 的数据库, 因此将事务的粒度控制在 handle_app 的维度, 避免其他地方失败导致创建应用的操作回滚, 但是 v2 中 app code 已被占用的问题.

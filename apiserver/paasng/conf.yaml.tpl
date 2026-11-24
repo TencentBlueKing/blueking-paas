@@ -677,6 +677,7 @@ BK_CI_CLIENT_USERNAME = "blueking"
 
 ## S-Mart CNB 基础镜像, key 为 S-Mart 包 artifact.json 中的 runtime.base_image_id
 ## 默认根据 HEROKU_RUNNER_IMAGE(default) 和 HEROKU_NOBLE_RUNNER_IMAGE(heroku-24) 生成, 此处配置会覆盖同名条目
+## 覆盖的条目需同时提供 name 和 tag, 且需自行将对应镜像推送到 bkrepo(init 仅推送 HEROKU_NOBLE_RUNNER_IMAGE)
 # HEROKU_NOBLE_RUNNER_IMAGE: hub.bktencent.com/blueking/run-heroku-noble:v2.5.0
 # SMART_CNB_IMAGE_CONF:
 #   heroku-24:

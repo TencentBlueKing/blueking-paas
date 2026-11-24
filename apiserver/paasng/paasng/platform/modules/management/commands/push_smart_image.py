@@ -72,6 +72,8 @@ def patch_ssl_verification(skip_verify: bool):
 
 def get_dest_image(image_type: str, base_image_id: str) -> Dict[str, str]:
     if image_type == AppImageType.LEGACY.value:
+        if base_image_id != settings.SMART_CNB_DEFAULT_IMAGE_ID:
+            logger.warning("--base-image-id is ignored when image type is legacy")
         return {
             "repo": bksmart_settings.base_image.name,
             "reference": bksmart_settings.base_image.tag,

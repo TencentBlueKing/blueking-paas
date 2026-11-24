@@ -20,7 +20,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Set, Tuple, cast
+from typing import Callable, List, Set, cast
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.entities import SMartAppArtifactMetadata
@@ -57,32 +57,28 @@ def dispatch_package_to_modules(
         uncompress_directory(source_path=tarball_filepath, target_path=workplace)
 
         handler: Callable[[Module, Path, SPStat, User, SMartAppExtraInfo | None], SourcePackage]
-        tasks: List[Tuple[Module, Path, SPStat, User, SMartAppExtraInfo | None]]
         builder_flag = workplace / ".Version"
-        if builder_flag.exists():
-            version = builder_flag.read_text().strip()
-            # prepare optional smart_app_extra for CNB-built packages
-            smart_app_extra: SMartAppExtraInfo | None = None
-            if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
-                smart_app_extra = parse_and_save_cnb_metadata(application, workplace)
-                handler = dispatch_cnb_image_to_registry
-            else:
-                # 非 CNB 制品: 重置制品元数据
-                reset_artifact_metadata(application)
-                handler = dispatch_slug_image_to_registry
+        # NOTE: .Version 存在即表示 "镜像层" 方案 (slug 包可能是空文件), 不存在才是历史源码包
+        is_image_layers = builder_flag.exists()
+        version = builder_flag.read_text().strip() if is_image_layers else ""
 
-            tasks = [
-                (module, workplace, stat, operator, smart_app_extra)
-                for module in application.modules.filter(name__in=modules)
-            ]
+        smart_app_extra: SMartAppExtraInfo | None = None
+        if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
+            smart_app_extra = parse_and_save_cnb_metadata(application, workplace)
+            source_path, handler = workplace, dispatch_cnb_image_to_registry
         else:
-            # 历史源码包 (无 .Version 标记): 同样需要重置制品元数据
+            # 非 CNB 制品 (slug 镜像层或无 .Version 标记的历史源码包): 重置制品元数据,
+            # 避免上一次上传残留的 use_cnb / base_image_id / entrypoints 影响后续部署
             reset_artifact_metadata(application)
-            tasks = [
-                (module, Path(tarball_filepath), stat, operator, None)
-                for module in application.modules.filter(name__in=modules)
-            ]
-            handler = patch_and_store_package
+            if is_image_layers:
+                source_path, handler = workplace, dispatch_slug_image_to_registry
+            else:
+                source_path, handler = Path(tarball_filepath), patch_and_store_package
+
+        tasks = [
+            (module, source_path, stat, operator, smart_app_extra)
+            for module in application.modules.filter(name__in=modules)
+        ]
 
         # WARNING: with atomic() 内，子线程无法读取到父事务中的未提交数据
         if _PARALLEL_PATCHING:

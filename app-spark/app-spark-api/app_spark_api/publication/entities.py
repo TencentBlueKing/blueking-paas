@@ -61,19 +61,19 @@ class OnlineVersionResponse(Schema):
 class PublicationTaskResponse(Schema):
     """进行中的任务。"""
 
-    kind: str = Field(description="任务类型，目前只有 deployment（发布、更新版本）")
-    version_id: str = Field(description="发布的版本号")
-    is_update: bool = Field(description="发起时是否已有线上版本，即是否为更新版本")
-    stage: str = Field(description="当前步骤：binding、packaging、uploading、deploying")
+    kind: str = Field(description="任务类型：deployment（发布、更新版本）或 unpublish（下架）")
+    version_id: str = Field(description="发布的版本号；下架时为发起时的线上版本")
+    is_update: bool = Field(description="发起时是否已有线上版本，即是否为更新版本；下架时恒为 true")
+    stage: str = Field(description="当前步骤：发布为 binding、packaging、uploading、deploying，下架为 unpublishing")
     started_at: datetime = Field(description="发起时间")
 
 
 class PublicationFailureResponse(Schema):
     """最近结束的任务失败了时的信息。"""
 
-    kind: str = Field(description="失败的任务类型")
-    version_id: str = Field(description="失败时发布的版本号")
-    is_update: bool = Field(description="失败的是否为更新版本")
+    kind: str = Field(description="失败的任务类型：deployment 或 unpublish")
+    version_id: str = Field(description="失败时发布的版本号；下架失败时为当时的线上版本")
+    is_update: bool = Field(description="失败的是否为更新版本；下架失败时恒为 true")
     error: str = Field(description="失败原因，可直接展示；更多信息到 detail_url 指向的开发者中心页面查看")
     failed_at: datetime | None = Field(description="失败时间")
     detail_url: str | None = Field(description="开发者中心里的详情页，未创建应用或未配置站点地址时为空")
@@ -82,8 +82,8 @@ class PublicationFailureResponse(Schema):
 class UnseenResultResponse(Schema):
     """发布面板打开时要主动展开的最近一次任务结果，用户点开看过后不再出现。"""
 
-    kind: str = Field(description="任务类型")
-    status: str = Field(description="任务结果：successful 或 failed")
+    kind: str = Field(description="任务类型：deployment 或 unpublish")
+    status: str = Field(description="任务结果：successful 或 failed；中断的发布不会出现在这里")
 
 
 class BkPaaSLinksResponse(Schema):
@@ -98,9 +98,9 @@ class BkPaaSLinksResponse(Schema):
 class PublicationResponse(Schema):
     """项目在开发者中心的发布状态。"""
 
-    online: OnlineVersionResponse | None = Field(description="线上版本，未发布时为空")
+    online: OnlineVersionResponse | None = Field(description="线上版本，未发布或已下架时为空")
     task: PublicationTaskResponse | None = Field(description="进行中的任务，没有时为空")
-    last_failure: PublicationFailureResponse | None = Field(description="最近一次失败")
+    last_failure: PublicationFailureResponse | None = Field(description="最近一次失败；中断的发布不算失败")
     unseen_result: UnseenResultResponse | None = Field(
         description="不为空时前端主动展开最近一次任务结果；用户点开看过（DELETE unseen-result/）或有任务进行中时为空"
     )

@@ -31,8 +31,9 @@ from blue_krill.async_utils.poll_task import (
 from app_spark_api.infras.bk_paas import BkPaaSClient, BkPaaSConfigurationError, DeploymentResult
 from app_spark_api.publication import services, steps, tasks
 
-# 在 queued fixture 换掉它之前取到真的实现，用来验证它怎么启动 poll_task。
+# 在 queued fixture 换掉它们之前取到真的实现，用来验证它们怎么启动 poll_task。
 from app_spark_api.publication.tasks import schedule_deployment_poll as real_schedule_deployment_poll
+from app_spark_api.publication.tasks import schedule_unpublish_poll as real_schedule_unpublish_poll
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -142,3 +143,12 @@ async def test_a_missing_configuration_fails_the_task_instead_of_retrying(projec
 
     assert (await tasks.apoll_once(task.pk)).finished
     assert (await services.get_publication_state(project)).last_failure.error == steps.MSG_NOT_CONFIGURED
+
+
+def test_unpublish_polling_starts_the_offline_poller(monkeypatch):
+    sent = []
+    monkeypatch.setattr(check_status_until_finished, "delay", lambda *args: sent.append(args))
+
+    real_schedule_unpublish_poll(1)
+
+    assert sent == [("OfflinePoller", "OfflinePollHandler", {"task_id": 1})]

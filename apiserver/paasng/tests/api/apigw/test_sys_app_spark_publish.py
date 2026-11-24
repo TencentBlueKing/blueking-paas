@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""AppSpark 复用应用态部署、中断、日志接口的测试。
+"""AppSpark 复用应用态部署、中断、下架、日志接口的测试。
 
 归属和预发布限制在两条入口各测一次：路径里带应用和环境的部署，以及路径里只有部署 ID 的日志。
 """
@@ -31,6 +31,7 @@ from rest_framework import status
 from paasng.misc.audit.constants import OperationEnum
 from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.applications.models import Application
+from paasng.platform.engine.exceptions import OfflineOperationExistError
 from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
@@ -47,6 +48,10 @@ def _deploy_url(app_code: str, module_name: str, env: str = "prod") -> str:
 
 def _interrupt_url(app_code: str, module_name: str, deployment_id: str) -> str:
     return f"/sys/api/bkapps/applications/{app_code}/modules/{module_name}/deployments/{deployment_id}/interruptions/"
+
+
+def _offline_url(app_code: str, module_name: str, env: str = "prod") -> str:
+    return f"/sys/api/bkapps/applications/{app_code}/modules/{module_name}/envs/{env}/offlines/"
 
 
 def _history_events_url(channel_id: str) -> str:
@@ -197,6 +202,30 @@ class TestAppSparkInterrupt:
         assert resp.status_code == status.HTTP_200_OK, resp.json()
         deployment.refresh_from_db()
         assert deployment.build_int_requested_at is not None
+
+
+class TestAppSparkOffline:
+    """应用态下架：未部署过、已有下架在进行这两种情况要有独立的错误码，调用方据此分别处理。"""
+
+    def test_never_deployed(self, sys_app_spark_api_client, app_spark_app, bk_module: Module):
+        resp = sys_app_spark_api_client.post(
+            _offline_url(app_spark_app.code, bk_module.name), data={"operator": create_user().username}
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.json()["code"] == "OFFLINE_ENV_NOT_DEPLOYED"
+
+    def test_already_in_progress(self, sys_app_spark_api_client, app_spark_app, bk_module: Module):
+        with mock.patch(
+            "paasng.platform.engine.views.sys_api.start_archive_step",
+            side_effect=OfflineOperationExistError("存在正在进行的下架任务"),
+        ):
+            resp = sys_app_spark_api_client.post(
+                _offline_url(app_spark_app.code, bk_module.name), data={"operator": create_user().username}
+            )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.json()["code"] == "OFFLINE_ALREADY_IN_PROGRESS"
 
 
 class TestAppSparkStreamsHistoryEvents:

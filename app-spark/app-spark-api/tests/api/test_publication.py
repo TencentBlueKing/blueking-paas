@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""The owner reads the publication state, starts a deployment and clears its result; nobody else can."""
+"""The owner reads the publication state, starts, interrupts or unpublishes and clears the result; nobody else can."""
 
 from http import HTTPStatus
 
@@ -68,6 +68,7 @@ def bkpaas(monkeypatch) -> FakeBkPaaSClient:
     fake = FakeBkPaaSClient()
     monkeypatch.setattr(BkPaaSClient, "from_settings", lambda: fake)
     monkeypatch.setattr("app_spark_api.publication.tasks.schedule_deployment_prepare", lambda *args: None)
+    monkeypatch.setattr("app_spark_api.publication.tasks.schedule_unpublish_poll", lambda *args: None)
     return fake
 
 
@@ -318,7 +319,74 @@ async def test_a_published_project_shows_its_url_failure_and_bkpaas_links(aapi_c
     )
 
 
-@pytest.mark.parametrize(("method", "suffix"), [("get", ""), ("post", "deployments/"), ("delete", "unseen-result/")])
+async def make_published(project) -> None:
+    """Bind the Project to an application with v1 online."""
+    await BkPaaSAppBinding.objects.acreate(project=project, app_code="sparkdemo-a1b2", module_name="default")
+    await make_finished_task(project, "successful", version_id="v1", result_seen=True)
+
+
+async def make_deploying_task(project) -> PublicationTask:
+    """A deployment of v2 the developer center is running."""
+    now = timezone.now()
+    return await PublicationTask.objects.acreate(
+        project=project,
+        kind="deployment",
+        version_id="v2",
+        is_update=True,
+        operator="alice",
+        stage="deploying",
+        deploy_requested_at=now,
+        deployment_id="d-1",
+        deploy_submitted_at=now,
+    )
+
+
+async def test_interrupting_a_running_deployment_asks_the_developer_center_once(
+    aapi_client, owned_project, bkpaas, bk_user
+):
+    await make_published(owned_project)
+    await make_deploying_task(owned_project)
+
+    first = await aapi_client.post(f"{URL}interrupt/")
+    second = await aapi_client.post(f"{URL}interrupt/")
+
+    # 中断只是受理，task 还在，等部署结果。
+    assert first.status_code == HTTPStatus.ACCEPTED
+    assert first.json()["task"]["stage"] == "deploying"
+    assert (second.status_code, second.json()) == (
+        HTTPStatus.CONFLICT,
+        {"code": "PUBLICATION_INTERRUPT_CONFLICT", "detail": steps.MSG_INTERRUPT_REQUESTED},
+    )
+    (request,) = bkpaas.called("interrupt_deployment")
+    assert (request["code"], request["deployment_id"], request["operator"]) == (
+        "sparkdemo-a1b2",
+        "d-1",
+        bk_user.username,
+    )
+
+
+async def test_unpublishing_starts_an_unpublish_task(aapi_client, owned_project, bkpaas, bk_user):
+    await make_published(owned_project)
+
+    response = await aapi_client.post(f"{URL}unpublish/")
+
+    assert response.status_code == HTTPStatus.ACCEPTED
+    task = response.json()["task"]
+    assert (task["kind"], task["stage"], task["version_id"]) == ("unpublish", "unpublishing", "v1")
+    (offline,) = bkpaas.called("offline")
+    assert (offline["code"], offline["module"], offline["operator"]) == ("sparkdemo-a1b2", "default", bk_user.username)
+
+
+@pytest.mark.parametrize(
+    ("method", "suffix"),
+    [
+        ("get", ""),
+        ("post", "deployments/"),
+        ("delete", "unseen-result/"),
+        ("post", "interrupt/"),
+        ("post", "unpublish/"),
+    ],
+)
 async def test_someone_elses_project_is_not_found(aapi_client, method, suffix):
     stranger = create_user()
     await Project.objects.acreate(

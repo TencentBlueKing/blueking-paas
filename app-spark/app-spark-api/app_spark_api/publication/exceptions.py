@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""发起发布时的领域错误，由 api.py 翻译成对外错误码。"""
+"""发起发布、中断、下架时的领域错误，由 api.py 翻译成对外错误码。"""
 
 from typing import TYPE_CHECKING
 
@@ -32,6 +32,22 @@ class PublicationProjectGoneError(PublicationError):
 
 class PublicationTaskInProgressError(PublicationError):
     """The Project already has a publication task running."""
+
+
+class PublicationNotInterruptibleError(PublicationError):
+    """The Project has no running deployment to interrupt; an unpublish cannot be interrupted."""
+
+
+class PublicationInterruptConflictError(PublicationError):
+    """The interruption cannot happen right now, but may later; the message says why."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+class PublicationNotOnlineError(PublicationError):
+    """The Project has no version serving in the developer center, so there is nothing to unpublish."""
 
 
 class PublicationVersionNotFoundError(PublicationError):

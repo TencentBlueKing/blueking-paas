@@ -16,7 +16,7 @@
 
 """发布任务的取值与时间参数。
 
-模型字段不用 choices，可选值以这里为准（取值以后可能增加，比如下架任务）。
+模型字段不用 choices，可选值以这里为准（取值以后可能增加）。
 """
 
 from datetime import timedelta
@@ -27,15 +27,17 @@ class PublicationTaskKind(StrEnum):
     """What a task does to the application in the developer center."""
 
     DEPLOYMENT = "deployment"
+    UNPUBLISH = "unpublish"
 
 
 class PublicationStage(StrEnum):
-    """The step a deployment task is on, in the order they run."""
+    """The step a task is on: a deployment runs BINDING to DEPLOYING in order, an unpublish only UNPUBLISHING."""
 
     BINDING = "binding"
     PACKAGING = "packaging"
     UPLOADING = "uploading"
     DEPLOYING = "deploying"
+    UNPUBLISHING = "unpublishing"
 
 
 class PublicationTaskStatus(StrEnum):
@@ -44,6 +46,8 @@ class PublicationTaskStatus(StrEnum):
     PENDING = "pending"
     SUCCESSFUL = "successful"
     FAILED = "failed"
+    # 项目所有者在 AppSpark 里中断、且中断生效了。不算失败：线上版本、最近一次失败都不受它影响。
+    INTERRUPTED = "interrupted"
 
 
 # 开发者中心应用名称的长度上限。名称里它不认的字符（如空格）由开发者中心自己去掉。
@@ -61,5 +65,5 @@ DEPLOY_REQUEST_TIMEOUT = timedelta(minutes=2)
 POLL_MAX_RETRIES = 100
 # 部署成功但开发者中心还没给出访问地址时，再多查几轮。地址一般随成功一起返回，偶尔晚一点。
 MAX_POLLS_FOR_ACCESS_URL = 3
-# 从提交部署（即开始轮询）算起，超过这么久还没结束就判失败。
+# 从提交部署或发起下架（即开始轮询）算起，超过这么久还没结束就判失败。
 DEPLOY_TIMEOUT = timedelta(minutes=15)

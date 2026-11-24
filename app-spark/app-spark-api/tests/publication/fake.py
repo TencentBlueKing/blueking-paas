@@ -19,7 +19,14 @@
 from collections import defaultdict
 from typing import Any, Self
 
-from app_spark_api.infras.bk_paas import AppBasicInfoValidation, CreatedApp, Deployment, DeploymentResult
+from app_spark_api.infras.bk_paas import (
+    AppBasicInfoValidation,
+    CreatedApp,
+    Deployment,
+    DeploymentResult,
+    OfflineOperation,
+    OfflineResult,
+)
 
 
 class FakeBkPaaSClient:
@@ -58,6 +65,15 @@ class FakeBkPaaSClient:
     async def get_deployment_result(self, **kwargs: Any) -> DeploymentResult:
         url = f"https://apps.example.com/{kwargs['code']}/"
         return self._answer("get_deployment_result", kwargs, DeploymentResult("successful", access_url=url))
+
+    async def interrupt_deployment(self, **kwargs: Any) -> None:
+        return self._answer("interrupt_deployment", kwargs, None)
+
+    async def offline(self, **kwargs: Any) -> OfflineOperation:
+        return self._answer("offline", kwargs, OfflineOperation("o-1"))
+
+    async def get_offline_result(self, **kwargs: Any) -> OfflineResult:
+        return self._answer("get_offline_result", kwargs, OfflineResult("successful"))
 
     def _answer(self, method: str, kwargs: dict[str, Any], default: Any) -> Any:
         self.calls.append((method, kwargs))

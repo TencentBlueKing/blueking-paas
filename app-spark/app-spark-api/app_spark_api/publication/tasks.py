@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""发布在 Celery 上的两段：准备部署（打包、上传、提交部署），以及轮询部署结果。
+"""发布在 Celery 上的几段：准备部署（打包、上传、提交部署）、轮询部署结果，以及轮询下架结果。
 
 准备任务只做一次：重复投递、worker 崩溃后的重投都被 steps.prepare_deployment 的认领挡住，崩溃的那次由查询
 发布状态时的兜底判失败。轮询交给 blue_krill 的 poll_task：每轮是一条 Celery 消息，间隔、总超时和出错重试
@@ -105,6 +105,46 @@ class DeploymentPollHandler(CallbackHandler):
         async_to_sync(steps.afail_task_by_id)(poller.params["task_id"], error)
 
 
+def schedule_unpublish_poll(task_id: int) -> None:
+    """开始轮询下架任务的下架结果。
+
+    :raises Exception: 投递失败（如 RabbitMQ 不可用），由调用方决定怎么收场。
+    """
+    OfflinePoller.start({"task_id": task_id}, OfflinePollHandler)
+
+
+class OfflinePoller(TaskPoller):
+    """Look at a submitted offline operation every few seconds until it ends."""
+
+    # 间隔和总超时与部署相同：下架通常几十秒结束，15 分钟只是轮询停掉时的兜底。
+    overall_timeout_seconds = int(DEPLOY_TIMEOUT.total_seconds())
+    default_retry_delay_seconds = DEPLOY_POLL_INTERVAL_SECONDS
+    max_retries_on_error = POLL_MAX_RETRIES
+
+    def query(self) -> PollingResult:
+        """Look at the offline operation once."""
+        if async_to_sync(apoll_unpublish_once)(self.params["task_id"]):
+            return PollingResult.done()
+
+        return PollingResult.doing()
+
+
+class OfflinePollHandler(CallbackHandler):
+    """Record why polling gave up; an offline operation that ended was already recorded by the poll itself."""
+
+    def handle(self, result: CallbackResult, poller: TaskPoller) -> None:
+        """Fail the task when polling timed out or kept erroring."""
+        if not result.is_exception:
+            return
+
+        if result.status == CallbackStatus.TIMEOUT:
+            error = steps.make_unpublish_timeout_message()
+        else:
+            error = steps.MSG_UNPUBLISH_POLL_FAILED
+
+        async_to_sync(steps.afail_task_by_id)(poller.params["task_id"], error)
+
+
 async def aprepare_once(task_id: int) -> bool:
     """准备部署，返回是否已经提交。"""
     client = await abuild_client_or_fail_task(task_id)
@@ -123,6 +163,16 @@ async def apoll_once(task_id: int, access_url_polls: int = 0) -> steps.PollOutco
 
     async with client:
         return await steps.poll_deployment(task_id, client, access_url_polls=access_url_polls)
+
+
+async def apoll_unpublish_once(task_id: int) -> bool:
+    """查看一次下架，返回任务是否已经结束。"""
+    client = await abuild_client_or_fail_task(task_id)
+    if client is None:
+        return True
+
+    async with client:
+        return await steps.poll_offline(task_id, client)
 
 
 async def abuild_client_or_fail_task(task_id: int) -> BkPaaSClient | None:

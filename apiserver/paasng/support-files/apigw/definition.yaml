@@ -12,9 +12,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.15
-  title: "Add APIs to list addon service plans and to manage module build config."
-  comment: "Add list_service_possible_plans, get_module_build_config, update_module_build_config and list_module_bp_runtimes, and expose them in the deploy-with-module MCP server."
+  version: 1.4.16
+  title: "Grant AppSpark the APIs to interrupt deployments and take apps offline."
+  comment: "Grant bk-app-spark sys_interrupt_deployment, sys_module_offline and sys_get_offline_result; document the error codes of sys_module_offline."
 
 stages:
   - name: "prod"
@@ -168,6 +168,9 @@ grant_permissions:
       - "upload_ai_agent_source_package_via_link"
       - "sys_deploy_with_module"
       - "sys_get_deployment_result"
+      - "sys_interrupt_deployment"
+      - "sys_module_offline"
+      - "sys_get_offline_result"
   - bk_app_code: bk_dbm
     grant_dimension: "resource"
     resource_names:

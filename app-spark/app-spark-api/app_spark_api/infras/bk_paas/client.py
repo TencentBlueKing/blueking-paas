@@ -32,6 +32,8 @@ from app_spark_api.infras.bk_paas.entities import (
     CreatedApp,
     Deployment,
     DeploymentResult,
+    OfflineOperation,
+    OfflineResult,
     structure_payload,
 )
 from app_spark_api.infras.bk_paas.exceptions import (
@@ -189,6 +191,34 @@ class BkPaaSClient:
             f"{self._build_module_path(code, module)}/deployments/{deployment_id}/result/"
         )
         return structure_payload(read_gateway_json(response), DeploymentResult)
+
+    async def interrupt_deployment(self, code: str, module: str, deployment_id: str, operator: str) -> None:
+        """Ask the developer center to interrupt a deployment.
+
+        成功只代表受理，中断通常 1-5 秒后才生效，要继续看部署结果，以 interrupted 为准。
+        """
+        response = await self._client.post(
+            f"{self._build_module_path(code, module)}/deployments/{deployment_id}/interruptions/",
+            json={"operator": operator},
+        )
+        read_gateway_json(response)
+
+    async def offline(self, code: str, module: str, operator: str) -> OfflineOperation:
+        """Take the module offline from the production environment.
+
+        环境已经下架时，开发者中心不新建下架操作，直接返回上一次成功的那个。
+        """
+        response = await self._client.post(
+            f"{self._build_module_path(code, module)}/envs/prod/offlines/", json={"operator": operator}
+        )
+        return structure_payload(read_gateway_json(response), OfflineOperation)
+
+    async def get_offline_result(self, code: str, module: str, offline_operation_id: str) -> OfflineResult:
+        """Return where an offline operation has got to."""
+        response = await self._client.get(
+            f"{self._build_module_path(code, module)}/offlines/{offline_operation_id}/result/"
+        )
+        return structure_payload(read_gateway_json(response), OfflineResult)
 
     @staticmethod
     def _build_module_path(code: str, module: str) -> str:

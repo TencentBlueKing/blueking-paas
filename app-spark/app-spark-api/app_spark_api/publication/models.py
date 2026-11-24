@@ -55,17 +55,27 @@ class PublicationTaskQuerySet(models.QuerySet["PublicationTask"]):
         """Tasks that have ended, latest first."""
         return self.exclude(status=PublicationTaskStatus.PENDING).order_by("-finished_at", "-pk")
 
-    def online(self) -> "PublicationTaskQuerySet":
-        """Successful deployments, latest first; the first one is the version serving now."""
-        return self.filter(kind=PublicationTaskKind.DEPLOYMENT, status=PublicationTaskStatus.SUCCESSFUL).order_by(
-            "-finished_at", "-pk"
-        )
+    def exclude_interrupted(self) -> "PublicationTaskQuerySet":
+        """Leave out tasks the owner interrupted, which count neither as a result nor as a failure."""
+        return self.exclude(status=PublicationTaskStatus.INTERRUPTED)
+
+    def succeeded(self) -> "PublicationTaskQuerySet":
+        """Successful tasks of any kind, latest first.
+
+        第一条是发布时，它的版本就是线上版本；是下架时，项目当前没有线上版本。
+        """
+        return self.filter(status=PublicationTaskStatus.SUCCESSFUL).order_by("-finished_at", "-pk")
+
+    def successful_deployments(self) -> "PublicationTaskQuerySet":
+        """Successful deployments, latest first."""
+        return self.succeeded().filter(kind=PublicationTaskKind.DEPLOYMENT)
 
 
 class PublicationTask(TimestampedModel):
-    """One deployment of a Project.
+    """One deployment, or one unpublish, of a Project.
 
-    发布请求里同步创建应用；打包、上传、提交部署由 Celery 准备任务做，之后由 poll_task 轮询结果直到结束，stage 跟着前进。
+    发布：请求里同步创建应用；打包、上传、提交部署由 Celery 准备任务做，之后由 poll_task 轮询结果直到结束，stage 跟着前进。
+    下架：请求里同步向开发者中心发起下架，之后由 poll_task 轮询下架结果直到结束。
     同一项目同时最多一个进行中的任务，发起时锁住项目行来保证。
     可选值见 constants：kind 取 PublicationTaskKind，stage 取 PublicationStage，status 取 PublicationTaskStatus。
     """
@@ -77,6 +87,7 @@ class PublicationTask(TimestampedModel):
         related_name="publication_tasks",
     )
     kind = models.CharField(verbose_name="任务类型", max_length=16)
+    # 下架任务记发起时的线上版本，失败记录据此说明是哪个版本没能下架。
     version_id = models.CharField(verbose_name="发布的版本号", max_length=64)
     is_update = models.BooleanField(verbose_name="发起时是否已有线上版本", default=False)
     operator = models.CharField(verbose_name="发起人用户名", max_length=64)
@@ -90,6 +101,15 @@ class PublicationTask(TimestampedModel):
     deployment_id = models.CharField(verbose_name="开发者中心部署 ID", max_length=64, blank=True, default="")
     # 轮询停掉时，兜底按它判部署超时。
     deploy_submitted_at = models.DateTimeField(verbose_name="提交部署的时间", null=True, blank=True)
+    # 向开发者中心发出中断请求前写入，按「为空才写」更新，只有写成功的那个请求去调中断接口；调用失败时清回空，
+    # 让用户可以再试。
+    interrupt_requested_at = models.DateTimeField(verbose_name="请求中断的时间", null=True, blank=True)
+    # 和上面一起写入，但调用失败也不清：开发者中心拒绝（如构建还在预备）或超时时，中断可能已经记下、稍后照样生效。
+    # 轮询拿到 interrupted 时据它区分是 AppSpark 自己中断的，还是有人在开发者中心里中断的。
+    interrupt_sent = models.BooleanField(verbose_name="是否向开发者中心发过中断请求", default=False)
+    offline_operation_id = models.CharField(
+        verbose_name="开发者中心下架操作 ID", max_length=64, blank=True, default=""
+    )
 
     access_url = models.CharField(verbose_name="部署成功后的访问地址", max_length=512, blank=True, default="")
     error = models.TextField(verbose_name="失败原因", blank=True, default="")

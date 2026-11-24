@@ -80,10 +80,8 @@ def get_dest_image(image_type: str, base_image_id: str) -> Dict[str, str]:
         }
 
     if image_type == AppImageType.CNB.value:
-        return {
-            "repo": bksmart_settings.cnb_base_image.get_name(base_image_id),
-            "reference": bksmart_settings.cnb_base_image.get_tag(base_image_id),
-        }
+        name, tag = bksmart_settings.cnb_base_image.get_name_and_tag(base_image_id)
+        return {"repo": name, "reference": tag}
 
     raise ValueError(f"Unsupported image type: {image_type}")
 

@@ -249,7 +249,7 @@ def test_dispatch_cnb_image_to_registry(
     bk_module.save()
     mgr = SMartImageManager(bk_module)
     cnb_runner_image = mgr.get_cnb_runner_image_info(base_image_id=base_image_id)
-    assert cnb_runner_image.name == bksmart_settings.cnb_base_image.get_name(base_image_id)
+    assert cnb_runner_image.name == bksmart_settings.cnb_base_image.image_conf[base_image_id]["name"]
     module_image = mgr.get_image_info()
 
     base_url = bksmart_settings.registry.get_client().api_base_url

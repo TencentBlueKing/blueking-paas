@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import copy
-from typing import Dict
+from typing import Dict, Tuple
 
 from django.conf import settings
 from moby_distribution import APIEndpoint, DockerRegistryV2Client
@@ -63,19 +63,15 @@ class CNBBaseImageConf(BaseModel):
         conf = self.image_conf.get(image_id) or {}
         return bool(conf.get("name") and conf.get("tag"))
 
-    def get_name(self, image_id: str) -> str:
-        """根据基础镜像 ID, 获取云原生基础镜像名称"""
-        return self._get_field(image_id, "name")
+    def get_name_and_tag(self, image_id: str) -> Tuple[str, str]:
+        """根据基础镜像 ID, 获取云原生基础镜像的名称和标签
 
-    def get_tag(self, image_id: str) -> str:
-        """根据基础镜像 ID, 获取云原生基础镜像标签"""
-        return self._get_field(image_id, "tag")
-
-    def _get_field(self, image_id: str, field: str) -> str:
-        try:
-            return self.image_conf[image_id][field]
-        except KeyError:
-            raise ValueError(f"Unsupported S-Mart base image id: {image_id}, failed to get image {field}")
+        :raises ValueError: 基础镜像 ID 未配置完整的镜像名称和标签
+        """
+        if not self.is_supported(image_id):
+            raise ValueError(f"Unsupported S-Mart base image id: {image_id}")
+        conf = self.image_conf[image_id]
+        return conf["name"], conf["tag"]
 
 
 class Settings(BaseModel):

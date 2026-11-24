@@ -50,11 +50,8 @@ class SMartImageManager:
 
         :param base_image_id: 基础镜像 ID, 来自 S-Mart 包 artifact.json 中的 runtime.base_image_id
         """
-        name = bksmart_settings.cnb_base_image.get_name(base_image_id)
-        tag = bksmart_settings.cnb_base_image.get_tag(base_image_id)
-        if name and tag:
-            return NamedImage(domain=bksmart_settings.registry.host, name=name, tag=tag)
-        raise ValueError("Unknown base image for S-Mart")
+        name, tag = bksmart_settings.cnb_base_image.get_name_and_tag(base_image_id)
+        return NamedImage(domain=bksmart_settings.registry.host, name=name, tag=tag)
 
     def get_image_info(self, tag: str = "latest") -> NamedImage:
         """获取当前 S-Mart 应用的镜像信息"""

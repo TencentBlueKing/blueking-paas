@@ -15,12 +15,15 @@ from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
     ModelResponse,
+    TextContent,
     TextPart,
     UserContent,
     UserPromptPart,
 )
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
+from app_spark_agent import settings
+from app_spark_agent.agent import _build_gateway_model
 from app_spark_agent.attachments import (
     ATTACHMENT_FETCH_FAILED_TEXT,
     ATTACHMENT_URI_PREFIX,
@@ -72,12 +75,11 @@ def make_turn(*content: UserContent) -> ModelRequest:
     return ModelRequest(parts=[UserPromptPart(content=list(content))])
 
 
-def collect_user_content(message: ModelMessage) -> list[UserContent]:
+def collect_user_content(message: ModelMessage) -> str | list[UserContent]:
     assert isinstance(message, ModelRequest)
     part = message.parts[0]
     assert isinstance(part, UserPromptPart)
-    assert not isinstance(part.content, str)
-    return list(part.content)
+    return part.content if isinstance(part.content, str) else list(part.content)
 
 
 def describe(attachment_id: str, filename: str, mime_type: str, size: int) -> str:
@@ -234,14 +236,16 @@ async def test_recent_images_carry_bytes_and_everything_carries_a_description(
 
     resolved = resolver.resolve_messages(messages)
 
-    assert collect_user_content(resolved[0]) == ["first", describe(old_image, "old.png", "image/png", len(PNG_BYTES))]
+    assert collect_user_content(resolved[0]) == f"first\n{describe(old_image, 'old.png', 'image/png', len(PNG_BYTES))}"
     assert collect_user_content(resolved[4]) == [
         "third",
         describe(image_id, "shot.png", "image/png", len(PNG_BYTES)),
         PNG,
         describe(csv_id, "data.csv", "text/csv", len(CSV_BYTES)),
     ]
-    assert collect_user_content(messages[4])[1] == make_image_ref(image_id), "the input is the run's history"
+    original_fourth = collect_user_content(messages[4])
+    assert isinstance(original_fourth, list)
+    assert original_fourth[1] == make_image_ref(image_id), "the input is the run's history"
 
 
 async def test_a_model_that_cannot_read_images_gets_descriptions_only(
@@ -252,11 +256,11 @@ async def test_a_model_that_cannot_read_images_gets_descriptions_only(
 
     resolved = AttachmentResolver(materializer, recent_turns=2, send_images=False).resolve_messages(messages)
 
-    assert collect_user_content(resolved[0]) == [describe(image_id, "shot.png", "image/png", len(PNG_BYTES))]
+    assert collect_user_content(resolved[0]) == describe(image_id, "shot.png", "image/png", len(PNG_BYTES))
 
 
 def test_text_only_history_is_not_copied(materializer: AttachmentMaterializer) -> None:
-    messages: list[ModelMessage] = [make_turn("hello")]
+    messages: list[ModelMessage] = [ModelRequest(parts=[UserPromptPart(content="hello")])]
 
     assert AttachmentResolver(materializer, recent_turns=2, send_images=True).resolve_messages(messages) is messages
 
@@ -268,7 +272,7 @@ def test_a_missing_attachment_reaches_the_model_as_unavailable(
 
     resolved = AttachmentResolver(materializer, recent_turns=2, send_images=True).resolve_messages(messages)
 
-    assert collect_user_content(resolved[0]) == [ATTACHMENT_FETCH_FAILED_TEXT]
+    assert collect_user_content(resolved[0]) == ATTACHMENT_FETCH_FAILED_TEXT
 
 
 @pytest.mark.parametrize(
@@ -280,16 +284,16 @@ def test_a_missing_attachment_reaches_the_model_as_unavailable(
         pytest.param(
             ImageUrl(url="https://example.com/a.png"),
             False,
-            ["[Linked file: https://example.com/a.png]"],
+            "[Linked file: https://example.com/a.png]",
             id="image-text-model",
         ),
         pytest.param(
-            DocumentUrl(url="https://example.com/a.pdf"), True, ["[Linked file: https://example.com/a.pdf]"], id="doc"
+            DocumentUrl(url="https://example.com/a.pdf"), True, "[Linked file: https://example.com/a.pdf]", id="doc"
         ),
     ],
 )
 def test_external_links_reach_the_model_as_links(
-    materializer: AttachmentMaterializer, item: UserContent, send_images: bool, expected: list[UserContent]
+    materializer: AttachmentMaterializer, item: UserContent, send_images: bool, expected: str | list[UserContent]
 ) -> None:
     resolver = AttachmentResolver(materializer, recent_turns=2, send_images=send_images)
 
@@ -315,8 +319,92 @@ async def test_the_model_sees_bytes_while_the_run_keeps_the_reference(
     async with agent.run_stream(["what is this", make_image_ref(image_id)]) as result:
         assert await result.get_output() == "I see it"
 
-    assert collect_user_content(seen[0][-1])[-1] == PNG
+    sent_content = collect_user_content(seen[0][-1])
+    assert isinstance(sent_content, list)
+    assert sent_content[-1] == PNG
     assert collect_user_content(result.all_messages()[0]) == ["what is this", make_image_ref(image_id)]
+
+
+async def test_text_only_turns_go_out_as_plain_strings_to_strict_text_models(
+    tmp_path: Path, fetch: FakeFetcher, image_id: str
+) -> None:
+    """Strict text-only gateway models 400 on content arrays even when every item has type=text."""
+    txt_id = str(uuid4())
+    txt_bytes = "第一章 简介\n".encode()
+    fetch.files[txt_id] = ("outline.txt", "text/plain", txt_bytes)
+    materializer = AttachmentMaterializer(tmp_path, fetch)
+    txt_ref = DocumentUrl(url=f"{ATTACHMENT_URI_PREFIX}{txt_id}", media_type="text/plain")
+    kept_turn = make_turn(TextContent("earlier prompt", metadata={"_kept_user_message": True}))
+    prior_image_turn = make_turn("look at this", make_image_ref(image_id))
+    history: list[ModelMessage] = [
+        kept_turn,
+        ModelResponse(parts=[TextPart(content="ok")]),
+        prior_image_turn,
+        ModelResponse(parts=[TextPart(content="saw it")]),
+    ]
+    await materializer.ensure([*history, make_turn("帮我概括一下", txt_ref)])
+    sent_payloads: list[dict[str, object]] = []
+
+    def respond(request: httpx2.Request) -> httpx2.Response:
+        payload = json.loads(request.content)
+        sent_payloads.append(payload)
+        for msg in payload["messages"]:
+            if not isinstance(msg.get("content"), str):
+                return httpx2.Response(
+                    400,
+                    json={
+                        "error": {
+                            "message": "DeepSeek-V4-Flash is not a multimodal model",
+                            "type": "BadRequestError",
+                            "param": None,
+                            "code": 400,
+                        }
+                    },
+                )
+
+        return httpx2.Response(
+            200,
+            json={
+                "id": "chatcmpl-1",
+                "object": "chat.completion",
+                "created": 1,
+                "model": "deepseek-v4-flash",
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "已概括大纲"},
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+            },
+        )
+
+    model = _build_gateway_model(
+        "deepseek-v4-flash",
+        "https://bkaidev.example.com/v1",
+        "user-access-token",
+        profile=settings.openai_capability_profile(),
+        transport=httpx2.MockTransport(respond),
+    )
+    agent = Agent(
+        model,
+        capabilities=[AttachmentResolver(materializer, recent_turns=2, send_images=False)],
+    )
+
+    result = await agent.run(["帮我概括一下", txt_ref], message_history=history)
+
+    assert result.output == "已概括大纲"
+    wire_messages = sent_payloads[0]["messages"]
+    assert isinstance(wire_messages, list)
+    assert [msg["content"] for msg in wire_messages if msg["role"] == "user"] == [
+        "earlier prompt",
+        f"look at this\n{describe(image_id, 'shot.png', 'image/png', len(PNG_BYTES))}",
+        f"帮我概括一下\n{describe(txt_id, 'outline.txt', 'text/plain', len(txt_bytes))}",
+    ]
+    stored = result.all_messages()
+    assert collect_user_content(stored[0]) == [TextContent("earlier prompt", metadata={"_kept_user_message": True})]
+    assert collect_user_content(stored[4]) == ["帮我概括一下", txt_ref]
 
 
 def make_meta_body(url: str, *, authenticated: bool) -> bytes:

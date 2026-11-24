@@ -31,6 +31,7 @@ from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
     ModelResponse,
+    TextContent,
     UserContent,
     UserPromptPart,
 )
@@ -293,14 +294,15 @@ class AttachmentResolver(AbstractCapability[Any]):
         return await handler(sent)
 
     def resolve_messages(self, messages: list[ModelMessage]) -> list[ModelMessage]:
-        """Return a copy with every file reference resolved, or messages itself if there is none."""
-        if not any(_has_file_url(message) for message in messages):
+        """Return a copy with file references resolved and text-only prompts collapsed to strings."""
+
+        if not any(_has_sequence_prompt(message) for message in messages):
             return messages
 
         recent = self._find_recent_turns(messages)
         resolved: list[ModelMessage] = []
         for index, message in enumerate(messages):
-            if not isinstance(message, ModelRequest) or not _has_file_url(message):
+            if not isinstance(message, ModelRequest) or not _has_sequence_prompt(message):
                 resolved.append(message)
                 continue
 
@@ -333,7 +335,7 @@ class AttachmentResolver(AbstractCapability[Any]):
             else:
                 content.append(item)
 
-        return replace(part, content=content)
+        return replace(part, content=_collapse_if_text_only(content))
 
     def _resolve_file_url(self, item: FileUrl, *, send_bytes: bool) -> list[UserContent]:
         attachment_id = parse_attachment_id(item.url)
@@ -392,13 +394,28 @@ def iter_attachment_ids(messages: Sequence[ModelMessage]) -> Iterator[str]:
                     yield attachment_id
 
 
-def _has_file_url(message: ModelMessage) -> bool:
+def _collapse_if_text_only(content: list[UserContent]) -> str | list[UserContent]:
+    """Join text items into a plain string when no media item remains in the prompt."""
+
+    texts: list[str] = []
+    for item in content:
+        if isinstance(item, str):
+            texts.append(item)
+        elif isinstance(item, TextContent):
+            texts.append(item.content)
+        else:
+            # 含有图片字节或外链图片等多模态块时保留列表，交给能看图的模型按分段结构读取。
+            return content
+
+    # OpenAI 兼容层只有看到字符串时才发纯文本 content；保留列表会被发成 type=text 数组，
+    # 纯文本模型在网关侧会直接按多模态请求拒绝。
+    return "\n".join(text for text in texts if text)
+
+
+def _has_sequence_prompt(message: ModelMessage) -> bool:
+    """Return whether message carries a non-string user prompt that needs resolving or collapsing."""
+
     if not isinstance(message, ModelRequest):
         return False
 
-    return any(
-        isinstance(item, FileUrl)
-        for part in message.parts
-        if isinstance(part, UserPromptPart) and not isinstance(part.content, str)
-        for item in part.content
-    )
+    return any(isinstance(part, UserPromptPart) and not isinstance(part.content, str) for part in message.parts)

@@ -53,6 +53,7 @@ ERROR_RESPONSES = dict.fromkeys(
         HTTPStatus.FORBIDDEN,
         HTTPStatus.NOT_FOUND,
         HTTPStatus.CONFLICT,
+        HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
         HTTPStatus.UNPROCESSABLE_ENTITY,
         HTTPStatus.TOO_MANY_REQUESTS,
         HTTPStatus.INTERNAL_SERVER_ERROR,

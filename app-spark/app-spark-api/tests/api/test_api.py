@@ -207,7 +207,7 @@ def test_openapi_declares_the_same_error_shape_for_internal_and_public_routes():
     schema = json.loads(json.dumps(api.get_openapi_schema()))
     assert {"code", "detail"} <= set(schema["components"]["schemas"]["ErrorResponse"]["required"])
     for path in ("/api/projects/", "/api/internal/conversations/{conversation_id}/state/messages"):
-        for status in ("401", "422", "500"):
+        for status in ("401", "413", "422", "500"):
             error_schema = schema["paths"][path]["post"]["responses"][status]["content"]["application/json"]["schema"]
             assert error_schema == {"$ref": "#/components/schemas/ErrorResponse"}
 

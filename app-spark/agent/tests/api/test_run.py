@@ -232,7 +232,7 @@ def test_an_attachment_reference_stays_a_reference_in_the_context(
     """Without a control plane the model is told the file is unavailable; the stored context keeps the reference."""
     sent = post_turn_and_collect_sent(recording_api, seen, {"type": "text", "text": "copy this"}, part)
 
-    assert sent == ["copy this", ATTACHMENT_FETCH_FAILED_TEXT]
+    assert sent == f"copy this\n{ATTACHMENT_FETCH_FAILED_TEXT}"
     context = json.dumps(recording_api.get("/context").json(), ensure_ascii=False)
     assert ATTACHMENT_REF in context
     assert ATTACHMENT_FETCH_FAILED_TEXT not in context
@@ -241,7 +241,7 @@ def test_an_attachment_reference_stays_a_reference_in_the_context(
 @pytest.mark.parametrize(
     ("image_input", "expected"),
     [
-        pytest.param(True, ImageUrl(url="https://example.com/a.png", media_type="image/png"), id="vision-model"),
+        pytest.param(True, [ImageUrl(url="https://example.com/a.png", media_type="image/png")], id="vision-model"),
         pytest.param(False, "[Linked file: https://example.com/a.png]", id="text-only-model"),
     ],
 )
@@ -252,7 +252,7 @@ def test_an_external_image_link_reaches_only_a_model_that_reads_images(
         recording_api, seen, make_image("https://example.com/a.png"), imageInput=image_input
     )
 
-    assert sent == [expected]
+    assert sent == expected
 
 
 def test_client_metadata_on_a_file_part_is_dropped(recording_api: TestClient, seen: list[list[ModelMessage]]) -> None:
@@ -272,7 +272,7 @@ def test_an_external_document_link_reaches_the_model_as_text(
         recording_api, seen, make_document("https://example.com/a.pdf", mime_type="application/pdf")
     )
 
-    assert sent == ["[Linked file: https://example.com/a.pdf]"]
+    assert sent == "[Linked file: https://example.com/a.pdf]"
 
 
 def test_a_body_that_is_not_json_is_rejected(api: TestClient) -> None:

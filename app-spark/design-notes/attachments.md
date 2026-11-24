@@ -6,7 +6,7 @@
 
 ## 前端
 
-选中文件就上传，拿到附件 ID 和内容地址。图片先在浏览器里压过再传：最长边超过 2048 就等比缩小到 2048；PNG 仍是 PNG，JPG、WEBP、GIF 转成质量 0.86 的 JPEG。只收这四种。图片用这个地址预览。内容按 ID 固定不变，响应是 `Cache-Control: private, max-age=一年, immutable`：浏览器长期缓存、不再回源；`private` 是因为要登录，共享缓存不能替别人存。看历史时还是这个地址，浏览器直接用缓存。没发出去的附件留在会话里，没有删除接口。
+选中文件就原样上传（不做前端缩放或重编码，超过 5MB 返回 413），拿到附件 ID 和内容地址。PNG、JPEG、GIF、WebP 用这个地址预览，其余文件按下载展示。内容按 ID 固定不变，响应是 `Cache-Control: private, max-age=一年, immutable`：浏览器长期缓存、不再回源；`private` 是因为要登录，共享缓存不能替别人存。看历史时还是这个地址，浏览器直接用缓存。没发出去的附件留在会话里，没有删除接口。
 
 发一轮时，把要用的 ID 按用户附加的顺序放进 `attachment_ids`。只发附件、不写字也可以。
 
@@ -37,9 +37,7 @@
 
 ```mermaid
 flowchart TD
-    pick[前端选中图片] --> shrink[最长边压到 2048，再上传]
-    shrink --> upload[上传到 API]
-    upload --> saved[字节进存储，返回附件 ID]
+    pick[前端选中文件，原样上传到 API] --> saved[字节进存储，返回附件 ID]
     saved --> preview[前端用内容地址预览，浏览器长期缓存]
     preview --> send[发一轮，按顺序带上 attachment_ids]
     send --> check{是本会话还没用过的附件}

@@ -43,6 +43,7 @@ from app_spark_api.agent.conversations.models import Conversation, ConversationA
 from app_spark_api.agent.conversations.tokens import mint_state_token
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.repository.storage.exceptions import StorageConfigurationError
+from app_spark_api.utils.api_errors.error_codes import error_codes
 from tests.api.support import CONVERSATIONS_URL, configure_local_provider, create_reachable_project
 
 if TYPE_CHECKING:
@@ -259,14 +260,16 @@ async def test_deleting_a_projects_conversations_deletes_their_attachment_bytes(
 
 
 @pytest.mark.parametrize(
-    ("case", "code"),
+    ("case", "expected"),
     [
-        ("too-large", "ATTACHMENT_TOO_LARGE"),
-        ("closed", "CONVERSATION_CLOSED"),
-        ("storage-down", "ATTACHMENT_STORAGE_UNAVAILABLE"),
+        ("too-large", error_codes.ATTACHMENT_TOO_LARGE),
+        ("closed", error_codes.CONVERSATION_CLOSED),
+        ("storage-down", error_codes.ATTACHMENT_STORAGE_UNAVAILABLE),
     ],
 )
-async def test_a_refused_upload_stores_nothing(aapi_client, conversation, monkeypatch, case: str, code: str) -> None:
+async def test_a_refused_upload_stores_nothing(
+    aapi_client, conversation, monkeypatch, case: str, expected: APIError
+) -> None:
     data = {"too-large": PNG_BYTES + b"\x00" * MAX_ATTACHMENT_SIZE}
     if case == "closed":
         await aapi_client.post(f"{CONVERSATIONS_URL}{conversation.number}/close/")
@@ -276,7 +279,7 @@ async def test_a_refused_upload_stores_nothing(aapi_client, conversation, monkey
 
     response = await upload(aapi_client, conversation.number, data.get(case, PNG_BYTES))
 
-    assert json.loads(response.content)["code"] == code
+    assert (response.status_code, json.loads(response.content)["code"]) == (expected.status_code, expected.code)
     assert not await ConversationAttachment.objects.aexists()
 
 
@@ -298,15 +301,15 @@ async def test_a_malformed_turn_is_refused(aapi_client, conversation, payload: d
 
 
 @pytest.mark.parametrize(
-    ("case", "code"),
+    ("case", "expected"),
     [
-        ("model-cannot-read-images", "MODEL_IMAGE_INPUT_UNSUPPORTED"),
-        ("another-conversations-attachment", "ATTACHMENT_NOT_FOUND"),
-        ("already-sent", "ATTACHMENT_ALREADY_USED"),
+        ("model-cannot-read-images", error_codes.MODEL_IMAGE_INPUT_UNSUPPORTED),
+        ("another-conversations-attachment", error_codes.ATTACHMENT_NOT_FOUND),
+        ("already-sent", error_codes.ATTACHMENT_ALREADY_USED),
     ],
 )
 async def test_an_unsendable_attachment_is_refused_before_a_runtime_starts(
-    aapi_client, conversation, other_conversation, case: str, code: str
+    aapi_client, conversation, other_conversation, case: str, expected: APIError
 ) -> None:
     # direct 的模型不支持图片；后两种情况报的是附件错误，说明附件先于模型能力检查。
     owner = other_conversation if case == "another-conversations-attachment" else conversation
@@ -320,7 +323,7 @@ async def test_an_unsendable_attachment_is_refused_before_a_runtime_starts(
         content_type="application/json",
     )
 
-    assert json.loads(response.content)["code"] == code
+    assert (response.status_code, json.loads(response.content)["code"]) == (expected.status_code, expected.code)
     assert await get_agent_runtime_provider().peek(str(conversation.id)) is None
 
 

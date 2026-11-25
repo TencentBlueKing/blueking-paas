@@ -263,6 +263,11 @@ ensure-legacy-image() {
 ensure-smart-image() {
     python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --type legacy --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}" --skip-verify "${PAAS_PUSH_SMART_SKIP_SSL_VERIFY:-False}"
     python manage.py push_smart_image --image "${PAAS_HEROKU_RUNNER_IMAGE}" --type cnb --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}" --skip-verify "${PAAS_PUSH_SMART_SKIP_SSL_VERIFY:-False}"
+    if [[ -n "${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}" ]]; then
+        python manage.py push_smart_image --image "${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}" --type cnb --base-image-id heroku-24 --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}" --skip-verify "${PAAS_PUSH_SMART_SKIP_SSL_VERIFY:-False}"
+    else
+        echo "Skipping heroku-24 S-Mart base image push because PAAS_HEROKU_NOBLE_RUNNER_IMAGE is empty"
+    fi
 }
 
 ensure-runtimes() {

@@ -17,11 +17,15 @@
 
 import json
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from os import PathLike
 from pathlib import Path
 from typing import Callable, List, Set
 
+from django.conf import settings
+from django.utils.translation import gettext as _
 from moby_distribution import ImageJSON, ImageRef, LayerRef
 
 from paasng.infras.accounts.models import User
@@ -31,12 +35,14 @@ from paasng.platform.modules.models import Module
 from paasng.platform.smart_app.conf import bksmart_settings
 from paasng.platform.smart_app.constants import SMartPackageBuilderVersionFlag
 from paasng.platform.smart_app.entities import DockerExportedImageManifest
+from paasng.platform.smart_app.exceptions import UnsupportedSMartPackageError
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 from paasng.platform.smart_app.services.patcher import patch_smart_tarball
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
+from paasng.utils.dictx import get_items
 from paasng.utils.file import safe_resolve_subpath
 from paasng.utils.text import remove_prefix
 
@@ -45,6 +51,9 @@ logger = logging.getLogger(__name__)
 # A flag value for parallel patching, turned on by default. A unittest might patch this value to
 # alter the behaviour.
 _PARALLEL_PATCHING = True
+
+_BUILDER_FLAG_FILENAME = ".Version"
+_ARTIFACT_FILENAME = "artifact.json"
 
 
 def dispatch_package_to_modules(
@@ -56,11 +65,11 @@ def dispatch_package_to_modules(
         uncompress_directory(source_path=tarball_filepath, target_path=workplace)
 
         handler: Callable[[Module, Path, SPStat, User], SourcePackage]
-        builder_flag = workplace / ".Version"
+        builder_flag = workplace / _BUILDER_FLAG_FILENAME
         if builder_flag.exists():
             version = builder_flag.read_text().strip()
             if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
-                handler = dispatch_cnb_image_to_registry
+                handler = partial(dispatch_cnb_image_to_registry, base_image_id=read_cnb_base_image_id(workplace))
             else:
                 handler = dispatch_slug_image_to_registry
             tasks = [(module, workplace, stat, operator) for module in application.modules.filter(name__in=modules)]
@@ -81,6 +90,64 @@ def dispatch_package_to_modules(
             for task in tasks:
                 packages.append(handler(*task))
             return packages
+
+
+def validate_smart_package(tarball_filepath: PathLike):
+    """在创建应用或写入数据之前, 校验当前平台能否部署该 S-Mart 包, 避免分发镜像时才失败
+
+    :raises UnsupportedSMartPackageError: 包的基础镜像未配置, 或使用了不支持的打包方案
+    """
+    reader = SourcePackageStatReader(tarball_filepath)
+    with reader.accessor(reader.path) as archive:
+        # 成员名可能带 "./" 前缀, 统一按规范化后的路径匹配
+        members = {os.path.normpath(name): name for name in archive.list()}
+        # 没有 artifact.json 的包总是使用默认基础镜像, 无需额外读取文件
+        if _ARTIFACT_FILENAME not in members or _BUILDER_FLAG_FILENAME not in members:
+            return
+
+        version = archive.read_file(members[_BUILDER_FLAG_FILENAME]).decode().strip()
+        if version != SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
+            return
+        parse_cnb_base_image_id(archive.read_file(members[_ARTIFACT_FILENAME]))
+
+
+def read_cnb_base_image_id(workplace: Path) -> str:
+    """从已解压的 S-Mart 包中读取基础镜像 ID, 没有 artifact.json 时使用默认基础镜像
+
+    :raises UnsupportedSMartPackageError: 包的基础镜像未配置, 或使用了不支持的打包方案
+    """
+    artifact_json_file = workplace / _ARTIFACT_FILENAME
+    if not artifact_json_file.exists():
+        return settings.SMART_CNB_DEFAULT_IMAGE_ID
+    return parse_cnb_base_image_id(artifact_json_file.read_bytes())
+
+
+def parse_cnb_base_image_id(artifact_content: bytes) -> str:
+    """解析 artifact.json 内容, 返回基础镜像 ID, 未声明时使用默认基础镜像
+
+    artifact.json 格式为:
+    {"version": "1.0", "runtime": {"base_image_id": "heroku-24", "architecture": "amd64"}}
+
+    :raises UnsupportedSMartPackageError: 包含 app_artifacts(多模块共享镜像的新打包方案), 或基础镜像 ID 未配置
+    """
+    try:
+        artifact = json.loads(artifact_content)
+    except ValueError:
+        raise UnsupportedSMartPackageError(_("S-Mart 包中的 artifact.json 不是合法的 JSON"))
+    if not isinstance(artifact, dict):
+        raise UnsupportedSMartPackageError(_("S-Mart 包中的 artifact.json 格式错误"))
+
+    if "app_artifacts" in artifact:
+        raise UnsupportedSMartPackageError(
+            _("当前平台不支持 artifact.json 中包含 app_artifacts 的打包方案, 请使用 v1 打包方案重新构建")
+        )
+
+    base_image_id = get_items(artifact, "runtime.base_image_id") or settings.SMART_CNB_DEFAULT_IMAGE_ID
+    if not bksmart_settings.cnb_base_image.is_supported(base_image_id):
+        raise UnsupportedSMartPackageError(
+            _("当前平台未配置 S-Mart 基础镜像 {base_image_id}, 请联系管理员").format(base_image_id=base_image_id)
+        )
+    return base_image_id
 
 
 def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat, operator: User) -> SourcePackage:
@@ -147,12 +214,26 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     return source_package
 
 
-def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User) -> SourcePackage:
-    """Merge image layer to base image, then push the new image to registry"""
-    logger.debug("dispatching cnb-image for module '%s', working at '%s'", module.name, workplace)
+def dispatch_cnb_image_to_registry(
+    module: Module,
+    workplace: Path,
+    stat: SPStat,
+    operator: User,
+    base_image_id: str,
+) -> SourcePackage:
+    """Merge image layer to base image, then push the new image to registry
+
+    :param base_image_id: 基础镜像 ID, 决定镜像层合并到哪个 run image 上
+    """
+    logger.debug(
+        "dispatching cnb-image for module '%s', working at '%s', base image id '%s'",
+        module.name,
+        workplace,
+        base_image_id,
+    )
 
     mgr = SMartImageManager(module)
-    base_image = mgr.get_cnb_runner_image_info()
+    base_image = mgr.get_cnb_runner_image_info(base_image_id=base_image_id)
     new_image_info = mgr.get_image_info(tag=stat.version)
 
     image_tarball = (workplace / module.name).with_suffix(".tgz")

@@ -47,11 +47,11 @@ from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
-from paasng.platform.smart_app.exceptions import PreparedPackageNotFound
+from paasng.platform.smart_app.exceptions import PreparedPackageNotFound, UnsupportedSMartPackageError
 from paasng.platform.smart_app.serializers import AppDescriptionSLZ, PackageStashRequestSLZ, PackageStashResponseSLZ
 from paasng.platform.smart_app.services.app_desc import get_app_description
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
-from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
+from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules, validate_smart_package
 from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.package.downloader import download_package
@@ -72,6 +72,8 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
     def handle_exception(self, exc):
         if isinstance(exc, (DownloadFailedError, UploadFailedError)):
             raise error_codes.OBJECT_STORE_EXCEPTION.f(_("请联系管理员")) from exc
+        if isinstance(exc, UnsupportedSMartPackageError):
+            return super().handle_exception(error_codes.UNSUPPORTED_SMART_PACKAGE.f(exc.message))
         return super().handle_exception(exc)
 
     @swagger_auto_schema(
@@ -103,6 +105,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             self.validate_app_desc(app_desc)
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
+            validate_smart_package(filepath)
 
             # Store as prepared package for later usage(create_prepared)
             PreparedSourcePackage(request).store(filepath)
@@ -142,6 +145,8 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             stat = SourcePackageStatReader(filepath).read()
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
+            # 平台配置可能在暂存后变更, 且应用创建后无法回滚, 因此需要在创建前再次校验
+            validate_smart_package(filepath)
 
             handler = get_desc_handler(stat.meta_info)
             with atomic():
@@ -205,6 +210,8 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
     def handle_exception(self, exc):
         if isinstance(exc, (DownloadFailedError, UploadFailedError)):
             raise error_codes.OBJECT_STORE_EXCEPTION.f(_("请联系管理员")) from exc
+        if isinstance(exc, UnsupportedSMartPackageError):
+            return super().handle_exception(error_codes.UNSUPPORTED_SMART_PACKAGE.f(exc.message))
         return super().handle_exception(exc)
 
     @swagger_auto_schema(tags=["源码包管理", "S-Mart"], response_serializer=AppDescriptionSLZ)
@@ -262,6 +269,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
             self.validate_app_desc(app_desc, application)
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
+            validate_smart_package(filepath)
 
             # Store as prepared package for later usage(commit)
             PreparedSourcePackage(request, namespace=namespace).store(filepath)
@@ -298,6 +306,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                 raise error_codes.FILE_CORRUPTED_ERROR.f(_("文件签名不一致"))
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
+            validate_smart_package(filepath)
 
             # Step 2. handle app(create module if necessary)
             handler = get_desc_handler(stat.meta_info)

@@ -45,16 +45,13 @@ class SMartImageManager:
         named = parse_image(default_runner.image, default_registry=bksmart_settings.registry.host)
         return named
 
-    def get_cnb_runner_image_info(self) -> NamedImage:
-        """获取 cloud native S-Mart 基础镜像信息"""
-        if bksmart_settings.cnb_base_image.name and bksmart_settings.cnb_base_image.tag:
-            return NamedImage(
-                domain=bksmart_settings.registry.host,
-                name=bksmart_settings.cnb_base_image.name,
-                tag=bksmart_settings.cnb_base_image.tag,
-            )
-        # TODO: 从 DB 读取默认的 cnb runner
-        raise ValueError("Unknown base image for S-Mart")
+    def get_cnb_runner_image_info(self, base_image_id: str) -> NamedImage:
+        """获取 cloud native S-Mart 基础镜像信息
+
+        :param base_image_id: 基础镜像 ID, 来自 S-Mart 包 artifact.json 中的 runtime.base_image_id
+        """
+        name, tag = bksmart_settings.cnb_base_image.get_name_and_tag(base_image_id)
+        return NamedImage(domain=bksmart_settings.registry.host, name=name, tag=tag)
 
     def get_image_info(self, tag: str = "latest") -> NamedImage:
         """获取当前 S-Mart 应用的镜像信息"""

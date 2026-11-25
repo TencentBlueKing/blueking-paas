@@ -4163,6 +4163,30 @@ msgid "访问容器镜像仓库异常"
 msgstr "Access to container image repository exception"
 
 #: paasng/utils/error_codes.py:127
+msgid "当前平台不支持部署该 S-Mart 包"
+msgstr "The S-Mart package is not supported by the current platform"
+
+#: paasng/platform/smart_app/services/dispatch.py
+msgid "S-Mart 包中的 artifact.json 不是合法的 JSON"
+msgstr "The artifact.json in the S-Mart package is not a valid JSON"
+
+#: paasng/platform/smart_app/services/dispatch.py
+msgid "S-Mart 包中的 artifact.json 格式错误"
+msgstr "The artifact.json in the S-Mart package is malformed"
+
+#: paasng/platform/smart_app/services/dispatch.py
+msgid "当前平台不支持 artifact.json 中包含 app_artifacts 的打包方案, 请使用 v1 打包方案重新构建"
+msgstr ""
+"The packaging scheme with app_artifacts in artifact.json is not supported, "
+"please rebuild the package with packaging v1"
+
+#: paasng/platform/smart_app/services/dispatch.py
+msgid "当前平台未配置 S-Mart 基础镜像 {base_image_id}, 请联系管理员"
+msgstr ""
+"The S-Mart base image {base_image_id} is not configured on the current "
+"platform, please contact the administrator"
+
+#: paasng/utils/error_codes.py:127
 msgid "S-Mart 应用源码文件损坏"
 msgstr ""
 

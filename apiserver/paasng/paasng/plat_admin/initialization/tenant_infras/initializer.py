@@ -153,6 +153,14 @@ class TenantInfrasInitializer:
         if self.on_record:
             self.on_record(record)
 
+    def _should_write(self, kind: str, target: str, exists: bool) -> bool:
+        """记录本项的变更动作，返回是否需要实际写入"""
+        if exists and not self.overwrite:
+            self._record(kind, target, Action.SKIP, "already exists")
+            return False
+        self._record(kind, target, Action.UPDATE if exists else Action.CREATE)
+        return not self.dry_run
+
     # 预检
 
     def _preflight(self) -> Dict[str, ServiceObj]:
@@ -246,12 +254,7 @@ class TenantInfrasInitializer:
         for cluster_data in self.data["clusters"]:
             name = cluster_data["name"]
             cluster = Cluster.objects.filter(name=name).first()
-            if cluster and not self.overwrite:
-                self._record("cluster", name, Action.SKIP, "already exists")
-                continue
-
-            self._record("cluster", name, Action.UPDATE if cluster else Action.CREATE)
-            if self.dry_run:
+            if not self._should_write("cluster", name, exists=cluster is not None):
                 continue
 
             with transaction.atomic(using="workloads"):
@@ -336,12 +339,7 @@ class TenantInfrasInitializer:
             return
 
         policy = ClusterAllocationPolicy.objects.filter(tenant_id=self.tenant_id).first()
-        if policy and not self.overwrite:
-            self._record("cluster_allocation_policy", self.tenant_id, Action.SKIP, "already exists")
-            return
-
-        self._record("cluster_allocation_policy", self.tenant_id, Action.UPDATE if policy else Action.CREATE)
-        if self.dry_run:
+        if not self._should_write("cluster_allocation_policy", self.tenant_id, exists=policy is not None):
             return
 
         if policy:
@@ -379,14 +377,8 @@ class TenantInfrasInitializer:
         return next((p for p in plans if p.name == name), None)
 
     def _upsert_plan(self, service: ServiceObj, plan_data: Dict[str, Any]):
-        target = f"{service.name}/{plan_data['name']}"
         plan = self._find_plan(service, plan_data["name"])
-        if plan and not self.overwrite:
-            self._record("plan", target, Action.SKIP, "already exists")
-            return
-
-        self._record("plan", target, Action.UPDATE if plan else Action.CREATE)
-        if self.dry_run:
+        if not self._should_write("plan", f"{service.name}/{plan_data['name']}", exists=plan is not None):
             return
 
         slz = PlanUpsertInputSLZ(
@@ -419,12 +411,7 @@ class TenantInfrasInitializer:
             display = identity if "host" in ins_data["credentials"] else f"#{idx}"
             target = f"{service.name}/{plan_data['name']}/{display}"
             instance = existing.get(identity)
-            if instance and not self.overwrite:
-                self._record("pre_created_instance", target, Action.SKIP, "already exists")
-                continue
-
-            self._record("pre_created_instance", target, Action.UPDATE if instance else Action.CREATE)
-            if self.dry_run:
+            if not self._should_write("pre_created_instance", target, exists=instance is not None):
                 continue
 
             fields = {
@@ -471,12 +458,7 @@ class TenantInfrasInitializer:
             return
 
         exists = TenantLogConfig.objects.filter(tenant_id=self.tenant_id).exists()
-        if exists and not self.overwrite:
-            self._record("log_config", self.tenant_id, Action.SKIP, "already exists")
-            return
-
-        self._record("log_config", self.tenant_id, Action.UPDATE if exists else Action.CREATE)
-        if self.dry_run:
+        if not self._should_write("log_config", self.tenant_id, exists=exists):
             return
         TenantLogConfig.objects.update_or_create(tenant_id=self.tenant_id, defaults=data)
 

@@ -118,6 +118,8 @@ class ErrorCodes:
     APP_SPARK_APP_REQUIRED = ErrorCode(_("应用不归 AppSpark 管理"), status_code=403)
     APP_SPARK_MODULE_REQUIRED = ErrorCode(_("AppSpark 只能操作应用的默认模块"), status_code=403)
     SYSAPI_ENV_NOT_ALLOWED = ErrorCode(_("当前调用方不允许操作该环境"))
+    # 应用态以用户身份签发 AccessToken 时, 用户与应用必须属于同一租户
+    USER_APP_TENANT_MISMATCH = ErrorCode(_("用户与目标应用不属于同一租户"), status_code=403)
     # 部署配置
     BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志

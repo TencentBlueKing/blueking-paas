@@ -25,7 +25,7 @@ import cattr
 import requests
 from attrs import define, evolve, field
 from bkpaas_auth.core.exceptions import InvalidTokenCredentialsError, ResponseError, ServiceError
-from bkpaas_auth.core.token import RequestBackend, TokenRequestBackend
+from bkpaas_auth.core.token import RequestBackend, TokenRequestBackend, UserAccount
 from django.conf import settings
 from django.utils.translation import gettext as _
 from requests.models import Response
@@ -209,24 +209,23 @@ class BlueKingApplicationOauthMixin:
         return credential
 
     @classmethod
-    def resolve_username(cls, user_credential: str) -> str:
-        """用用户凭证换出用户名。
+    def resolve_user_account(cls, user_credential: str) -> UserAccount:
+        """用用户凭证换出用户账号信息 (用户名与所属租户).
 
         bk_ticket 换票要带用户名(rtx), 所以必须先换; bk_token 换票本身不需要, 但换出来既能统一审计的操作人.
         """
         # bk_ticket 由蓝鲸登录签发, 只有 RTX provider 的 request backend 认它; bk_token 走 BK provider
         account_backend = RequestBackend() if cls.COOKIE_KEY == "bk_ticket" else TokenRequestBackend()
         try:
-            account = account_backend.request_user_account(**{cls.COOKIE_KEY: user_credential})
+            return account_backend.request_user_account(**{cls.COOKIE_KEY: user_credential})
         except NotImplementedError:
             # bkpaas-auth 的 RTX request backend 没有 APIGW 实现, bk_ticket 在多租户环境下换不出用户
             raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL.f(
                 _("当前环境不支持用 bk_ticket 换取用户信息, 请使用 bk_token")
             )
         except (ServiceError, ResponseError, InvalidTokenCredentialsError):
-            logger.exception("Unable to resolve the username by the user credential")
+            logger.exception("Unable to resolve the user account by the user credential")
             raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL
-        return account.bk_username
 
     def fetch_token(self, username: str, user_credential: str) -> dict:
         raise NotImplementedError

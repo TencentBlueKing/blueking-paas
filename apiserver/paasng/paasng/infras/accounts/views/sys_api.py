@@ -29,9 +29,11 @@ from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_app_audit_record
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.mixins import SysManagedAppInPathMixin
 from paasng.utils.error_codes import error_codes
+
+from .api import make_access_token_detail
 
 
 class SysOauthTokenViewSet(viewsets.ViewSet, SysManagedAppInPathMixin):
@@ -39,13 +41,21 @@ class SysOauthTokenViewSet(viewsets.ViewSet, SysManagedAppInPathMixin):
 
     @swagger_auto_schema(tags=["Oauth"], operation_id="sys_fetch_app_access_token")
     def fetch_app_token(self, request, code: str, env_name: str):
-        """以用户凭证为 AI Agent 应用申请 AccessToken, 仅 AIDEV 可调用, 仅允许操作 AI Agent 应用"""
+        """以用户凭证为 AI Agent 应用申请 AccessToken, 仅 AIDEV 可调用, 仅允许操作 AI Agent 应用
+
+        信任边界: 本接口信任 AIDEV 是合法的托管方, 只校验调用方角色与目标应用归属, 不校验凭证对应的用户是否对该应用有权限.
+        """
         application = self.get_managed_application_via_path()
 
         # 凭证头与平台使用的后端类型一一对应, 先校验凭证
         backend_cls = get_bkapp_oauth_backend_cls()
         user_credential = backend_cls.get_user_credential_from_headers(request)
-        username = backend_cls.resolve_username(user_credential)
+        account = backend_cls.resolve_user_account(user_credential)
+        username = account.bk_username
+
+        # 跨租户借用用户身份属于越权, 不在 "AIDEV 托管" 的范围内
+        if settings.ENABLE_MULTI_TENANT_MODE and account.tenant_id and account.tenant_id != application.tenant_id:
+            raise error_codes.USER_APP_TENANT_MISMATCH
 
         try:
             backend = create_app_oauth_backend(application, env_name=env_name)
@@ -67,6 +77,6 @@ class SysOauthTokenViewSet(viewsets.ViewSet, SysManagedAppInPathMixin):
             operation=OperationEnum.CREATE,
             target=OperationTarget.ACCESS_TOKEN,
             access_type=AccessType.API,
-            data_after=DataDetail(data=data),
+            data_after=make_access_token_detail(data, env_name),
         )
         return Response(data=data)

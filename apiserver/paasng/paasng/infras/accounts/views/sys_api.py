@@ -53,8 +53,8 @@ class SysOauthTokenViewSet(viewsets.ViewSet, SysManagedAppInPathMixin):
         account = backend_cls.resolve_user_account(user_credential)
         username = account.bk_username
 
-        # 跨租户借用用户身份属于越权, 不在 "AIDEV 托管" 的范围内
-        if settings.ENABLE_MULTI_TENANT_MODE and account.tenant_id and account.tenant_id != application.tenant_id:
+        # 跨租户借用用户身份属于越权, 不在 "AIDEV 托管" 的范围内.
+        if settings.ENABLE_MULTI_TENANT_MODE and account.tenant_id != application.tenant_id:
             raise error_codes.USER_APP_TENANT_MISMATCH
 
         try:

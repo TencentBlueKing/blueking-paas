@@ -234,7 +234,7 @@ urlpatterns += [
     ),
     # 以用户凭证为 AI Agent 应用申请 AccessToken, 仅 AIDEV 可调用
     re_path(
-        r"^sys/api/bkapps/applications/(?P<code>[^/]+)/oauth/token/(?P<env_name>test|prod|lesscode)/$",
+        r"^sys/api/bkapps/applications/(?P<code>[^/]+)/oauth/token/(?P<env_name>test|prod)/$",
         SysOauthTokenViewSet.as_view({"get": "fetch_app_token"}),
         name="sys.api.applications.oauth.token",
     ),

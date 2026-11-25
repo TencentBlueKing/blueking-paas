@@ -11,14 +11,18 @@
 | 参数名称 | 参数类型 | 必须 | 参数说明 |
 | -------- | -------- | --- | -------- |
 | app_code | string | 是 | 应用 ID，必须是 AI Agent 应用 |
-| env_name | string | 是 | 环境，可选值 "test" / "prod" / "lesscode" |
+| env_name | string | 是 | 环境，可选值 "test" / "prod" |
 
 #### 2、请求头
 
+两个请求头二选一，传哪个取决于平台使用的鉴权方式。
+
 | 请求头 | 参数类型 | 必须 | 参数说明 |
 | -------- | -------- | --- | -------- |
-| X-USER-BK-TICKET | string | 否 | 用户的 bk_ticket，平台使用 bk_ticket 鉴权时必填 |
-| X-USER-BK-TOKEN | string | 否 | 用户的 bk_token，平台使用 bk_token 鉴权时必填 |
+| X-USER-BK-TICKET | string | 二选一 | 用户的 bk_ticket，平台使用 bk_ticket 鉴权时传这个 |
+| X-USER-BK-TOKEN | string | 二选一 | 用户的 bk_token，平台使用 bk_token 鉴权时传这个 |
+
+凭证类型必须与平台的鉴权后端一致，另一种凭证的请求头会被忽略。多租户环境下平台只能使用 bk_token。
 
 ### 请求示例
 
@@ -42,4 +46,4 @@ curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret
 | -------- | -------- | -------- |
 | access_token | string | 具有应用身份认证的 AccessToken |
 | refresh_token | string | 用于调用 refresh app token 接口 |
-| expires_in | int | 有效时间，lesscode 环境默认有效期为 7 天 |
+| expires_in | int | 有效时间，由上游签发服务决定 |

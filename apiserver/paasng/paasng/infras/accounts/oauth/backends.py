@@ -223,9 +223,12 @@ class BlueKingApplicationOauthMixin:
             raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL.f(
                 _("当前环境不支持用 bk_ticket 换取用户信息, 请使用 bk_token")
             )
-        except (ServiceError, ResponseError, InvalidTokenCredentialsError):
+        except InvalidTokenCredentialsError:
+            logger.warning("The user credential is invalid or expired")
+            raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL.f(_("用户凭证无效或已过期"))
+        except (ServiceError, ResponseError):
             logger.exception("Unable to resolve the user account by the user credential")
-            raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL
+            raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL.f(_("无法访问用户登录服务"))
 
     def fetch_token(self, username: str, user_credential: str) -> dict:
         raise NotImplementedError

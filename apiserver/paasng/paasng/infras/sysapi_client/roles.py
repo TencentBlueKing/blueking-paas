@@ -82,6 +82,8 @@ class ClientPermChecker:
             ClientAction.MANAGE_CLOUD_API: False,
             # 校验应用 ID 和名称给会创建应用的角色：基础管理（含 AIDEV、LessCode）和 APP_SPARK。
             ClientAction.VALIDATE_APP_BASIC_INFO: False,
+            # 以用户凭证申请应用 AccessToken 只给 AIDEV。
+            ClientAction.FETCH_APP_ACCESS_TOKEN: False,
         }
         basic_reader_perms = nobody_perms | {
             ClientAction.READ_APPLICATIONS: True,
@@ -108,6 +110,7 @@ class ClientPermChecker:
             ClientAction.READ_AI_AGENT_APP: True,
             ClientAction.MANAGE_AI_AGENT_PROCESS: True,
             ClientAction.MANAGE_CLOUD_API: True,
+            ClientAction.FETCH_APP_ACCESS_TOKEN: True,
         }
         # AppSpark 只拿发布所需的几个动作，不继承基础管理角色的通用应用管理权限。
         app_spark_perms = nobody_perms | {

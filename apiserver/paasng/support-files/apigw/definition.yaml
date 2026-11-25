@@ -12,9 +12,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.15
-  title: "Add APIs to list addon service plans and to manage module build config."
-  comment: "Add list_service_possible_plans, get_module_build_config, update_module_build_config and list_module_bp_runtimes, and expose them in the deploy-with-module MCP server."
+  version: 1.4.16
+  title: "Add a system API to fetch the access token of an AI Agent application."
+  comment: "Add sys_fetch_app_access_token, which lets AIDEV fetch an application access token on behalf of a user with only the user's bk_ticket/bk_token."
 
 stages:
   - name: "prod"
@@ -152,6 +152,7 @@ grant_permissions:
       - "sys_get_repo_branches"
       - "sys_get_service_instance_by_module"
       - "fetch_app_access_token"
+      - "sys_fetch_app_access_token"
       - "shim_plugins_center_add_role_members"
       - "shim_plugins_center_delete_role_members"
       - "sys_update_process"

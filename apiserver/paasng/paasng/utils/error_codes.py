@@ -181,6 +181,8 @@ class ErrorCodes:
     CANNOT_GET_SMART_BUILD_PHASES = ErrorCode(_("无法获取 S-Mart 构建的阶段信息"))
     # 对外接口异常
     CANNOT_GET_BK_USER_CREDENTIAL = ErrorCode(_("无法获取用户凭证"))
+    # 上游登录服务不可用
+    USER_LOGIN_SERVICE_UNAVAILABLE = ErrorCode(_("用户登录服务暂不可用，请稍后重试"), status_code=503)
     # Oauth 相关错误
     OAUTH_UNKNOWN_BACKEND_NAME = ErrorCode(_("Oauth 后端类型无效"))
     # Feature Flag 相关错误

@@ -227,8 +227,8 @@ class BlueKingApplicationOauthMixin:
             logger.warning("The user credential is invalid or expired")
             raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL.f(_("用户凭证无效或已过期"))
         except (ServiceError, ResponseError):
-            logger.exception("Unable to resolve the user account by the user credential")
-            raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL.f(_("无法访问用户登录服务"))
+            logger.exception("The user login service is unavailable")
+            raise error_codes.USER_LOGIN_SERVICE_UNAVAILABLE
 
     def fetch_token(self, username: str, user_credential: str) -> dict:
         raise NotImplementedError

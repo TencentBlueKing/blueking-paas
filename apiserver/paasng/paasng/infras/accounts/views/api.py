@@ -196,7 +196,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 username=request.user.username, user_credential=backend.get_user_credential_from_request(request)
             )
         except BKAppOauthError as e:
-            return Response(status=e.response_code, data={"message": e.error_message})
+            return Response(status=e.response_code or status.HTTP_400_BAD_REQUEST, data={"message": e.error_message})
         # 新建 token 成功后添加审计记录
         add_app_audit_record(
             app_code=app_code,
@@ -225,7 +225,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             data = backend.refresh_token(refresh_token=data["refresh_token"])
         except BKAppOauthError as e:
-            return Response(status=e.response_code, data={"message": e.error_message})
+            return Response(status=e.response_code or status.HTTP_400_BAD_REQUEST, data={"message": e.error_message})
         # 刷新 token 成功后添加审计记录
         add_app_audit_record(
             app_code=app_code,

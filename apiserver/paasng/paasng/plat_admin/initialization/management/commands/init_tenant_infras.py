@@ -26,7 +26,6 @@ from paasng.plat_admin.initialization.tenant_infras.initializer import (
     InitializationError,
     Record,
     TenantInfrasInitializer,
-    expand_env_refs,
 )
 from paasng.plat_admin.initialization.tenant_infras.serializers import TenantInfrasSLZ
 from paasng.utils.validators import str2bool
@@ -50,11 +49,6 @@ class Command(BaseCommand):
     def handle(self, file_, dry_run: bool, overwrite: bool, *args, **options):
         with file_ as fh:
             raw = yaml.safe_load(fh) or {}
-
-        try:
-            raw = expand_env_refs(raw)
-        except ValueError as e:
-            raise CommandError(str(e))
 
         slz = TenantInfrasSLZ(data=raw)
         if not slz.is_valid():

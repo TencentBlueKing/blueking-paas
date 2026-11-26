@@ -18,7 +18,7 @@
 import copy
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterator, List
+from typing import Any, Iterator
 from unittest import mock
 
 import pytest
@@ -36,16 +36,14 @@ from paas_wl.infras.cluster.models import (
 )
 from paasng.accessories.log.models import TenantLogConfig
 from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
-from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.manager import mixed_plan_mgr, mixed_service_mgr
 from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
 from paasng.plat_admin.initialization.tenant_infras import initializer as initializer_module
 from paasng.plat_admin.initialization.tenant_infras.initializer import (
-    ENV_REF_PATTERN,
     Action,
     InitializationError,
     Record,
     TenantInfrasInitializer,
-    expand_env_refs,
 )
 from paasng.plat_admin.initialization.tenant_infras.serializers import TenantInfrasSLZ
 from tests.utils.helpers import generate_random_string
@@ -85,7 +83,7 @@ def mock_k8s_accessible() -> Iterator[mock.MagicMock]:
 
 
 @pytest.fixture()
-def raw_config(tenant_id, pool_service, normal_service) -> Dict[str, Any]:
+def raw_config(tenant_id, pool_service, normal_service) -> dict[str, Any]:
     cluster_name = f"c-{generate_random_string(8)}"
     return {
         "tenant_id": tenant_id,
@@ -143,26 +141,14 @@ def raw_config(tenant_id, pool_service, normal_service) -> Dict[str, Any]:
     }
 
 
-def run_init(raw: Dict[str, Any], dry_run: bool = False, overwrite: bool = False) -> List[Record]:
+def run_init(raw: dict[str, Any], dry_run: bool = False, overwrite: bool = False) -> list[Record]:
     slz = TenantInfrasSLZ(data=copy.deepcopy(raw))
     slz.is_valid(raise_exception=True)
     return TenantInfrasInitializer(slz.validated_data, overwrite=overwrite, dry_run=dry_run).run()
 
 
-def actions(records: List[Record]) -> Dict[str, str]:
+def actions(records: list[Record]) -> dict[str, str]:
     return {f"{r.kind}:{r.target}": r.action for r in records}
-
-
-class TestExpandEnvRefs:
-    def test_expand(self, monkeypatch):
-        monkeypatch.setenv("FOO_PWD", "s3cret")
-        data = {"a": ["x-${FOO_PWD}", 1], "b": {"c": "${FOO_PWD}"}}
-        assert expand_env_refs(data) == {"a": ["x-s3cret", 1], "b": {"c": "s3cret"}}
-
-    def test_missing(self, monkeypatch):
-        monkeypatch.delenv("NOT_EXISTS_VAR", raising=False)
-        with pytest.raises(ValueError, match="NOT_EXISTS_VAR"):
-            expand_env_refs({"a": "${NOT_EXISTS_VAR}"})
 
 
 class TestInitialize:
@@ -328,8 +314,6 @@ class TestInitialize:
         assert not Plan.objects.filter(tenant_id=tenant_id).exists()
 
     def test_service_failure_isolated(self, raw_config, tenant_id, pool_service, normal_service):
-        from paasng.accessories.servicehub.manager import mixed_plan_mgr
-
         origin_create = mixed_plan_mgr.create
 
         def _create(service, plan_data):
@@ -358,13 +342,9 @@ class TestInitialize:
 
 
 class TestValidation:
-    def test_example_config(self, monkeypatch):
+    def test_example_config(self):
         example = Path(initializer_module.__file__).parent / "example.yaml"
-        content = example.read_text()
-        for name in set(ENV_REF_PATTERN.findall(content)):
-            monkeypatch.setenv(name, "dummy")
-
-        slz = TenantInfrasSLZ(data=expand_env_refs(yaml.safe_load(content)))
+        slz = TenantInfrasSLZ(data=yaml.safe_load(example.read_text()))
         assert slz.is_valid(), slz.errors
 
     def test_cluster_owned_by_other_tenant(self, raw_config):
@@ -406,9 +386,7 @@ class TestValidation:
 
 
 class TestCommand:
-    def test_dry_run_by_default(self, raw_config, tenant_id, tmp_path, monkeypatch, capsys):
-        monkeypatch.setenv("TENANT_CLUSTER_TOKEN", "token-from-env")
-        raw_config["clusters"][0]["token"] = "${TENANT_CLUSTER_TOKEN}"
+    def test_dry_run_by_default(self, raw_config, tenant_id, tmp_path, capsys):
         path = tmp_path / "tenant.yaml"
         path.write_text(yaml.safe_dump(raw_config))
 
@@ -417,7 +395,7 @@ class TestCommand:
         assert not Plan.objects.filter(tenant_id=tenant_id).exists()
 
         call_command("init_tenant_infras", "-f", str(path), "--dry-run=false")
-        assert Cluster.objects.get(name=raw_config["clusters"][0]["name"]).token_value == "token-from-env"
+        assert Cluster.objects.get(name=raw_config["clusters"][0]["name"]).token_value == "secret-token"
 
     def test_invalid_config(self, tmp_path):
         path = tmp_path / "tenant.yaml"

@@ -1,5 +1,4 @@
 # 租户初始化配置示例：python manage.py init_tenant_infras -f example.yaml [--dry-run=false] [--overwrite]
-# 所有字符串都支持 ${ENV_NAME} 引用环境变量，密钥类字段建议使用该方式，避免明文写在文件中
 tenant_id: bk2game
 
 # 新建或更新的集群（集群归属于 tenant_id），字段与平台管理端「添加集群」表单一致
@@ -14,7 +13,7 @@ clusters:
     api_servers:
       - https://bcs-api.example.com/clusters/BCS-K8S-00000
     auth_type: token  # token / cert（cert 时需提供 base64 编码的 ca / cert / key）
-    token: ${BK2GAME_CLUSTER_TOKEN}
+    token: your-cluster-token
     container_log_dir: /var/lib/docker/containers
     access_entry_ip: 10.0.0.1
     # 未启用日志平台方案时必填
@@ -23,14 +22,14 @@ clusters:
       host: es.example.com
       port: 9200
       username: elastic
-      password: ${BK2GAME_ES_PASSWORD}
+      password: your-password
     # 非默认 / 运营租户必填
     app_image_registry:
       host: mirrors.example.com
       skip_tls_verify: false
       namespace: bkapps
       username: bkapps
-      password: ${BK2GAME_REGISTRY_PASSWORD}
+      password: your-password
     # 以下为可选项
     available_tenant_ids: [bk2game]  # 默认为 [tenant_id]
     app_address_type: subdomain  # subpath / subdomain
@@ -63,7 +62,7 @@ services:
           host: mysql.example.com
           port: 3306
           user: admin
-          password: ${BK2GAME_MYSQL_PASSWORD}
+          password: your-password
     # 绑定策略可选，默认统一分配本次声明的所有可用方案；也可使用 env_plans: {stag: [...], prod: [...]}
     binding_policy:
       plans: [default]
@@ -76,7 +75,7 @@ services:
           port: 5672
           management_api: http://rabbitmq.example.com:15672
           admin: admin
-          password: ${BK2GAME_RABBITMQ_PASSWORD}
+          password: your-password
   otel:
     plans:
       - name: default
@@ -88,7 +87,7 @@ services:
         config:
           endpoint_url: http://bkrepo.example.com
           username: bksaas-addons
-          password: ${BK2GAME_BKREPO_PASSWORD}
+          password: your-password
           project: bksaas-addons
   redis:
     plans:
@@ -102,7 +101,7 @@ services:
             credentials:
               host: redis-0.example.com
               port: 6379
-              password: ${BK2GAME_REDIS_0_PASSWORD}
+              password: your-password
       - name: 1exclusive
         description: 独占实例
 

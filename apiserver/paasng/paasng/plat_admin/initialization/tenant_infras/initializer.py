@@ -19,11 +19,9 @@
 
 import json
 import logging
-import os
-import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from django.db import transaction
 from django.db.models import Q
@@ -55,37 +53,6 @@ if TYPE_CHECKING:
     from paas_wl.infras.cluster.entities import AllocationPolicy
 
 logger = logging.getLogger(__name__)
-
-ENV_REF_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
-
-
-def expand_env_refs(data: Any) -> Any:
-    """将配置中所有字符串里的 ${NAME} 替换为环境变量的值
-
-    :raises ValueError: 引用的环境变量不存在
-    """
-    missing: Set[str] = set()
-
-    def _replace(match: re.Match) -> str:
-        name = match.group(1)
-        if name not in os.environ:
-            missing.add(name)
-            return match.group(0)
-        return os.environ[name]
-
-    def _walk(value: Any) -> Any:
-        if isinstance(value, str):
-            return ENV_REF_PATTERN.sub(_replace, value)
-        if isinstance(value, dict):
-            return {k: _walk(v) for k, v in value.items()}
-        if isinstance(value, list):
-            return [_walk(v) for v in value]
-        return value
-
-    result = _walk(data)
-    if missing:
-        raise ValueError(f"environment variables not set: {', '.join(sorted(missing))}")
-    return result
 
 
 class InitializationError(Exception):
@@ -121,7 +88,7 @@ class TenantInfrasInitializer:
 
     def __init__(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         overwrite: bool = False,
         dry_run: bool = True,
         on_record: Optional[Callable[[Record], None]] = None,
@@ -131,20 +98,20 @@ class TenantInfrasInitializer:
         self.overwrite = overwrite
         self.dry_run = dry_run
         self.on_record = on_record
-        self.records: List[Record] = []
+        self.records: list[Record] = []
 
     @property
-    def failed_records(self) -> List[Record]:
+    def failed_records(self) -> list[Record]:
         return [r for r in self.records if r.action == Action.FAILED]
 
-    def run(self) -> List[Record]:
+    def run(self) -> list[Record]:
         services = self._preflight()
 
         self._init_clusters()
         self._init_shared_clusters()
         self._init_cluster_allocation_policy()
         for name, service in services.items():
-            self._init_service_safely(name, service, self.data["services"][name])
+            self._init_service_safely(service, self.data["services"][name])
         self._init_log_config()
         return self.records
 
@@ -164,7 +131,7 @@ class TenantInfrasInitializer:
 
     # 预检
 
-    def _preflight(self) -> Dict[str, ServiceObj]:
+    def _preflight(self) -> dict[str, ServiceObj]:
         for name in self.data["shared_clusters"]:
             if not Cluster.objects.filter(name=name).exists():
                 raise InitializationError(f"shared cluster {name} does not exist")
@@ -174,10 +141,11 @@ class TenantInfrasInitializer:
 
         for cluster_data in self.data["clusters"]:
             cluster = Cluster.objects.filter(name=cluster_data["name"]).first()
-            removed = (
-                set(cluster.available_tenant_ids) - set(cluster_data["available_tenant_ids"]) if cluster else set()
-            )
-            if self.overwrite and removed:
+            if (
+                self.overwrite
+                and cluster
+                and (removed := set(cluster.available_tenant_ids) - set(cluster_data["available_tenant_ids"]))
+            ):
                 raise InitializationError(
                     f"overwriting cluster {cluster_data['name']} would remove tenants {', '.join(sorted(removed))} "
                     "from its available tenants, please add them to available_tenant_ids"
@@ -201,11 +169,11 @@ class TenantInfrasInitializer:
         if not policy_data:
             return
 
-        policies: List[AllocationPolicy] = [p.policy for p in policy_data["allocation_precedence_policies"]]
+        policies: list[AllocationPolicy] = [p.policy for p in policy_data["allocation_precedence_policies"]]
         if policy_data["allocation_policy"]:
             policies.append(policy_data["allocation_policy"])
 
-        used_names: Set[str] = set()
+        used_names: set[str] = set()
         for policy in policies:
             used_names |= set(policy.clusters or [])
             for clusters in (policy.env_clusters or {}).values():
@@ -222,7 +190,7 @@ class TenantInfrasInitializer:
                 f"clusters {', '.join(sorted(unknown))} in allocation policy do not exist or are not available"
             )
 
-    def _check_service(self, name: str, svc_data: Dict[str, Any]) -> ServiceObj:
+    def _check_service(self, name: str, svc_data: dict[str, Any]) -> ServiceObj:
         try:
             service = mixed_service_mgr.find_by_name(name, include_invisible=True)
         except ServiceObjNotFound:
@@ -242,7 +210,7 @@ class TenantInfrasInitializer:
                 )
         return service
 
-    def _cluster_needs_access_check(self, cluster: Optional[Cluster], data: Dict[str, Any]) -> bool:
+    def _cluster_needs_access_check(self, cluster: Optional[Cluster], data: dict[str, Any]) -> bool:
         if cluster is None:
             return True
         if not self.overwrite:
@@ -273,7 +241,7 @@ class TenantInfrasInitializer:
         if modified:
             invalidate_global_configuration_pool()
 
-    def _upsert_cluster(self, cluster: Optional[Cluster], data: Dict[str, Any]):
+    def _upsert_cluster(self, cluster: Optional[Cluster], data: dict[str, Any]):
         created = cluster is None
         if cluster is None:
             cluster = Cluster(
@@ -361,15 +329,15 @@ class TenantInfrasInitializer:
 
     # 增强服务
 
-    def _init_service_safely(self, name: str, service: ServiceObj, svc_data: Dict[str, Any]):
+    def _init_service_safely(self, service: ServiceObj, svc_data: dict[str, Any]):
         try:
             with transaction.atomic():
                 self._init_service(service, svc_data)
         except Exception as e:
-            logger.exception("failed to init service %s for tenant %s", name, self.tenant_id)
-            self._record("service", name, Action.FAILED, str(e))
+            logger.exception("failed to init service %s for tenant %s", service.name, self.tenant_id)
+            self._record("service", service.name, Action.FAILED, str(e))
 
-    def _init_service(self, service: ServiceObj, svc_data: Dict[str, Any]):
+    def _init_service(self, service: ServiceObj, svc_data: dict[str, Any]):
         for plan_data in svc_data["plans"]:
             self._upsert_plan(service, plan_data)
 
@@ -385,7 +353,7 @@ class TenantInfrasInitializer:
         plans = service.get_plans_by_tenant_id(self.tenant_id, is_active=NOTSET)
         return next((p for p in plans if p.name == name), None)
 
-    def _upsert_plan(self, service: ServiceObj, plan_data: Dict[str, Any]):
+    def _upsert_plan(self, service: ServiceObj, plan_data: dict[str, Any]):
         plan = self._find_plan(service, plan_data["name"])
         if not self._should_write("plan", f"{service.name}/{plan_data['name']}", exists=plan is not None):
             return
@@ -407,7 +375,7 @@ class TenantInfrasInitializer:
         else:
             mixed_plan_mgr.create(service, plan_data=payload)
 
-    def _upsert_pre_created_instances(self, service: ServiceObj, plan_data: Dict[str, Any]):
+    def _upsert_pre_created_instances(self, service: ServiceObj, plan_data: dict[str, Any]):
         if not plan_data["pre_created_instances"]:
             return
 
@@ -447,7 +415,7 @@ class TenantInfrasInitializer:
             elif not self.overwrite:
                 self._record(kind, target, Action.SKIP, "already exists")
 
-    def _init_binding_policy(self, service: ServiceObj, svc_data: Dict[str, Any]):
+    def _init_binding_policy(self, service: ServiceObj, svc_data: dict[str, Any]):
         mgr = SvcBindingPolicyManager(service, self.tenant_id)
         exists = mgr.get_comb_cfg() is not None
         if exists and not self.overwrite:
@@ -483,7 +451,6 @@ class TenantInfrasInitializer:
         defaults = dict(data)
         if exists and defaults.get("shared_bk_biz_id") is None:
             defaults.pop("shared_bk_biz_id", None)
-            logger.info("shared_bk_biz_id not declared, keep current value of tenant %s", self.tenant_id)
         TenantLogConfig.objects.update_or_create(tenant_id=self.tenant_id, defaults=defaults)
 
 
@@ -491,23 +458,20 @@ def _is_pool_service(service: ServiceObj) -> bool:
     return isinstance(service, LocalServiceObj) and service.provider_name == "pool"
 
 
-def _policy_plan_names(policy: Dict[str, Any]) -> List[str]:
+def _policy_plan_names(policy: dict[str, Any]) -> list[str]:
     if plans := policy.get("plans"):
         return list(plans)
     return [n for names in (policy.get("env_plans") or {}).values() for n in names]
 
 
-def _group_instances_by_identity(plan: Plan) -> Dict[str, List[PreCreatedInstance]]:
-    groups: Dict[str, List[PreCreatedInstance]] = defaultdict(list)
+def _group_instances_by_identity(plan: Plan) -> dict[str, list[PreCreatedInstance]]:
+    groups: dict[str, list[PreCreatedInstance]] = defaultdict(list)
     for ins in PreCreatedInstance.objects.filter(plan=plan):
-        try:
-            groups[instance_identity(json.loads(ins.credentials))].append(ins)
-        except (TypeError, ValueError):
-            logger.warning("invalid credentials of pre-created instance %s, ignored", ins.uuid)
+        groups[instance_identity(json.loads(ins.credentials))].append(ins)
     return groups
 
 
-def instance_identity(credentials: Dict[str, Any]) -> str:
+def instance_identity(credentials: dict[str, Any]) -> str:
     """资源池实例以连接地址作为唯一标识，没有地址时使用完整凭证"""
     if "host" in credentials:
         return f"{credentials['host']}:{credentials.get('port', '')}"

@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict, List
+from typing import Any
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -38,12 +38,12 @@ class TenantClusterSLZ(ClusterUpdateInputSLZ):
     component_preferred_namespace = serializers.CharField(help_text="组件部署首选命名空间", default="blueking")
     component_image_registry = serializers.CharField(help_text="组件镜像仓库", default="hub.bktencent.com")
 
-    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def to_internal_value(self, data: dict[str, Any]) -> dict[str, Any]:
         data = {"available_tenant_ids": [self.context["cur_tenant_id"]], **data}
         return super().to_internal_value(data)
 
 
-def validate_clusters(tenant_id: str, clusters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def validate_clusters(tenant_id: str, clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """逐个校验集群配置（每个集群的校验上下文不同，无法使用嵌套序列化器）"""
     names = [c.get("name") for c in clusters]
     if len(names) != len(set(names)):
@@ -76,7 +76,7 @@ class ClusterAllocationPolicySLZ(serializers.Serializer):
         help_text="分配规则列表", child=AllocationPrecedencePolicySLZ(), max_length=20, required=False
     )
 
-    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         if attrs["type"] == ClusterAllocationPolicyType.UNIFORM:
             if not attrs.get("allocation_policy"):
                 raise ValidationError("需要配置统一分配策略")
@@ -106,7 +106,7 @@ class PlanSLZ(serializers.Serializer):
     properties = serializers.DictField(help_text="方案属性，更新已有方案时未声明则沿用当前值", required=False)
     pre_created_instances = PreCreatedInstanceSLZ(help_text="资源池实例，仅资源池类服务可用", many=True, default=list)
 
-    def validate_pre_created_instances(self, instances: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def validate_pre_created_instances(self, instances: list[dict[str, Any]]) -> list[dict[str, Any]]:
         identities = [instance_identity(ins["credentials"]) for ins in instances]
         if duplicated := {i for i in identities if identities.count(i) > 1}:
             raise ValidationError(f"实例 {', '.join(sorted(duplicated))} 重复，同一实例需要多份时请使用 count")
@@ -124,7 +124,7 @@ class ServiceBindingPolicySLZ(serializers.Serializer):
     plans = serializers.ListField(help_text="方案名称列表", child=serializers.CharField(), required=False)
     env_plans = EnvPlansSLZ(help_text="按环境分配的方案名称", required=False)
 
-    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         if bool(attrs.get("plans")) == bool(attrs.get("env_plans")):
             raise ValidationError("plans 与 env_plans 必须且只能配置一个")
         return attrs
@@ -134,7 +134,7 @@ class ServiceSLZ(serializers.Serializer):
     plans = PlanSLZ(help_text="方案列表", many=True, default=list)
     binding_policy = ServiceBindingPolicySLZ(help_text="绑定策略，默认统一分配本次声明的可用方案", required=False)
 
-    def validate_plans(self, plans: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def validate_plans(self, plans: list[dict[str, Any]]) -> list[dict[str, Any]]:
         names = [p["name"] for p in plans]
         if len(names) != len(set(names)):
             raise ValidationError("方案名称不能重复")
@@ -164,7 +164,7 @@ class TenantInfrasSLZ(serializers.Serializer):
     services = serializers.DictField(help_text="增强服务配置，key 为服务名称", child=ServiceSLZ(), default=dict)
     log_config = TenantLogConfigSLZ(help_text="租户日志配置", required=False)
 
-    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         attrs["clusters"] = validate_clusters(attrs["tenant_id"], attrs["clusters"])
 
         declared = {c["name"] for c in attrs["clusters"]}

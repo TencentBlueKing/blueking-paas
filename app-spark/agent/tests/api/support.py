@@ -22,7 +22,7 @@ from pydantic_ai.models import Model
 from app_spark_agent.git import WorkspaceSaver
 from app_spark_agent.server import create_runtime_app
 from app_spark_agent.state import ConversationContext
-from tests.support.ag_ui import SSE_HEADERS, assistant_text, run_body, sse_events
+from tests.support.ag_ui import SSE_HEADERS, answer_run_body, assistant_text, run_body, sse_events
 from tests.support.fake_models import gated_model
 
 # Both are at least sixteen characters and share no substring, so a leak test can search for
@@ -75,8 +75,9 @@ def build_test_client(
     tmp_path: Path,
     *,
     model: Model,
-    capabilities: Sequence[AbstractCapability[object]] = (),
+    capabilities: Sequence[AbstractCapability[Any]] = (),
     tools: Sequence[Any] = (),
+    output_type: Any = str,
     make_saver: Callable[[Path], WorkspaceSaver] | None = None,
 ) -> TestClient:
     """Create a Runtime wired to a fake model, bypassing the real DeepSeek agent.
@@ -86,12 +87,13 @@ def build_test_client(
         be pointed at that exact directory. Omitted for the default local-only Runtime.
     """
     workspace = tmp_path / "workspace"
-    workspace.mkdir()
+    workspace.mkdir(parents=True, exist_ok=True)
     state_dir = tmp_path / "state"
-    agent: Agent[object, str] = Agent(
+    agent: Agent[Any, Any] = Agent(
         model,
         tools=list(tools),
-        capabilities=list[AbstractCapability[object]](capabilities),
+        capabilities=list(capabilities),
+        output_type=output_type,
     )
     app = create_runtime_app(
         workspace=workspace,
@@ -119,6 +121,27 @@ def run_request(
             run_id=run_id or str(uuid4()),
             context_version=context_version,
             prompt=prompt,
+        ),
+    )
+
+
+def answer_request(
+    client: TestClient,
+    *,
+    conversation_id: str,
+    context_version: int,
+    responses: Sequence[dict[str, object]],
+    run_id: str | None = None,
+) -> Any:
+    """Post one deferred ``askUserResponses`` run and return the raw HTTP response."""
+    return client.post(
+        "/runs",
+        headers=SSE_HEADERS,
+        json=answer_run_body(
+            conversation_id=conversation_id,
+            run_id=run_id or str(uuid4()),
+            context_version=context_version,
+            responses=responses,
         ),
     )
 
@@ -226,6 +249,29 @@ def run_turn(
         conversation_id=conversation_id,
         context_version=version,
         prompt=prompt,
+        run_id=run_id,
+    )
+    assert response.status_code == 200, response.text
+    return RunOutcome(
+        events=sse_events(response.text),
+        content_type=response.headers["content-type"],
+    )
+
+
+def answer_turn(
+    client: TestClient,
+    *,
+    conversation_id: str,
+    responses: Sequence[dict[str, object]],
+    run_id: str | None = None,
+) -> RunOutcome:
+    """Drive one successful ``askUserResponses`` resume at the Runtime's current context version."""
+    version: int = client.get("/health").json()["context_version"]
+    response = answer_request(
+        client,
+        conversation_id=conversation_id,
+        context_version=version,
+        responses=responses,
         run_id=run_id,
     )
     assert response.status_code == 200, response.text

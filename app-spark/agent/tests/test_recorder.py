@@ -165,3 +165,45 @@ async def test_compaction_commits_the_settled_history_mid_run(tmp_path: Path) ->
     assert store.context.messages == compacted
     assert store.context.context_version == 1
     assert recorded(log) == [first_response, tool_return, second_response]
+
+
+async def test_deferred_resume_records_messages_past_initial_message_count(tmp_path: Path) -> None:
+    """Deferred-resume runs pre-record nothing, so the first request must capture the new tool return."""
+    log = make_log(tmp_path)
+    store = ContextStore(tmp_path / "context.json")
+    prior_user = user_turn("first")
+    prior_response = assistant_turn("asking")
+    deferred_return = user_turn("answered")
+    final_response = assistant_turn("done")
+    recorder = TranscriptRecorder(
+        log=log,
+        context_store=store,
+        conversation_id=CONVERSATION_ID,
+        run_id=RUN_ID,
+        initial_message_count=2,
+    )
+
+    await recorder.before_model_request(_RUN_CTX, request_context([prior_user, prior_response, deferred_return]))
+    await recorder.after_model_request(
+        _RUN_CTX,
+        request_context=request_context([prior_user, prior_response, deferred_return]),
+        response=final_response,
+    )
+
+    assert recorded(log) == [deferred_return, final_response]
+
+
+async def test_flush_trailing_records_post_response_messages_once(tmp_path: Path) -> None:
+    """A run pausing on a deferred tool after a sibling tool leaves an unrecorded trailing request."""
+    recorder, log, _store = make_recorder(tmp_path)
+    user = user_turn("hello")
+    response = assistant_turn("calling tools")
+    sibling_return = user_turn("sibling tool result")
+
+    await recorder.before_model_request(_RUN_CTX, request_context([user]))
+    await recorder.after_model_request(_RUN_CTX, request_context=request_context([user]), response=response)
+
+    await recorder.flush_trailing([user, response, sibling_return])
+    await recorder.flush_trailing([user, response, sibling_return])
+
+    assert recorded(log) == [response, sibling_return]

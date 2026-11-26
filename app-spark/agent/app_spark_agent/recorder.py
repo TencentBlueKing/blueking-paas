@@ -60,11 +60,16 @@ class TranscriptRecorder(AbstractCapability[Any]):
         context_store: ContextStore,
         conversation_id: str,
         run_id: str,
+        initial_message_count: int | None = None,
     ) -> None:
         self._log = log
         self._context_store = context_store
         self._conversation_id = conversation_id
         self._run_id = run_id
+        # Deferred-resume runs start with no pre-recorded user message: `CallToolsNode` synthesizes
+        # the `ToolReturnPart` request before the first `before_model_request`, so slicing past the
+        # prior history length captures that opening tool-return message into `log.jsonl`.
+        self._initial_message_count = initial_message_count
         # Messages already recorded, held by strong reference so identity comparison against a
         # later history stays sound: a dropped message must not have its address reused by a
         # genuinely new one.
@@ -131,6 +136,20 @@ class TranscriptRecorder(AbstractCapability[Any]):
         self._settled = settled
         return response
 
+    async def flush_trailing(self, messages: Sequence[ModelMessage]) -> None:
+        """Record any messages appended after the final model response.
+
+        When a model response invokes a sibling tool alongside a deferred `ask_user_question`, the
+        sibling tool runs and appends its `ToolReturnPart` request before the run pauses with no
+        subsequent `before_model_request`. Flushing at run completion keeps `log.jsonl` complete.
+        """
+        trailing = self._unrecorded(messages)
+        if not trailing:
+            return
+        await self._record(trailing)
+        if self._settled is not None:
+            self._settled = [*self._settled, *trailing]
+
     def _unrecorded(self, messages: Sequence[ModelMessage]) -> list[ModelMessage]:
         """Return the messages appended since the previous request settled.
 
@@ -142,6 +161,8 @@ class TranscriptRecorder(AbstractCapability[Any]):
         the recent tail alone, so the scan stops long before reaching it.
         """
         if self._settled is None:
+            if self._initial_message_count is not None:
+                return list(messages[self._initial_message_count :])
             # First request of the run: the caller already recorded the prior context and the
             # user turn. Nothing here can be diffed anyway, because the framework rebuilds these
             # messages before this hook runs -- history cleanup merges the new user turn into a

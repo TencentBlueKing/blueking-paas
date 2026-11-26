@@ -4,13 +4,15 @@
 参数去调用**所有**可用工具，包括 Shell，行为既不确定也读不懂。这里要的是一段演得像 LLM 的
 确定性脚本。
 
-三个场景：
+四个场景：
 
 - ``write-file``（默认）：先调 ``write_file`` 落一个文件，拿到工具结果后再流式回一段说明。
   一轮里就覆盖了工具调用 delta、工具结果、一轮内多次模型请求，以及 workspace 真实变更。
 - ``chat``：只流式回文本，用于最朴素的「SSE 通不通」断言。
 - ``slow``：先吐一个 chunk 让流真的开始，再挂起 ``FAKE_DELAY_SECONDS``。调用方因此可以在
   run 确实在飞的时候发第二个请求，去验证 Runtime 的 409——不靠 sleep 猜时序。
+- ``ask-user``：先调 ``ask_user_question`` 提出单选 + 多选两道题并暂停本轮；恢复后回显收到的答案
+  （或在用户忽略提问直接发新消息时，回显新消息）。
 
 用法::
 
@@ -42,6 +44,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
+from pydantic_ai_harness.ask_user import TOOL_NAME as ASK_USER_TOOL
 
 from app_spark_agent import settings
 
@@ -55,9 +58,10 @@ WRITE_FILE_TOOL = "write_file"
 SCENARIO_WRITE_FILE = "write-file"
 SCENARIO_CHAT = "chat"
 SCENARIO_SLOW = "slow"
+SCENARIO_ASK_USER = "ask-user"
 
 DEFAULT_SCENARIO = SCENARIO_WRITE_FILE
-SCENARIOS = (SCENARIO_WRITE_FILE, SCENARIO_CHAT, SCENARIO_SLOW)
+SCENARIOS = (SCENARIO_WRITE_FILE, SCENARIO_CHAT, SCENARIO_SLOW, SCENARIO_ASK_USER)
 
 # 假模型每轮写的文件名。带上轮次，连续多轮就会留下可区分、可断言的产物。
 NOTE_FILENAME_TEMPLATE = "fake-agent-note-{turn}.md"
@@ -162,6 +166,8 @@ def plan_step(scenario: str, messages: Sequence[ModelMessage]) -> Step:
     if scenario == SCENARIO_SLOW:
         # 挂在第一块之后：调用方能先收到流真的开始了，再放心地去触发并发请求。
         return TextStep(chunks=chunks(f"Thinking about: {prompt}"), pause_after=0)
+    if scenario == SCENARIO_ASK_USER:
+        return _plan_ask_user_step(messages, prompt)
 
     turn = count_user_prompts(messages)
     filename = NOTE_FILENAME_TEMPLATE.format(turn=turn)
@@ -172,6 +178,60 @@ def plan_step(scenario: str, messages: Sequence[ModelMessage]) -> Step:
         args={"path": filename, "content": f"# Turn {turn}\n\n{prompt}\n"},
         tool_call_id=f"fake-write-file-{turn}",
     )
+
+
+def _plan_ask_user_step(messages: Sequence[ModelMessage], prompt: str) -> Step:
+    """Decide the next action for `fake:ask-user` solely from trailing request parts."""
+    ask_returns: list[ToolReturnPart] = []
+    has_user_prompt = False
+    for message in reversed(messages):
+        if isinstance(message, ModelResponse):
+            break
+        for part in message.parts:
+            if isinstance(part, ToolReturnPart) and part.tool_name == ASK_USER_TOOL:
+                ask_returns.append(part)
+            elif isinstance(part, UserPromptPart):
+                has_user_prompt = True
+
+    if ask_returns:
+        if has_user_prompt:
+            return TextStep(chunks=chunks(f"Continuing with your new message: {prompt}"))
+        rendered = ", ".join(_render_tool_return(part.content) for part in reversed(ask_returns))
+        return TextStep(chunks=chunks(f"Received your answers: {rendered}"))
+
+    turn = count_user_prompts(messages)
+    return ToolCallStep(
+        tool_name=ASK_USER_TOOL,
+        args={
+            "questions": [
+                {
+                    "header": "Style",
+                    "question": "Which visual style do you prefer?",
+                    "options": [
+                        {"label": "Minimal (Recommended)", "description": "Clean layout with high contrast"},
+                        {"label": "Playful", "description": "Warm colors and rounded cards"},
+                    ],
+                    "multi_select": False,
+                },
+                {
+                    "header": "Features",
+                    "question": "Which starter features should be included?",
+                    "options": [
+                        {"label": "Search", "description": "Filter items by keyword"},
+                        {"label": "Export CSV", "description": "Download records as CSV"},
+                    ],
+                    "multi_select": True,
+                },
+            ]
+        },
+        tool_call_id=f"fake-ask-user-{turn}",
+    )
+
+
+def _render_tool_return(content: object) -> str:
+    if isinstance(content, str):
+        return content
+    return json.dumps(content, ensure_ascii=False, sort_keys=True)
 
 
 def wrote_file_this_run(messages: Sequence[ModelMessage]) -> bool:

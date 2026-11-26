@@ -17,14 +17,17 @@ from app_spark_agent import VERSION, settings
 from app_spark_agent.agent import build_run_model
 from app_spark_agent.app_supervisor import AppLaunchConflict, AppLaunchFailed
 from app_spark_agent.attachments import AttachmentResolver
+from app_spark_agent.cap.ask_user import PendingAskUser
 from app_spark_agent.git import GitError
 
 # Imported under a different name: `log` already means "append-only channel" in this module.
 from app_spark_agent.observability import log as logger
-from app_spark_agent.recorder import TranscriptRecorder, record_messages
+from app_spark_agent.recorder import TranscriptRecorder
 from app_spark_agent.server.run_input import ALLOWED_FILE_URL_SCHEMES, PreparedRun, prepare_run, request_with_body
+from app_spark_agent.server.run_prepare import prepare_run_opening
 from app_spark_agent.server.run_task import RunStopper, RuntimeClosingError
 from app_spark_agent.server.runtime import ConversationRuntime, RuntimeBusyError
+from app_spark_agent.server.utils import inject_after_run_started
 from app_spark_agent.state import (
     AppendLog,
     AppendLogError,
@@ -106,6 +109,7 @@ async def health(runtime: RuntimeDep) -> dict[str, object]:
         "workspace_persisted": saver is not None,
         "workspace_save_pending": saver is not None and saver.status.outstanding,
         "workspace": saver.status.as_payload() if saver is not None else None,
+        "pending_questions": PendingAskUser(context.messages).as_payloads(),
     }
 
 
@@ -420,19 +424,19 @@ async def _start_run(
     # 被取消时还没有任何东西落盘，同一个 run_id 可以原样重试。
     await runtime.attachments.ensure([*context.messages, *adapter.messages])
 
-    # Recorded here rather than inferred from the run's history: the framework merges
-    # this turn into a restored trailing request before any capability sees it, and the
-    # adapter is the only place that still knows the turn on its own.
-    await record_messages(
-        runtime.transcript,
-        prepared.run_id,
-        adapter.sanitize_messages(adapter.messages),
+    opening = await prepare_run_opening(
+        prepared=prepared,
+        prior_messages=context.messages,
+        user_turn_messages=adapter.sanitize_messages(adapter.messages),
+        transcript=runtime.transcript,
     )
+
     recorder = TranscriptRecorder(
         log=runtime.transcript,
         context_store=runtime.context_store,
         conversation_id=prepared.conversation_id,
         run_id=prepared.run_id,
+        initial_message_count=opening.initial_message_count,
     )
     stopper = RunStopper()
 
@@ -447,10 +451,14 @@ async def _start_run(
     cancelled = False
 
     async def commit_context(result: AgentRunResult[Any]) -> None:
+        all_messages = result.all_messages()
+        # 并行工具调用 + ask_user_question 暂停时，其他工具的返回在最后一次响应之后落盘、
+        # 不会触发下一次 before_model_request，在此补齐写入原始 transcript。
+        await recorder.flush_trailing(all_messages)
         # The authoritative end-of-run context: whatever compaction left behind, which
         # is exactly what the next run must be given.
         await runtime.context_store.commit(
-            result.all_messages(),
+            all_messages,
             conversation_id=prepared.conversation_id,
         )
 
@@ -488,7 +496,8 @@ async def _start_run(
             )
 
     events = adapter.run_stream(
-        message_history=context.messages,
+        message_history=opening.message_history,
+        deferred_tool_results=prepared.deferred_tool_results,
         conversation_id=prepared.conversation_id,
         run_id=prepared.run_id,
         # None 时 pydantic-ai 用 agent 构造时的默认模型。
@@ -497,6 +506,8 @@ async def _start_run(
         on_complete=commit_context,
         on_cancel=commit_stopped_context,
     )
+    if opening.opening_ui_events:
+        events = inject_after_run_started(events, opening.opening_ui_events)
     encoder = adapter.build_event_stream()
 
     async def end_with_error(message: str) -> str:

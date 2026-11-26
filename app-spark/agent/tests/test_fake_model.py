@@ -23,8 +23,11 @@ from pytest import MonkeyPatch
 
 from app_spark_agent import settings
 from app_spark_agent.agent import build_model
+from app_spark_agent.cap.ask_user import BYPASSED_BY_USER_MESSAGE
 from app_spark_agent.fake_model import (
+    ASK_USER_TOOL,
     NOTE_FILENAME_TEMPLATE,
+    SCENARIO_ASK_USER,
     WRITE_FILE_TOOL,
     TextStep,
     ToolCallStep,
@@ -34,7 +37,7 @@ from app_spark_agent.fake_model import (
     render_user_content,
 )
 from app_spark_agent.server import create_runtime_app
-from tests.api.support import RUNTIME_TOKEN, AuthedTestClient, run_turn
+from tests.api.support import RUNTIME_TOKEN, AuthedTestClient, answer_turn, run_turn
 
 
 def user_turn(prompt: str) -> ModelRequest:
@@ -176,3 +179,84 @@ def test_an_image_prompt_is_echoed_as_a_summary_not_its_bytes() -> None:
     content: list[UserContent] = ["look at", BinaryContent(data=b"\x89PNG" + b"\x00" * 6, media_type="image/png")]
 
     assert render_user_content(content) == "look at [image image/png 10 bytes]"
+
+
+def test_ask_user_scenario_asks_then_echoes_answers_or_bypassed_message() -> None:
+    ask_step = plan_step(SCENARIO_ASK_USER, [user_turn("build a dashboard")])
+    assert isinstance(ask_step, ToolCallStep)
+    assert ask_step.tool_name == ASK_USER_TOOL
+    assert ask_step.tool_call_id == "fake-ask-user-1"
+
+    ask_call = ModelResponse(
+        parts=[ToolCallPart(tool_name=ASK_USER_TOOL, args=ask_step.args, tool_call_id=ask_step.tool_call_id)]
+    )
+    answered = ModelRequest(
+        parts=[
+            ToolReturnPart(
+                tool_name=ASK_USER_TOOL,
+                content={"Style": ["Minimal (Recommended)"], "Features": ["Search"]},
+                tool_call_id=ask_step.tool_call_id,
+            )
+        ]
+    )
+    reply_step = plan_step(SCENARIO_ASK_USER, [user_turn("build a dashboard"), ask_call, answered])
+    assert isinstance(reply_step, TextStep)
+    assert "Minimal (Recommended)" in "".join(reply_step.chunks)
+
+    bypassed = ModelRequest(
+        parts=[
+            ToolReturnPart(
+                tool_name=ASK_USER_TOOL,
+                content=BYPASSED_BY_USER_MESSAGE,
+                tool_call_id=ask_step.tool_call_id,
+            )
+        ]
+    )
+    bypass_step = plan_step(
+        SCENARIO_ASK_USER,
+        [user_turn("build a dashboard"), ask_call, bypassed, user_turn("actually build a timer")],
+    )
+    assert isinstance(bypass_step, TextStep)
+    assert "actually build a timer" in "".join(bypass_step.chunks)
+
+
+def test_a_fake_ask_user_runtime_pauses_and_resumes_end_to_end(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """`fake:ask-user` exercises the real agent's AskUser capability without network calls."""
+    monkeypatch.setattr(settings, "MODEL", "fake:ask-user")
+    monkeypatch.setattr(settings, "MODEL_API_KEY", None)
+    monkeypatch.setattr(settings, "RUNTIME_TOKEN", RUNTIME_TOKEN)
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    app = create_runtime_app(workspace=workspace, state_dir=tmp_path / "state")
+    with AuthedTestClient(app) as client:
+        conversation_id = str(uuid4())
+        first = run_turn(client, conversation_id=conversation_id, prompt="build a tracker")
+        health_after_pause: dict[str, Any] = client.get("/health").json()
+
+        pending = health_after_pause["pending_questions"]
+        assert len(pending) == 1
+        tool_call_id = pending[0]["tool_call_id"]
+        assert first.events[-1]["outcome"]["pendingToolCallIds"] == [tool_call_id]
+
+        resumed = answer_turn(
+            client,
+            conversation_id=conversation_id,
+            responses=[
+                {
+                    "toolCallId": tool_call_id,
+                    "answers": [
+                        {"header": "Style", "selected": ["Playful"]},
+                        {"header": "Features", "selected": ["Search", "Export CSV"]},
+                    ],
+                }
+            ],
+        )
+        health_after_resume: dict[str, Any] = client.get("/health").json()
+
+    assert "Playful" in resumed.reply
+    assert "Export CSV" in resumed.reply
+    assert health_after_resume["pending_questions"] == []

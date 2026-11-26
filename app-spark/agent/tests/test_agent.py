@@ -8,12 +8,13 @@ from typing import Any, cast
 
 import httpx2
 import pytest
-from pydantic_ai import Agent
+from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai.capabilities import LocalWorkspace
 from pydantic_ai.messages import ModelMessage, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai_harness import (
+    AskUser,
     ClampOversizedMessages,
     ClearToolResults,
     DeduplicateFileReads,
@@ -76,6 +77,9 @@ def test_create_agent_scopes_tools_to_workspace(
     assert len(repo_contexts) == 1
     assert tuple(repo_contexts[0].filenames) == ("AGENTS.md",)
     assert repo_contexts[0].nested_traversal is True
+    ask_user = next(item for item in capabilities if isinstance(item, AskUser))
+    assert ask_user.answerer is None
+    assert agent.output_type == [str, DeferredToolRequests]
     assert any(isinstance(item, TieredCompaction) for item in capabilities)
     log_tool = function_tools(agent)["read_app_log"]
     assert log_tool.function_schema.json_schema["properties"] == {}
@@ -101,7 +105,7 @@ def test_extra_tools_reach_the_model_alongside_the_owned_ones(tmp_path: Path) ->
     assert set(tools["init_project"].function_schema.json_schema["properties"]) == {"name"}
 
 
-def function_tools(agent: Agent[None, str]) -> dict[str, Any]:
+def function_tools(agent: Agent[None, Any]) -> dict[str, Any]:
     """Return the function tools registered on agent, keyed by name."""
     tools: dict[str, Any] = {}
     for toolset in agent.toolsets:
@@ -116,7 +120,7 @@ def denied(name: str, patterns: Sequence[str]) -> bool:
     return any(fnmatch.fnmatchcase(name, pattern) for pattern in patterns)
 
 
-def shell_of(agent: Agent[None, str]) -> Shell:
+def shell_of(agent: Agent[None, Any]) -> Shell:
     return next(item for item in agent.root_capability.capabilities if isinstance(item, Shell))
 
 

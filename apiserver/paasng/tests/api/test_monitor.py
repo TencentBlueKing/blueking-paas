@@ -23,6 +23,7 @@ import pytest
 
 from paasng.infras.bkmonitorv3.constants import SpaceType
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
+from tests.utils.auth import create_user
 from tests.utils.mocks.bkmonitor import StubBKMonitorClient
 
 pytestmark = pytest.mark.django_db
@@ -57,6 +58,22 @@ class TestListAlertsView:
         assert resp.data[0]["env"] in ["stag", "prod"]
         assert len(resp.data[0]["receivers"]) == 2
 
+    def test_list_alerts_rejects_user_without_app_permission(self, api_client, bk_app, bk_monitor_space):
+        """更新告警查询接口。"""
+        api_client.force_authenticate(user=create_user())
+
+        with mock.patch("paasng.misc.monitoring.monitor.views.make_bk_monitor_client") as make_client:
+            resp = api_client.post(
+                f"/api/monitor/applications/{bk_app.code}/alerts/",
+                data={
+                    "start_time": (datetime.now() - timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S"),
+                    "end_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                },
+            )
+
+        assert resp.status_code == 403
+        make_client.assert_not_called()
+
     def test_list_alerts_by_user(self, api_client, bk_app, bk_monitor_space):
         resp = api_client.post(
             "/api/monitor/user/alerts/",
@@ -85,3 +102,14 @@ class TestAlarmStrategiesView:
         alarm_strategies = resp.data["strategy_config_list"]
         assert len(alarm_strategies) == 3
         assert alarm_strategies[0]["is_enabled"] in [True, False]
+
+    @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
+    def test_list_alarm_strategies_rejects_user_without_app_permission(self, api_client, bk_app, bk_monitor_space):
+        """更新告警策略查询接口。"""
+        api_client.force_authenticate(user=create_user())
+
+        with mock.patch("paasng.misc.monitoring.monitor.views.make_bk_monitor_client") as make_client:
+            resp = api_client.get(f"/api/monitor/applications/{bk_app.code}/alarm_strategies/")
+
+        assert resp.status_code == 403
+        make_client.assert_not_called()

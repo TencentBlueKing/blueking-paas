@@ -18,19 +18,15 @@
 
 import Vue from 'vue';
 import VueI18n from 'vue-i18n';
-import cookie from 'cookie';
 import { locale, lang } from 'bk-magic-vue';
 import zh from './lang/zh';
 import en from './lang/en';
 import store from '@/store';
+import { resolveLocalLanguage } from '@/common/locale';
 
 Vue.use(VueI18n);
 
-let localLanguage = cookie.parse(document.cookie).blueking_language || 'zh-cn';
-
-if (['zh-cn', 'zh-CN', 'None', 'none', ''].includes(localLanguage)) {
-  localLanguage = 'zh-cn';
-}
+const localLanguage = resolveLocalLanguage();
 
 store.commit('updateLocalLanguage', localLanguage);
 if (localLanguage === 'en') {

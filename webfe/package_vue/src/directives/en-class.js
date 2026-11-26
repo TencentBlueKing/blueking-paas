@@ -16,11 +16,11 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-import cookie from 'cookie';
+import { resolveLocalLanguage } from '@/common/locale';
 
 export default {
   bind(el, binding) {
-    if ((typeof binding.value === 'string' && el && el.classList.contains(binding.value)) || cookie.parse(document.cookie).blueking_language !== 'en') {
+    if ((typeof binding.value === 'string' && el && el.classList.contains(binding.value)) || resolveLocalLanguage() !== 'en') {
       return;
     }
     if (typeof binding.value === 'string') {

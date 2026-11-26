@@ -258,12 +258,15 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
 
     @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertSLZ(many=True)})
     def list(self, request, code):
         """查询告警"""
-        serializer = ListAlertsSLZ(data=request.data, context={"app_codes": [code]})
+        # 更新告警查询接口，按当前应用构造查询参数。
+        application = self.get_application()
+
+        serializer = ListAlertsSLZ(data=request.data, context={"app_codes": [application.code]})
         serializer.is_valid(raise_exception=True)
         query_params: QueryAlertsParams = serializer.validated_data
         if not query_params.bk_biz_ids:
@@ -322,12 +325,15 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
 
     @swagger_auto_schema(query_serializer=ListAlarmStrategiesSLZ, responses={200: AlarmStrategySLZ})
     def list(self, request, code):
         """查询告警策略"""
-        serializer = ListAlarmStrategiesSLZ(data=request.data, context={"app_code": code})
+        # 更新告警策略查询接口，按当前应用构造查询参数。
+        application = self.get_application()
+
+        serializer = ListAlarmStrategiesSLZ(data=request.data, context={"app_code": application.code})
         serializer.is_valid(raise_exception=True)
 
         try:

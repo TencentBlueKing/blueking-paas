@@ -249,6 +249,76 @@ class TestInitialize:
         assert {c["host"]: c["password"] for c in creds}["redis-0"] == "new-p0"
         assert TenantLogConfig.objects.get(tenant_id=tenant_id).retention == 30
 
+    def test_instance_count(self, raw_config, tenant_id, pool_service):
+        instances = raw_config["services"][pool_service.name]["plans"][0]["pre_created_instances"]
+        instances[0]["count"] = 3
+        run_init(raw_config)
+        assert PreCreatedInstance.objects.filter(tenant_id=tenant_id).count() == 4
+
+        target = f"pre_created_instance:{pool_service.name}/0shared/redis-0:6379"
+        instances[0]["count"] = 5
+        records = run_init(raw_config)
+        assert actions(records)[target] == Action.CREATE
+        assert PreCreatedInstance.objects.filter(tenant_id=tenant_id).count() == 6
+
+        # 数量减少时不删除已有实例
+        instances[0]["count"] = 2
+        records = run_init(raw_config)
+        assert actions(records)[target] == Action.SKIP
+        assert PreCreatedInstance.objects.filter(tenant_id=tenant_id).count() == 6
+
+    def test_overwrite_updates_all_duplicated_instances(self, raw_config, tenant_id, pool_service):
+        instance = raw_config["services"][pool_service.name]["plans"][0]["pre_created_instances"][0]
+        instance["count"] = 3
+        run_init(raw_config)
+
+        instance["credentials"]["password"] = "new-p0"
+        run_init(raw_config, overwrite=True)
+
+        creds = [json.loads(i.credentials) for i in PreCreatedInstance.objects.filter(tenant_id=tenant_id)]
+        assert [c["password"] for c in creds if c["host"] == "redis-0"] == ["new-p0"] * 3
+
+    def test_overwrite_keeps_shared_bk_biz_id(self, raw_config, tenant_id):
+        raw_config["log_config"]["shared_bk_biz_id"] = 100
+        run_init(raw_config)
+
+        raw_config["log_config"].pop("shared_bk_biz_id")
+        raw_config["log_config"]["retention"] = 30
+        run_init(raw_config, overwrite=True)
+
+        log_config = TenantLogConfig.objects.get(tenant_id=tenant_id)
+        assert log_config.retention == 30
+        assert log_config.shared_bk_biz_id == 100
+
+    def test_overwrite_removing_available_tenants(self, raw_config, tenant_id):
+        run_init(raw_config)
+        cluster = Cluster.objects.get(name=raw_config["clusters"][0]["name"])
+        cluster.available_tenant_ids = [tenant_id, "other"]
+        cluster.save(update_fields=["available_tenant_ids"])
+        raw_config["clusters"][0]["description"] = "updated"
+
+        with pytest.raises(InitializationError, match="would remove tenants other"):
+            run_init(raw_config, overwrite=True)
+        cluster.refresh_from_db()
+        assert cluster.description == "tenant cluster"
+
+        raw_config["clusters"][0]["available_tenant_ids"] = [tenant_id, "other"]
+        run_init(raw_config, overwrite=True)
+        cluster.refresh_from_db()
+        assert cluster.description == "updated"
+
+    def test_overwrite_keeps_undeclared_plan_config(self, raw_config, tenant_id, normal_service):
+        run_init(raw_config)
+        plan_data = raw_config["services"][normal_service.name]["plans"][0]
+        plan_data.pop("config")
+        plan_data["description"] = "updated plan"
+
+        run_init(raw_config, overwrite=True)
+
+        plan = Plan.objects.get(service=normal_service, tenant_id=tenant_id)
+        assert plan.description == "updated plan"
+        assert json.loads(plan.config) == {"host": "db"}
+
     def test_cluster_inaccessible(self, raw_config, tenant_id, mock_k8s_accessible):
         mock_k8s_accessible.return_value = False
 
@@ -310,6 +380,14 @@ class TestValidation:
         ]
         with pytest.raises(InitializationError, match="not a resource pool service"):
             run_init(raw_config, dry_run=True)
+
+    def test_duplicated_instances(self, raw_config, pool_service):
+        instances = raw_config["services"][pool_service.name]["plans"][0]["pre_created_instances"]
+        instances.append(copy.deepcopy(instances[0]))
+
+        slz = TenantInfrasSLZ(data=raw_config)
+        assert not slz.is_valid()
+        assert "count" in str(slz.errors)
 
     def test_unknown_binding_plan(self, raw_config, normal_service):
         raw_config["services"][normal_service.name]["binding_policy"] = {"plans": ["not-exists"]}

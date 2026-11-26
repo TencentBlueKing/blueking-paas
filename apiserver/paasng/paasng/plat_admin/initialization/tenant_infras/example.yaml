@@ -95,8 +95,10 @@ services:
       - name: 0shared
         description: 共享实例
         # 资源池实例，以 credentials 中的 host:port 判断是否已存在
+        # 每条实例记录只能分配一次，count 为同一实例的记录数（即可分配次数），重复执行时只补足缺少的数量
         pre_created_instances:
           - config: {}
+            count: 20
             credentials:
               host: redis-0.example.com
               port: 6379

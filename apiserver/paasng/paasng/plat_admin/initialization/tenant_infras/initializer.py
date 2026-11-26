@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import re
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set
 
@@ -173,6 +174,14 @@ class TenantInfrasInitializer:
 
         for cluster_data in self.data["clusters"]:
             cluster = Cluster.objects.filter(name=cluster_data["name"]).first()
+            removed = (
+                set(cluster.available_tenant_ids) - set(cluster_data["available_tenant_ids"]) if cluster else set()
+            )
+            if self.overwrite and removed:
+                raise InitializationError(
+                    f"overwriting cluster {cluster_data['name']} would remove tenants {', '.join(sorted(removed))} "
+                    "from its available tenants, please add them to available_tenant_ids"
+                )
             if not self._cluster_needs_access_check(cluster, cluster_data):
                 continue
             if not check_k8s_accessible(
@@ -382,12 +391,18 @@ class TenantInfrasInitializer:
             return
 
         slz = PlanUpsertInputSLZ(
-            data={k: plan_data[k] for k in ("name", "description", "is_active", "config", "properties")}
+            data={
+                k: plan_data[k] for k in ("name", "description", "is_active", "config", "properties") if k in plan_data
+            }
         )
         slz.is_valid(raise_exception=True)
         payload = slz.validated_data
         payload["tenant_id"] = self.tenant_id
         if plan:
+            # 未声明的字段沿用当前值，避免被序列化器的默认值（空字典）覆盖
+            for field in ("config", "properties"):
+                if field not in plan_data:
+                    payload[field] = getattr(plan, field)
             mixed_plan_mgr.update(service, plan_id=plan.uuid, plan_data=payload)
         else:
             mixed_plan_mgr.create(service, plan_data=payload)
@@ -398,35 +413,39 @@ class TenantInfrasInitializer:
 
         plan_obj = self._find_plan(service, plan_data["name"])
         plan = Plan.objects.get(uuid=plan_obj.uuid) if plan_obj else None
-        existing: Dict[str, PreCreatedInstance] = {}
-        if plan:
-            for ins in PreCreatedInstance.objects.filter(plan=plan):
-                try:
-                    existing[_instance_identity(json.loads(ins.credentials))] = ins
-                except (TypeError, ValueError):
-                    logger.warning("invalid credentials of pre-created instance %s, ignored", ins.uuid)
+        existing = _group_instances_by_identity(plan) if plan else {}
 
+        kind = "pre_created_instance"
         for idx, ins_data in enumerate(plan_data["pre_created_instances"]):
-            identity = _instance_identity(ins_data["credentials"])
+            identity = instance_identity(ins_data["credentials"])
             display = identity if "host" in ins_data["credentials"] else f"#{idx}"
             target = f"{service.name}/{plan_data['name']}/{display}"
-            instance = existing.get(identity)
-            if not self._should_write("pre_created_instance", target, exists=instance is not None):
-                continue
-
+            instances = existing.get(identity, [])
+            # 只补足缺少的数量，多出的实例不会删除
+            missing = ins_data["count"] - len(instances)
             fields = {
                 "config": ins_data["config"],
                 "credentials": json.dumps(ins_data["credentials"]),
                 "allocation_type": ins_data["allocation_type"],
                 "binding_policy": ins_data.get("binding_policy") or {},
             }
-            if instance:
-                for k, v in fields.items():
-                    setattr(instance, k, v)
-                instance.save()
-            else:
-                assert plan is not None
-                PreCreatedInstance.objects.create(plan=plan, tenant_id=plan.tenant_id, **fields)
+
+            if instances and self.overwrite:
+                self._record(kind, target, Action.UPDATE, f"{len(instances)} instance(s)")
+                if not self.dry_run:
+                    for instance in instances:
+                        for k, v in fields.items():
+                            setattr(instance, k, v)
+                        instance.save()
+
+            if missing > 0:
+                self._record(kind, target, Action.CREATE, f"{missing} instance(s)")
+                if not self.dry_run:
+                    assert plan is not None
+                    for _ in range(missing):
+                        PreCreatedInstance.objects.create(plan=plan, tenant_id=plan.tenant_id, **fields)
+            elif not self.overwrite:
+                self._record(kind, target, Action.SKIP, "already exists")
 
     def _init_binding_policy(self, service: ServiceObj, svc_data: Dict[str, Any]):
         mgr = SvcBindingPolicyManager(service, self.tenant_id)
@@ -460,7 +479,12 @@ class TenantInfrasInitializer:
         exists = TenantLogConfig.objects.filter(tenant_id=self.tenant_id).exists()
         if not self._should_write("log_config", self.tenant_id, exists=exists):
             return
-        TenantLogConfig.objects.update_or_create(tenant_id=self.tenant_id, defaults=data)
+
+        defaults = dict(data)
+        if exists and defaults.get("shared_bk_biz_id") is None:
+            defaults.pop("shared_bk_biz_id", None)
+            logger.info("shared_bk_biz_id not declared, keep current value of tenant %s", self.tenant_id)
+        TenantLogConfig.objects.update_or_create(tenant_id=self.tenant_id, defaults=defaults)
 
 
 def _is_pool_service(service: ServiceObj) -> bool:
@@ -473,7 +497,17 @@ def _policy_plan_names(policy: Dict[str, Any]) -> List[str]:
     return [n for names in (policy.get("env_plans") or {}).values() for n in names]
 
 
-def _instance_identity(credentials: Dict[str, Any]) -> str:
+def _group_instances_by_identity(plan: Plan) -> Dict[str, List[PreCreatedInstance]]:
+    groups: Dict[str, List[PreCreatedInstance]] = defaultdict(list)
+    for ins in PreCreatedInstance.objects.filter(plan=plan):
+        try:
+            groups[instance_identity(json.loads(ins.credentials))].append(ins)
+        except (TypeError, ValueError):
+            logger.warning("invalid credentials of pre-created instance %s, ignored", ins.uuid)
+    return groups
+
+
+def instance_identity(credentials: Dict[str, Any]) -> str:
     """资源池实例以连接地址作为唯一标识，没有地址时使用完整凭证"""
     if "host" in credentials:
         return f"{credentials['host']}:{credentials.get('port', '')}"

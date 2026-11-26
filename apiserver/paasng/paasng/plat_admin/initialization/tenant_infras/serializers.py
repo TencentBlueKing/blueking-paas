@@ -23,6 +23,7 @@ from rest_framework.exceptions import ValidationError
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType
 from paas_wl.infras.cluster.entities import IngressConfig
 from paas_wl.infras.cluster.models import Cluster
+from paasng.plat_admin.initialization.tenant_infras.initializer import instance_identity
 from paasng.plat_mgt.infras.clusters.serializers import ClusterUpdateInputSLZ
 from paasng.plat_mgt.infras.clusters.serializers.policies import AllocationPolicySLZ, AllocationPrecedencePolicySLZ
 from paasng.plat_mgt.infras.services.serializers.pre_created_instances import PreCreatedInstanceUpsertSLZ
@@ -92,15 +93,24 @@ class ClusterAllocationPolicySLZ(serializers.Serializer):
 
 class PreCreatedInstanceSLZ(PreCreatedInstanceUpsertSLZ):
     credentials = serializers.DictField(help_text="预创建实例的凭据")
+    count = serializers.IntegerField(
+        help_text="实例数量，每条实例记录可分配给一个增强服务实例", min_value=1, default=1
+    )
 
 
 class PlanSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="方案名称", max_length=64)
     description = serializers.CharField(help_text="方案简介")
     is_active = serializers.BooleanField(help_text="是否可用", default=True)
-    config = serializers.DictField(help_text="方案配置", default=dict)
-    properties = serializers.DictField(help_text="方案属性", default=dict)
+    config = serializers.DictField(help_text="方案配置，更新已有方案时未声明则沿用当前值", required=False)
+    properties = serializers.DictField(help_text="方案属性，更新已有方案时未声明则沿用当前值", required=False)
     pre_created_instances = PreCreatedInstanceSLZ(help_text="资源池实例，仅资源池类服务可用", many=True, default=list)
+
+    def validate_pre_created_instances(self, instances: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        identities = [instance_identity(ins["credentials"]) for ins in instances]
+        if duplicated := {i for i in identities if identities.count(i) > 1}:
+            raise ValidationError(f"实例 {', '.join(sorted(duplicated))} 重复，同一实例需要多份时请使用 count")
+        return instances
 
 
 class EnvPlansSLZ(serializers.Serializer):

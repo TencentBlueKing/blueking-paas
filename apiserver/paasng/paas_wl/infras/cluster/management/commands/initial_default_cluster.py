@@ -15,12 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import re
 from typing import Dict, List
+from uuid import UUID
 
 from attr import define
 from blue_krill.data_types.enum import StrStructuredEnum
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from environ import Env
 
@@ -40,9 +42,20 @@ from paasng.settings.kms import get_kms_credential
 
 env = Env()
 
+# 未配置时沿用的默认集群标识, 保持存量部署的初始化行为不变
+DEFAULT_CLUSTER_UUID = "332d740b-03ed-40f2-aa6b-c90cc5f1e89c"
+DEFAULT_CLUSTER_NAME = "default-main"
+# 与后台 "集群名称" 校验规则保持一致: Cluster.name 最大 32 位且全局唯一
+CLUSTER_NAME_PATTERN = r"^[A-Za-z0-9-]+$"
+CLUSTER_NAME_MIN_LENGTH = 3
+CLUSTER_NAME_MAX_LENGTH = 32
+
 
 class EnvVarKey(StrStructuredEnum):
     """环境变量键名"""
+
+    UUID = "PAAS_WL_CLUSTER_UUID"
+    NAME = "PAAS_WL_CLUSTER_NAME"
 
     APP_ROOT_DOMAIN = "PAAS_WL_CLUSTER_APP_ROOT_DOMAIN"
     SUB_PATH_DOMAIN = "PAAS_WL_CLUSTER_SUB_PATH_DOMAIN"
@@ -95,19 +108,41 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--overwrite", dest="overwrite", action="store_true")
         parser.add_argument("--dry_run", dest="dry_run", action="store_true")
+        parser.add_argument(
+            "--cluster-uuid",
+            dest="cluster_uuid",
+            default=None,
+            help=f"集群 UUID，优先级高于环境变量 {EnvVarKey.UUID}，未配置时使用 {DEFAULT_CLUSTER_UUID}",
+        )
+        parser.add_argument(
+            "--cluster-name",
+            dest="cluster_name",
+            default=None,
+            help=f"集群名称，优先级高于环境变量 {EnvVarKey.NAME}，未配置时使用 {DEFAULT_CLUSTER_NAME}",
+        )
 
     def handle(self, overwrite, dry_run, *args, **options):
-        data = self._build_cluster_data()
+        data = self._build_cluster_data(
+            cluster_uuid=options.get("cluster_uuid"), cluster_name=options.get("cluster_name")
+        )
+
+        existing = Cluster.objects.filter(pk=data.uuid).first()
 
         if dry_run:
             self.stdout.write(f"DRY-RUN: preparing to initialize the cluster, data: {data}")
+            for conflict in self._find_name_conflicts(data, existing):
+                self.stderr.write(f"DRY-RUN WARNING: {conflict}")
             return
 
-        if Cluster.objects.filter(pk=data.uuid).exists() and not overwrite:
-            self.stderr.write(
-                f"Cluster (uuid: {data.uuid}, name: {data.name}) exists and not allow to overwrite, skip"
-            )
+        if existing and not overwrite:
+            msg = f"Cluster (uuid: {data.uuid}, name: {existing.name}) exists and not allow to overwrite, skip"
+            if existing.name != data.name:
+                msg += f" (configured name: {data.name}, not applied)"
+            self.stderr.write(msg)
             return
+
+        if conflicts := self._find_name_conflicts(data, existing):
+            raise CommandError("\n".join(conflicts))
 
         # 更新 / 创建集群及相关资源配置
         with transaction.atomic(using="workloads"):
@@ -118,8 +153,41 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Successfully initialized the cluster {data.name} in tenant {data.tenant_id}")
 
-    def _build_cluster_data(self) -> InitialClusterData:
-        """根据环境变量 / 项目配置构建集群数据"""
+    def _find_name_conflicts(self, data: InitialClusterData, existing: Cluster | None) -> List[str]:
+        """检查将要写入的集群名称是否会引发问题，返回问题描述列表 (为空表示没有问题)
+
+        集群以 uuid (主键) 作为唯一标识; 名称在库中唯一, 且被集群分配策略, 应用配置引用,
+        所以本命令只允许通过 uuid 识别到既有集群后覆盖其配置, 不允许借覆盖动作改名.
+        """
+        conflicts = []
+
+        if (holder := Cluster.objects.filter(name=data.name).exclude(pk=data.uuid).first()) is not None:
+            conflicts.append(
+                f"Cluster name {data.name} is already used by cluster {holder.uuid}, "
+                f"please configure another {EnvVarKey.NAME} (or --cluster-name)"
+            )
+
+        if existing is not None and existing.name != data.name:
+            conflicts.append(
+                f"Cluster name can not be changed by this command, cluster {data.uuid} is named "
+                f"{existing.name}, but {data.name} was configured by {EnvVarKey.NAME} (or --cluster-name). "
+                "Keep the original name, or create a new cluster with another uuid"
+            )
+
+        return conflicts
+
+    def _build_cluster_data(
+        self, cluster_uuid: str | None = None, cluster_name: str | None = None
+    ) -> InitialClusterData:
+        """根据环境变量 / 项目配置构建集群数据
+
+        :param cluster_uuid: 命令行指定的集群 UUID, 为空时读取环境变量
+        :param cluster_name: 命令行指定的集群名称, 为空时读取环境变量
+        """
+        # 集群唯一标识, 多机房部署共享同一套 DB 时需分别配置
+        resolved_uuid = self._resolve_cluster_uuid(cluster_uuid)
+        resolved_name = self._resolve_cluster_name(cluster_name)
+
         # 网络相关配置
         app_root_domain = env.str(EnvVarKey.APP_ROOT_DOMAIN, "")
         sub_path_domain = env.str(EnvVarKey.SUB_PATH_DOMAIN, "")
@@ -194,9 +262,8 @@ class Command(BaseCommand):
         tolerations = env.json(EnvVarKey.TOLERATIONS, [])
 
         return InitialClusterData(
-            # 固定 uuid & 集群名称
-            uuid="332d740b-03ed-40f2-aa6b-c90cc5f1e89c",
-            name="default-main",
+            uuid=resolved_uuid,
+            name=resolved_name,
             tenant_id=get_init_tenant_id(),
             description="default blueking application cluster",
             ingress_config=ingress_config,
@@ -211,12 +278,48 @@ class Command(BaseCommand):
             api_server_urls=api_server_urls,
         )
 
+    def _resolve_cluster_uuid(self, cluster_uuid: str | None) -> str:
+        """集群 UUID 取值优先级: 命令行参数 > 环境变量 > 默认值
+
+        该值是集群在数据库中的主键, 同一次部署后续的初始化 (迁移 Job) 都依赖它来识别集群,
+        因此多套环境共享同一套 DB 时必须分别配置, 避免相互覆盖.
+        """
+        raw = (cluster_uuid or env.str(EnvVarKey.UUID, "")).strip()
+        if not raw:
+            return DEFAULT_CLUSTER_UUID
+
+        try:
+            return str(UUID(raw))
+        except ValueError:
+            raise CommandError(
+                f"{EnvVarKey.UUID} (or --cluster-uuid) is not a valid UUID: {raw!r}, "
+                "supported formats: 332d740b-03ed-40f2-aa6b-c90cc5f1e89c / 332d740b03ed40f2aa6bc90cc5f1e89c"
+            ) from None
+
+    def _resolve_cluster_name(self, cluster_name: str | None) -> str:
+        """集群名称取值优先级：命令行参数 > 环境变量 > 默认值
+
+        集群名称在库中唯一, 并且会写入集群分配策略和应用配置, 改动需同步处理这些关联数据.
+        """
+        name = (cluster_name or env.str(EnvVarKey.NAME, "")).strip()
+        if not name:
+            return DEFAULT_CLUSTER_NAME
+
+        if not (CLUSTER_NAME_MIN_LENGTH <= len(name) <= CLUSTER_NAME_MAX_LENGTH) or not re.fullmatch(
+            CLUSTER_NAME_PATTERN, name
+        ):
+            raise CommandError(
+                f"{EnvVarKey.NAME} (or --cluster-name) must be {CLUSTER_NAME_MIN_LENGTH}-"
+                f"{CLUSTER_NAME_MAX_LENGTH} characters of {CLUSTER_NAME_PATTERN}: {name!r}"
+            )
+        return name
+
     def _upsert_cluster_and_related_configs(self, data: InitialClusterData):
-        # 1. 创建 / 更新集群
+        # 1. 创建 / 更新集群, 以 uuid (主键) 识别集群, 名称已由 _find_name_conflicts 校验不会被改动
         cluster, _ = Cluster.objects.update_or_create(
             uuid=data.uuid,
-            name=data.name,
             defaults={
+                "name": data.name,
                 "tenant_id": data.tenant_id,
                 "description": data.description,
                 "ingress_config": data.ingress_config,

@@ -281,6 +281,15 @@ export const PAAS_APP_TYPE = {
   engineless_app: '外链应用',
 };
 
+/**
+ * 应用类型（application.type），用于逻辑判断；展示文案见 PAAS_APP_TYPE
+ */
+export const APPLICATION_TYPE = {
+  DEFAULT: 'default',
+  CLOUD_NATIVE: 'cloud_native',
+  ENGINELESS_APP: 'engineless_app',
+};
+
 export const CIRCLED_NUMBERS = [
   '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
   '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳',

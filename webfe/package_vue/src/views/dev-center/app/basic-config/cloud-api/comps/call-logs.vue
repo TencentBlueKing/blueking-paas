@@ -114,7 +114,7 @@
 
 <script>
 import dayjs from '@/common/dayjs';
-import { createTimeShortcuts, createLongTermDatePresets } from '@/common/date';
+import { TIME_SHORTCUT_KEYS, createDateShortcuts } from '@/common/date';
 
 const MAX_LOOKBACK_SECONDS = 180 * 24 * 60 * 60;
 const COMMON_STATUSES = [200, 201, 204, 400, 401, 403, 404, 429, 499, 500, 502, 504];
@@ -161,9 +161,7 @@ export default {
       return JSON.stringify([this.filters.gateway_name, this.filters.status]);
     },
     dateShortcuts() {
-      const longTerm = createLongTermDatePresets(this.$i18n)
-        .filter(item => [this.$t('最近7天'), this.$t('最近30天')].includes(item.text));
-      return [...createTimeShortcuts(this.$i18n), ...longTerm];
+      return createDateShortcuts(this.$i18n, [...TIME_SHORTCUT_KEYS, '7d', '30d']);
     },
     searchFields() {
       return [

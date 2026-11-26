@@ -19,6 +19,8 @@
 package resources
 
 import (
+	"math"
+	"os"
 	"strconv"
 	"time"
 
@@ -38,12 +40,25 @@ import (
 )
 
 const (
-	// HookExecuteTimeoutThreshold Hook执行超时时间阈值
-	HookExecuteTimeoutThreshold = time.Minute * 15
+	defaultHookExecuteTimeoutThreshold = 15 * time.Minute
+	hookExecuteTimeoutThresholdEnvName = "HOOK_EXECUTE_TIMEOUT_THRESHOLD"
 
 	// HookExecuteFailedTimeoutThreshold 失败 Hook 的超时时间阈值
 	HookExecuteFailedTimeoutThreshold = time.Minute * 2
 )
+
+// HookExecuteTimeoutThreshold Hook 执行超时时间阈值
+var HookExecuteTimeoutThreshold = getHookExecuteTimeoutThreshold(
+	os.Getenv(hookExecuteTimeoutThresholdEnvName),
+)
+
+func getHookExecuteTimeoutThreshold(rawValue string) time.Duration {
+	seconds, err := strconv.ParseInt(rawValue, 10, 64)
+	if err != nil || seconds <= 0 || seconds > math.MaxInt64/int64(time.Second) {
+		return defaultHookExecuteTimeoutThreshold
+	}
+	return time.Duration(seconds) * time.Second
+}
 
 var (
 	// ErrHookPodExists 用于指定 Hook 的 Pod 已经存在

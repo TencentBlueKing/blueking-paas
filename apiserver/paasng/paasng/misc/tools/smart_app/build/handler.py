@@ -17,8 +17,10 @@
 
 import logging
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Any, Dict, List
 
+import arrow
 from attrs import define
 from django.conf import settings
 
@@ -63,6 +65,10 @@ class SmartBuilderTemplate:
 
 class SmartBuildHandler(PodScheduleHandler):
     """S-Mart Builder Handler"""
+
+    @staticmethod
+    def get_pod_timeout(pod_info) -> arrow.Arrow:
+        return arrow.get(pod_info.status.startTime) + timedelta(seconds=settings.MAX_SMART_BUILDER_SECONDS)
 
     def build_pod(self, template: SmartBuilderTemplate) -> str:
         """Create build Pod

@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 
 import pytest
@@ -69,6 +70,15 @@ def basic_template(basic_runtime_spec):
 
 class TestSmartBuildHandler:
     """Test SmartBuildHandler core logic"""
+
+    def test_pod_timeout_uses_smart_builder_setting(self, settings, smart_build_handler):
+        settings.MAX_SMART_BUILDER_SECONDS = 1200
+        settings.MAX_SLUG_SECONDS = 1800
+        start_time = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        pod = mock.Mock()
+        pod.status.startTime = start_time
+
+        assert smart_build_handler.get_pod_timeout(pod).datetime == start_time + timedelta(seconds=1200)
 
     def test_construct_pod_body_basic(self, smart_build_handler, basic_template):
         """Test _construct_pod_body with basic configuration"""

@@ -19,6 +19,8 @@
 package resources
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +32,18 @@ import (
 )
 
 var _ = Describe("HookUtils", func() {
+	DescribeTable(
+		"get hook execute timeout threshold",
+		func(rawValue string, expected time.Duration) {
+			Expect(getHookExecuteTimeoutThreshold(rawValue)).To(Equal(expected))
+		},
+		Entry("empty value", "", 15*time.Minute),
+		Entry("invalid value", "invalid", 15*time.Minute),
+		Entry("non-positive value", "0", 15*time.Minute),
+		Entry("duration overflow", "9223372037", 15*time.Minute),
+		Entry("configured seconds", "1200", 20*time.Minute),
+	)
+
 	var bkapp *paasv1alpha2.BkApp
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme

@@ -31,6 +31,7 @@ from blue_krill.async_utils.poll_task import (
     PollingStatus,
     TaskPoller,
 )
+from django.conf import settings
 from django.utils import timezone
 from pydantic import ValidationError as PyDanticValidationError
 
@@ -108,8 +109,7 @@ class WaitBkAppProcedurePoller(TaskPoller):
     :param module_env_id: id of ModuleEnvironment object
     """
 
-    # over 15 min considered as timeout
-    overall_timeout_seconds = 15 * 60
+    overall_timeout_seconds = settings.DEPLOYMENT_READY_TIMEOUT
     # Abort policies were extra rules which were used to break current polling procedure
     abort_policies: List[AbortPolicy] = []
 
@@ -158,8 +158,6 @@ class WaitAppModelReady(WaitBkAppProcedurePoller):
     :param deployment_id: Optional[uuid]: ID of Deployment object
     """
 
-    # over 15 min considered as timeout
-    overall_timeout_seconds = 15 * 60
     # Abort policies were extra rules which were used to break current polling procedure
     abort_policies: List[AbortPolicy] = [UserInterruptedPolicy()]
 

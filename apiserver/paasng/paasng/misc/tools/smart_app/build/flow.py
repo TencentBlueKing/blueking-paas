@@ -20,6 +20,7 @@ import time
 from contextlib import contextmanager
 
 import redis
+from django.conf import settings
 from django.utils import timezone
 from django.utils.encoding import force_str
 
@@ -113,7 +114,7 @@ class SmartBuildCoordinator:
     """
 
     # The lock will be released anyway after {DEFAULT_LOCK_TIMEOUT} seconds
-    DEFAULT_LOCK_TIMEOUT = 15 * 60
+    DEFAULT_LOCK_TIMEOUT = settings.SMART_BUILD_LOCK_TIMEOUT
     # A placeholder value for lock
     DEFAULT_TOKEN = "None"
     # If not any poll in 90s, assume the poller is failed

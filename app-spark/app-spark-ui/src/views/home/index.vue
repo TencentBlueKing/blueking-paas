@@ -68,7 +68,7 @@
         </div>
       </section>
 
-      <section class="recent" aria-labelledby="recent-title">
+      <section v-if="!isEmpty" class="recent" aria-labelledby="recent-title">
         <header class="recent__head">
           <h2 id="recent-title">最近编辑</h2>
           <router-link class="recent__more" :to="{ name: 'projects' }">
@@ -83,9 +83,6 @@
         <div v-else-if="listError" class="recent__state is-error" role="alert">
           <p>{{ listError }}</p>
           <button type="button" @click="fetchRecent">重试</button>
-        </div>
-        <div v-else-if="!projects.length" class="recent__state">
-          <p>还没有项目。在上面描述你的想法，AI 会帮你把它做出来。</p>
         </div>
         <ul v-else class="recent__grid">
           <li v-for="project in projects" :key="project.id">
@@ -131,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { fromNowFormatter, readableError, timeFormatter } from '@/common/util';
 import AppIcon from '@/components/AppIcon.vue';
@@ -157,6 +154,7 @@ const createError = ref('');
 const loading = ref(false);
 const listError = ref('');
 const projects = ref<ProjectResponse[]>([]);
+const isEmpty = computed(() => !loading.value && !listError.value && !projects.value.length);
 const deleteVisible = ref(false);
 const deletingProject = ref<ProjectResponse | null>(null);
 const renameVisible = ref(false);

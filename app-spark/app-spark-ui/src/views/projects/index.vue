@@ -9,7 +9,12 @@
             {{ pagination.count }}
           </span>
         </h1>
-        <button type="button" class="projects-page__create" @click="createProject">
+        <button
+          v-if="!isEmpty"
+          type="button"
+          class="projects-page__create"
+          @click="createProject"
+        >
           <AppIcon name="plus-line" />
           创建新项目
         </button>
@@ -25,12 +30,47 @@
         <p>{{ listError }}</p>
         <button type="button" class="projects-page__create" @click="fetchProjects">重试</button>
       </div>
-      <div v-else-if="!projects.length" class="list-state">
-        <h2>还没有项目</h2>
-        <p>在首页描述你的想法，AI 会帮你把它做成一个应用。</p>
+      <div v-else-if="!projects.length" class="empty-state">
+        <svg
+          class="empty-state__art"
+          viewBox="0 0 112 80"
+          fill="none"
+          aria-hidden="true"
+        >
+          <rect
+            x="22"
+            y="8"
+            width="76"
+            height="52"
+            rx="10"
+            fill="#eef2f8"
+            stroke="#d6dfec"
+            stroke-width="1.5"
+          />
+          <rect
+            x="12"
+            y="18"
+            width="78"
+            height="54"
+            rx="10"
+            fill="#ffffff"
+            stroke="#c5d2e6"
+            stroke-width="1.5"
+          />
+          <line x1="12" y1="31" x2="90" y2="31" stroke="#e4ebf5" stroke-width="1.5" />
+          <circle cx="21" cy="24.5" r="2" fill="#d0dae9" />
+          <circle cx="28" cy="24.5" r="2" fill="#d0dae9" />
+          <circle cx="35" cy="24.5" r="2" fill="#d0dae9" />
+          <rect x="22" y="40" width="26" height="5" rx="2.5" fill="#3d6dff" fill-opacity="0.22" />
+          <rect x="22" y="50" width="54" height="4" rx="2" fill="#e5ebf4" />
+          <rect x="22" y="58" width="38" height="4" rx="2" fill="#edf1f7" />
+        </svg>
+        <h2>暂无项目</h2>
         <button type="button" class="projects-page__create" @click="createProject">
+          <AppIcon name="messages-square" />
           创建第一个项目
         </button>
+        <p class="empty-state__hint">通过与 AI 聊天来开始创造</p>
       </div>
       <template v-else>
         <p v-if="listError" class="inline-error" role="alert">
@@ -118,6 +158,7 @@ const router = useRouter();
 const loading = ref(false);
 const listError = ref('');
 const projects = ref<ProjectResponse[]>([]);
+const isEmpty = computed(() => !loading.value && !listError.value && !projects.value.length);
 const deleteVisible = ref(false);
 const deletingProject = ref<ProjectResponse | null>(null);
 const renameVisible = ref(false);
@@ -361,6 +402,34 @@ fetchProjects();
 
 .skeleton-row i:first-child {
   width: 40%;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 88px 24px 72px;
+  text-align: center;
+}
+
+.empty-state__art {
+  width: 112px;
+  height: 80px;
+  margin-bottom: 18px;
+}
+
+.empty-state h2 {
+  margin: 0 0 20px;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.empty-state__hint {
+  margin: 12px 0 0;
+  color: var(--faint);
+  font-size: 13px;
+  line-height: 20px;
 }
 
 .list-state {

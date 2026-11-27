@@ -19,6 +19,8 @@
 from app_spark_api.infras.bk_paas.client import BKAPI_AUTHORIZATION_HEADER, BkPaaSClient, build_gateway_base_url
 from app_spark_api.infras.bk_paas.console import ConsoleLinks, build_console_links, build_deployment_detail_url
 from app_spark_api.infras.bk_paas.entities import (
+    OFFLINE_ALREADY_IN_PROGRESS_CODE,
+    OFFLINE_ENV_NOT_DEPLOYED_CODE,
     UNIQUE_APP_FIELD_CODE,
     AppBasicInfoValidation,
     AppFieldError,
@@ -26,6 +28,9 @@ from app_spark_api.infras.bk_paas.entities import (
     Deployment,
     DeploymentResult,
     DeploymentStatus,
+    OfflineOperation,
+    OfflineResult,
+    OfflineStatus,
 )
 from app_spark_api.infras.bk_paas.exceptions import (
     BkPaaSApiError,
@@ -36,6 +41,8 @@ from app_spark_api.infras.bk_paas.exceptions import (
 
 __all__ = [
     "BKAPI_AUTHORIZATION_HEADER",
+    "OFFLINE_ALREADY_IN_PROGRESS_CODE",
+    "OFFLINE_ENV_NOT_DEPLOYED_CODE",
     "UNIQUE_APP_FIELD_CODE",
     "AppBasicInfoValidation",
     "AppFieldError",
@@ -49,6 +56,9 @@ __all__ = [
     "Deployment",
     "DeploymentResult",
     "DeploymentStatus",
+    "OfflineOperation",
+    "OfflineResult",
+    "OfflineStatus",
     "build_console_links",
     "build_deployment_detail_url",
     "build_gateway_base_url",

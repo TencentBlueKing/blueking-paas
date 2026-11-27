@@ -97,6 +97,18 @@ async def _record_finished_deployment(
         await afinish_task(task, PublicationTaskStatus.SUCCESSFUL, access_url=result.access_url or "")
         return PollOutcome(finished=True)
 
-    error = MSG_DEPLOY_INTERRUPTED if result.status == DeploymentStatus.INTERRUPTED else result.error_detail
-    await afinish_task(task, PublicationTaskStatus.FAILED, error=error or MSG_DEPLOY_FAILED)
+    if result.status == DeploymentStatus.INTERRUPTED:
+        # 本轮开头读到的任务可能早于中断请求，要重新读一次才知道是不是 AppSpark 自己请求的中断。
+        # 是的话不算失败；不是的话是有人在开发者中心里中断的，照旧记失败。
+        interrupt_sent = (
+            await PublicationTask.objects.filter(pk=task.pk).values_list("interrupt_sent", flat=True).afirst()
+        )
+        if interrupt_sent:
+            await afinish_task(task, PublicationTaskStatus.INTERRUPTED, notify=False)
+            return PollOutcome(finished=True)
+
+        await afinish_task(task, PublicationTaskStatus.FAILED, error=MSG_DEPLOY_INTERRUPTED)
+        return PollOutcome(finished=True)
+
+    await afinish_task(task, PublicationTaskStatus.FAILED, error=result.error_detail or MSG_DEPLOY_FAILED)
     return PollOutcome(finished=True)

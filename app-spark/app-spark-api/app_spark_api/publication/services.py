@@ -14,10 +14,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""发布状态的查询与发起：接口层调这里。
+"""发布状态的查询，发布、中断、下架的发起：接口层调这里。
 
 发起发布时在请求里同步创建应用，失败直接告诉用户；打包、上传、提交部署和之后的轮询都在 Celery 上（见 tasks）。
-发布状态全部从任务表推出来：线上版本是最近一次成功的发布，最近一次失败是最近结束、且失败了的那个任务。
+下架在请求里同步发起，之后的轮询同样在 Celery 上。中断作用在进行中的发布任务上，不新建任务。
+发布状态全部从任务表推出来：最近一次成功的任务是发布时，它的版本就是线上版本，是下架时没有线上版本；
+最近一次失败是最近结束（不算已中断的）、且失败了的那个任务。
 """
 
 import asyncio
@@ -25,6 +27,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import attrs
+import httpx2
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db import transaction
@@ -34,6 +37,7 @@ from app_spark_api.core.projects.models import Project
 from app_spark_api.infras.bk_paas import (
     BkPaaSClient,
     BkPaaSConfigurationError,
+    BkPaaSError,
     ConsoleLinks,
     build_console_links,
     build_deployment_detail_url,
@@ -51,6 +55,9 @@ from app_spark_api.publication.constants import (
 from app_spark_api.publication.exceptions import (
     PublicationAppNameConflictError,
     PublicationAppNameInvalidError,
+    PublicationInterruptConflictError,
+    PublicationNotInterruptibleError,
+    PublicationNotOnlineError,
     PublicationNoVersionError,
     PublicationProjectGoneError,
     PublicationSubmitError,
@@ -179,27 +186,40 @@ async def afail_pending_tasks(project: Project, error: str) -> None:
         await steps.afinish_task(task, PublicationTaskStatus.FAILED, error=error)
 
 
+def _lock_for_new_task(project: Project) -> None:
+    """Lock the Project row and make sure it has no running task; call inside a transaction."""
+    # 锁住项目行再看有没有进行中的任务：两个并发的发起只有一个能建出任务，另一个返回 409。
+    # 查任务也用加锁读：MySQL 默认的 REPEATABLE READ 下，普通读可能看不到对方刚提交的任务。
+    # 项目刚被删除时锁不到行：不能再为它建任务、建应用。
+    if Project.objects.select_for_update().filter(pk=project.pk).first() is None:
+        raise PublicationProjectGoneError(f"Project {project.pk} is gone")
+
+    if PublicationTask.objects.select_for_update().pending().filter(project=project).first() is not None:
+        raise PublicationTaskInProgressError(f"Project {project.pk} already has a running publication task")
+
+
 def _create_deployment_task(project: Project, version_id: str, operator: str) -> PublicationTask:
     with transaction.atomic():
-        # 锁住项目行再看有没有进行中的任务：两个并发的发起只有一个能建出任务，另一个返回 409。
-        # 查任务也用加锁读：MySQL 默认的 REPEATABLE READ 下，普通读可能看不到对方刚提交的任务。
-        # 项目刚被删除时锁不到行：不能再为它建任务、建应用。
-        if Project.objects.select_for_update().filter(pk=project.pk).first() is None:
-            raise PublicationProjectGoneError(f"Project {project.pk} is gone")
-
-        if PublicationTask.objects.select_for_update().pending().filter(project=project).first() is not None:
-            raise PublicationTaskInProgressError(f"Project {project.pk} already has a running publication task")
-
+        _lock_for_new_task(project)
         return PublicationTask.objects.create(
             project=project,
             kind=PublicationTaskKind.DEPLOYMENT,
             version_id=version_id,
-            # 发起时就定下来：失败记录要据此说「更新版本失败」还是「发布失败」。
-            is_update=PublicationTask.objects.online().filter(project=project).exists(),
+            # 发起时就定下来：失败记录要据此说「更新版本失败」还是「发布失败」。下架之后再发布算首次发布。
+            is_update=_find_online_task(project) is not None,
             operator=operator,
             stage=PublicationStage.BINDING,
             tenant_id=project.tenant_id,
         )
+
+
+def _find_online_task(project: Project) -> PublicationTask | None:
+    """Return the deployment serving now, or None when the Project was never published or has been unpublished."""
+    latest = PublicationTask.objects.filter(project=project).succeeded().first()
+    if latest is None or latest.kind != PublicationTaskKind.DEPLOYMENT:
+        return None
+
+    return latest
 
 
 async def _bind_and_queue(
@@ -233,6 +253,133 @@ async def _fail_submission(task: PublicationTask, error: steps.PublicationStepEr
     return PublicationSubmitError(error.message, error.cause)
 
 
+async def interrupt_deployment(project: Project, operator: str) -> None:
+    """Interrupt the Project's running deployment, or refuse when there is nothing to interrupt."""
+    task = await _get_running_deployment(project)
+
+    # 创建应用在发布请求里同步进行，一两秒就过去；这时结束任务会提前放开项目，和接着的重新发布抢着建应用。
+    if task.stage == PublicationStage.BINDING:
+        raise PublicationInterruptConflictError(steps.MSG_INTERRUPT_BINDING)
+
+    # 还没发出部署请求：开发者中心里什么都没发生，直接结束，准备任务推进下一步时会发现任务已结束而停下。
+    # 守卫挡的是这一刻准备任务刚发出部署请求的情况，那时要按已提交的部署处理，所以守卫没过就重新读一次再判。
+    if task.deploy_requested_at is None:
+        if await steps.afinish_task(
+            task, PublicationTaskStatus.INTERRUPTED, notify=False, guard=steps.FinishGuard.BEFORE_DEPLOY_REQUEST
+        ):
+            return
+
+        task = await _get_running_deployment(project)
+
+    # 同一任务只向开发者中心发一次中断，结果出来之前再点只提示稍候。
+    if task.interrupt_requested_at is not None:
+        raise PublicationInterruptConflictError(steps.MSG_INTERRUPT_REQUESTED)
+
+    # 已发出部署请求、还没拿到部署 ID：没法告诉开发者中心中断哪一次，过几秒拿到 ID 再来。
+    if not task.deployment_id:
+        raise PublicationInterruptConflictError(steps.MSG_INTERRUPT_SUBMITTING)
+
+    # 先查好绑定再写中断标记，免得查询出错时标记留下、用户在部署结束前都没法再中断。
+    binding = await BkPaaSAppBinding.objects.aget(project_id=task.project_id)
+
+    # 按「仍在进行中、还没人请求过中断」写入，并发的两次中断只有一次去调开发者中心。
+    requested_at = timezone.now()
+    claimed = (
+        await PublicationTask.objects.pending()
+        .filter(pk=task.pk, interrupt_requested_at__isnull=True)
+        .aupdate(interrupt_requested_at=requested_at, interrupt_sent=True, updated_at=requested_at)
+    )
+    if not claimed:
+        # 没写成也可能是任务这一刻刚结束，那就没什么可中断的了。
+        await _get_running_deployment(project)
+        raise PublicationInterruptConflictError(steps.MSG_INTERRUPT_REQUESTED)
+
+    # 浏览器断开时也要做完：调用失败要把中断标记清掉，否则用户在部署结束前都没法再中断。
+    await _complete_even_if_cancelled(_request_interruption(task, binding, operator, requested_at))
+
+
+async def _get_running_deployment(project: Project) -> PublicationTask:
+    task = await PublicationTask.objects.pending().filter(project=project).afirst()
+    if task is None or task.kind != PublicationTaskKind.DEPLOYMENT:
+        raise PublicationNotInterruptibleError(f"Project {project.pk} has no running deployment")
+
+    return task
+
+
+async def _request_interruption(
+    task: PublicationTask, binding: BkPaaSAppBinding, operator: str, requested_at: datetime
+) -> None:
+    try:
+        async with BkPaaSClient.from_settings() as client:
+            await client.interrupt_deployment(
+                code=binding.app_code, module=binding.module_name, deployment_id=task.deployment_id, operator=operator
+            )
+    except (BkPaaSError, httpx2.HTTPError) as exc:
+        # 清掉标记让用户可以再试；只清自己写下的那次，不碰后来的。interrupt_sent 留着，见模型上的说明。
+        await (
+            PublicationTask.objects.pending()
+            .filter(pk=task.pk, interrupt_requested_at=requested_at)
+            .aupdate(interrupt_requested_at=None)
+        )
+
+        # 开发者中心按规则拒绝的（预备执行中、已结束、应用已脱离管理）任务都还在继续，原样说明，让用户稍后再试；
+        # 不可用、没配好对接沿用发布的错误分类。
+        error = steps.to_step_error(exc)
+        if error.cause == steps.FailureCause.REJECTED:
+            raise PublicationInterruptConflictError(error.message) from exc
+
+        raise error from exc
+
+
+async def start_unpublish(project: Project, operator: str) -> PublicationTask:
+    """Take the Project offline in the developer center and queue polling the result."""
+    task = await sync_to_async(_create_unpublish_task)(project, operator)
+
+    # 浏览器断开时也要做完：下架一旦发出，就要记下下架操作 ID 并开始轮询，否则只能等兜底超时。
+    await _complete_even_if_cancelled(_submit_and_poll_offline(task))
+    return task
+
+
+def _create_unpublish_task(project: Project, operator: str) -> PublicationTask:
+    with transaction.atomic():
+        _lock_for_new_task(project)
+
+        # 在锁里判断：并发的另一次下架可能刚刚成功。
+        online = _find_online_task(project)
+        if online is None:
+            raise PublicationNotOnlineError(f"Project {project.pk} is not online")
+
+        return PublicationTask.objects.create(
+            project=project,
+            kind=PublicationTaskKind.UNPUBLISH,
+            version_id=online.version_id,
+            is_update=True,
+            operator=operator,
+            stage=PublicationStage.UNPUBLISHING,
+            tenant_id=project.tenant_id,
+        )
+
+
+async def _submit_and_poll_offline(task: PublicationTask) -> None:
+    try:
+        client = BkPaaSClient.from_settings()
+    except BkPaaSConfigurationError as exc:
+        await steps.afinish_task(task, PublicationTaskStatus.FAILED, error=steps.to_step_error(exc).message)
+        return
+
+    async with client:
+        submitted = await steps.submit_offline(task, client)
+
+    if not submitted:
+        return
+
+    # 下架已经发出，投递失败也不能撤回；轮询没起来时，查询发布状态的兜底会在下架超时后判失败。
+    try:
+        await asyncio.to_thread(tasks.schedule_unpublish_poll, task.pk)
+    except Exception:
+        logger.exception("Queueing the poll of unpublish task %s failed", task.pk)
+
+
 async def _queue_preparation(task: PublicationTask) -> None:
     """Queue the Celery task that packs, uploads and submits the deployment."""
     # apply_async 是同步的，会堵住事件循环，放到线程里投。
@@ -246,6 +393,10 @@ async def _queue_preparation(task: PublicationTask) -> None:
 async def _handle_stalled_task(task: PublicationTask) -> None:
     """Fail a task that will not end by itself."""
     now = timezone.now()
+
+    if task.kind == PublicationTaskKind.UNPUBLISH:
+        await _handle_stalled_unpublish(task, now)
+        return
 
     # 部署超时一般由轮询判。轮询停掉了（投递失败、worker 崩溃丢了消息）就没人再判，这里兜住，
     # 免得项目一直卡在进行中。
@@ -278,6 +429,24 @@ async def _handle_stalled_task(task: PublicationTask) -> None:
         )
 
 
+async def _handle_stalled_unpublish(task: PublicationTask, now: datetime) -> None:
+    # 下架超时一般由轮询判。轮询停掉了（投递失败、worker 崩溃丢了消息）就没人再判，这里兜住。
+    if task.offline_operation_id:
+        if task.started_at <= now - DEPLOY_TIMEOUT:
+            await steps.afinish_task(task, PublicationTaskStatus.FAILED, error=steps.make_unpublish_timeout_message())
+        return
+
+    # 发起下架的请求中途没了（如 Pod 重启），没记下下架操作 ID。下架可以重复发起，判失败让用户再点一次即可。
+    # 等过一次请求超时再判，免得判掉还在等开发者中心响应的请求；读到的状态可能已经过时，所以只在仍没有 ID 时判。
+    if task.started_at <= now - DEPLOY_REQUEST_TIMEOUT:
+        await steps.afinish_task(
+            task,
+            PublicationTaskStatus.FAILED,
+            error=steps.MSG_UNPUBLISH_INTERRUPTED,
+            guard=steps.FinishGuard.BEFORE_OFFLINE_SUBMITTED,
+        )
+
+
 async def get_publication_state(project: Project) -> PublicationState:
     """Return where the Project stands in the developer center."""
     # 前端在任务进行中会反复来查，顺带给停住的任务一个兜底；兜底可能结束任务，所以之后再读一次。
@@ -291,12 +460,17 @@ async def get_publication_state(project: Project) -> PublicationState:
     if binding is not None:
         links = build_console_links(settings.BKPAAS_URL, binding.app_code, binding.module_name)
 
-    latest = await PublicationTask.objects.filter(project=project).finished().afirst()
-    last_failure = None
-    if latest is not None and latest.status == PublicationTaskStatus.FAILED:
-        last_failure = _build_failure(latest, binding, links)
+    finished = PublicationTask.objects.filter(project=project).finished()
 
-    # 新任务开始后，上一次的结果属于上一次任务，再展示只会和进行中的状态打架。
+    # 已中断的任务不是失败，最近一次失败取它之前的那个任务。
+    latest_concluded = await finished.exclude_interrupted().afirst()
+    last_failure = None
+    if latest_concluded is not None and latest_concluded.status == PublicationTaskStatus.FAILED:
+        last_failure = _build_failure(latest_concluded, binding, links)
+
+    # 新任务开始后，上一次的结果属于上一次任务，再展示只会和进行中的状态打架。要展开的结果不跳过已中断的任务：
+    # 它结束时已记为看过，不会被展开；跳过它反而会把更早、还没看过的结果重新翻出来。
+    latest = await finished.afirst()
     unseen_result = None
     if active is None and latest is not None and not latest.result_seen:
         unseen_result = UnseenResult(kind=latest.kind, status=latest.status)
@@ -314,14 +488,14 @@ async def get_publication_state(project: Project) -> PublicationState:
 
 
 async def _get_online_version(project: Project) -> OnlineVersion | None:
-    successful = PublicationTask.objects.online().filter(project=project)
-    latest = await successful.afirst()
+    latest = await sync_to_async(_find_online_task)(project)
     if latest is None:
         return None
 
-    # 开发者中心偶尔拿不到访问地址：更新版本不会改变访问地址，沿用之前记下的。
+    # 开发者中心偶尔拿不到访问地址：更新版本、下架后重新发布都不会改变访问地址，沿用之前记下的。
     url = latest.access_url
     if not url:
+        successful = PublicationTask.objects.filter(project=project).successful_deployments()
         url = await successful.exclude(access_url="").values_list("access_url", flat=True).afirst() or ""
 
     return OnlineVersion(version_id=latest.version_id, url=url, published_at=latest.finished_at)

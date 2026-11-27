@@ -140,6 +140,9 @@ class ErrorCodes:
     # 下架
     CANNOT_GET_OFFLINE = ErrorCode(_("查询下线信息失败"))
     CANNOT_OFFLINE_APP = ErrorCode(_("下线失败"))
+    # 应用态下架单独给出这两种情况，调用方据此区分「环境本就没部署过」和「已有下架在进行」，不用解析文案
+    OFFLINE_ENV_NOT_DEPLOYED = ErrorCode(_("没有找到对应的部署记录，不允许下架"))
+    OFFLINE_ALREADY_IN_PROGRESS = ErrorCode(_("存在正在进行的下架任务，请勿重复操作"))
     # 市场上架
     RELEASED_MARKET_CONDITION_NOT_MET = ErrorCode(_("未满足应用市场服务开启条件"))
     # 资源 Metrics

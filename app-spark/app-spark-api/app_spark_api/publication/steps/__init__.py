@@ -22,6 +22,9 @@
    这几步可能要几分钟，所以交给 Celery。
 3. polling：提交成功后由 tasks.DeploymentPoller 反复调 poll_deployment，部署结束时写下结果。
 
+下架只有一个模块 unpublishing：下架请求里由 services.start_unpublish 调 submit_offline 发起下架，
+之后由 tasks.OfflinePoller 反复调 poll_offline，下架结束时写下结果。
+
 重做是否安全决定了各步怎么防重复：创建应用之前先查绑定；打包和上传重做也安全，只有提交部署不能发两次，
 所以准备任务只做一次；轮询只读，只有写下结果要保证只生效一次。
 
@@ -33,7 +36,11 @@ from app_spark_api.publication.steps.errors import (
     MSG_APP_NAME_TAKEN,
     MSG_APP_NOT_MANAGED,
     MSG_BKPAAS_UNAVAILABLE,
+    MSG_DEPLOY_INTERRUPTED,
     MSG_DEPLOY_UNCERTAIN,
+    MSG_INTERRUPT_BINDING,
+    MSG_INTERRUPT_REQUESTED,
+    MSG_INTERRUPT_SUBMITTING,
     MSG_MODULE_NOT_DEFAULT,
     MSG_NOT_AUTHORIZED,
     MSG_NOT_CONFIGURED,
@@ -41,21 +48,30 @@ from app_spark_api.publication.steps.errors import (
     MSG_PREPARE_FAILED,
     MSG_PREPARE_INTERRUPTED,
     MSG_PROJECT_DELETED,
+    MSG_UNPUBLISH_ALREADY_RUNNING,
+    MSG_UNPUBLISH_INTERRUPTED,
+    MSG_UNPUBLISH_POLL_FAILED,
     AppNameTakenError,
     FailureCause,
     PublicationStepError,
     make_deploy_timeout_message,
+    make_unpublish_timeout_message,
     to_step_error,
 )
 from app_spark_api.publication.steps.polling import PollOutcome, poll_deployment
 from app_spark_api.publication.steps.preparing import prepare_deployment
 from app_spark_api.publication.steps.progress import FinishGuard, afail_task_by_id, afinish_task
+from app_spark_api.publication.steps.unpublishing import poll_offline, submit_offline
 
 __all__ = [
     "MSG_APP_NAME_TAKEN",
     "MSG_APP_NOT_MANAGED",
     "MSG_BKPAAS_UNAVAILABLE",
+    "MSG_DEPLOY_INTERRUPTED",
     "MSG_DEPLOY_UNCERTAIN",
+    "MSG_INTERRUPT_BINDING",
+    "MSG_INTERRUPT_REQUESTED",
+    "MSG_INTERRUPT_SUBMITTING",
     "MSG_MODULE_NOT_DEFAULT",
     "MSG_NOT_AUTHORIZED",
     "MSG_NOT_CONFIGURED",
@@ -63,6 +79,9 @@ __all__ = [
     "MSG_PREPARE_FAILED",
     "MSG_PREPARE_INTERRUPTED",
     "MSG_PROJECT_DELETED",
+    "MSG_UNPUBLISH_ALREADY_RUNNING",
+    "MSG_UNPUBLISH_INTERRUPTED",
+    "MSG_UNPUBLISH_POLL_FAILED",
     "AppNameTakenError",
     "FailureCause",
     "FinishGuard",
@@ -73,7 +92,10 @@ __all__ = [
     "bind_app",
     "build_app_tenant_kwargs",
     "make_deploy_timeout_message",
+    "make_unpublish_timeout_message",
     "poll_deployment",
+    "poll_offline",
     "prepare_deployment",
+    "submit_offline",
     "to_step_error",
 ]

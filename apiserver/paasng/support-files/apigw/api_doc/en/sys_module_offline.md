@@ -42,3 +42,15 @@ curl -X POST -H 'content-type: application/json' -H 'x-bkapi-authorization: {"bk
 | Field | Type | Description |
 | ------- | ------ | ------------- |
 | offline_operation_id | string | Offline operation ID |
+
+If the environment is already offline, no new operation is created and the ID of the latest successful offline operation is returned.
+
+### Error Description
+
+| HTTP Status Code | Error Code | Scenario |
+| ------ | ------ | ------ |
+| 400 | OFFLINE_ENV_NOT_DEPLOYED | The environment has never been deployed, there is nothing to take offline |
+| 400 | OFFLINE_ALREADY_IN_PROGRESS | An offline operation is already running in the environment |
+| 400 | CANNOT_OFFLINE_APP | Offline failed for other reasons |
+| 400 | SYSAPI_ENV_NOT_ALLOWED | The caller is not allowed to operate on the environment (e.g. AppSpark passing stag) |
+| 403 | AI_AGENT_APP_REQUIRED / APP_SPARK_APP_REQUIRED / APP_SPARK_MODULE_REQUIRED | The application or module is not managed by the caller |

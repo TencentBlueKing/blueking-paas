@@ -155,6 +155,18 @@ class ErrorCodes:
     PUBLICATION_BKPAAS_MISCONFIGURED = ErrorCode(_("{reason}"), status_code=HTTPStatus.SERVICE_UNAVAILABLE)
     # 本服务自己出错（如应用建好了却没记下来）。
     PUBLICATION_INTERNAL_ERROR = ErrorCode(_("{reason}"), status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+    # 只能中断进行中的发布；没有任务或正在下架时没什么可中断的。
+    PUBLICATION_NOT_INTERRUPTIBLE = ErrorCode(
+        _("There is no running deployment to interrupt."),
+        status_code=HTTPStatus.BAD_REQUEST,
+    )
+    # 现在中断不了但发布还在继续（已请求过中断、部署正在提交、开发者中心暂不接受），detail 说明原因，稍后再试。
+    PUBLICATION_INTERRUPT_CONFLICT = ErrorCode(_("{reason}"), status_code=HTTPStatus.CONFLICT)
+    # 没有线上版本（未发布或已下架），没什么可下架的。
+    PUBLICATION_NOT_ONLINE = ErrorCode(
+        _("This project has no version online to unpublish."),
+        status_code=HTTPStatus.BAD_REQUEST,
+    )
 
     # --- Agent Runtime ----------------------------------------------------------------------------
     AGENT_BUSY = ErrorCode(

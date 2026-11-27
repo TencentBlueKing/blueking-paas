@@ -149,6 +149,46 @@ class DeploymentResult:
         return self.status in _FINISHED_STATUSES
 
 
+class OfflineStatus(StrEnum):
+    """Status of one offline operation, as sys_get_offline_result reports it."""
+
+    PENDING = "pending"
+    SUCCESSFUL = "successful"
+    FAILED = "failed"
+
+
+# 应用态下架接口拒绝时的两个错误码，要和 CANNOT_OFFLINE_APP 区分开处理。
+# 环境从未部署过：开发者中心里本来就没有在运行的东西，按已下架处理。
+OFFLINE_ENV_NOT_DEPLOYED_CODE = "OFFLINE_ENV_NOT_DEPLOYED"
+# 开发者中心里刚有人发起了下架、还没结束：它不告诉我们那次下架的 ID，接不过来。
+OFFLINE_ALREADY_IN_PROGRESS_CODE = "OFFLINE_ALREADY_IN_PROGRESS"
+
+
+@attrs.frozen
+class OfflineOperation:
+    """An offline operation the developer center has accepted."""
+
+    offline_operation_id: str
+
+
+@attrs.frozen
+class OfflineResult:
+    """Where one offline operation has got to.
+
+    :param status: 下架状态，常见取值见 OfflineStatus，也可能是开发者中心新增的其他值。
+    :param err_detail: 失败原因，成功或进行中时为空。
+    """
+
+    status: str
+    err_detail: str | None = None
+
+    @property
+    def is_finished(self) -> bool:
+        """Whether the offline operation has stopped, one way or another."""
+        # 和部署一样，没见过的状态值按进行中处理。
+        return self.status in {OfflineStatus.SUCCESSFUL, OfflineStatus.FAILED}
+
+
 def structure_payload[T](payload: Any, cls: type[T]) -> T:
     """Structure a developer center response into one of the classes above.
 

@@ -43,6 +43,15 @@ MSG_APP_NOT_RECORDED = "开发者中心已创建应用 {code}，但 AppSpark 没
 MSG_PROJECT_DELETED = "项目已删除，发布随之终止"
 MSG_APP_NAME_TAKEN = "应用名称「{name}」已被开发者中心的其他应用使用，请换一个名称"
 _MSG_DEPLOY_TIMEOUT = "部署超过 {minutes} 分钟仍未结束，请到开发者中心查看部署进度"
+MSG_INTERRUPT_REQUESTED = "已请求中断，请稍候"
+MSG_INTERRUPT_SUBMITTING = "部署正在提交，请稍后重试"
+MSG_INTERRUPT_BINDING = "正在创建开发者中心应用，请稍后重试"
+MSG_UNPUBLISH_FAILED = "下架失败，请到开发者中心查看"
+MSG_UNPUBLISH_ALREADY_RUNNING = "开发者中心已有下架任务在进行，请稍后再下架一次"
+MSG_UNPUBLISH_INTERRUPTED = "下架因服务重启中断，请重试"
+MSG_UNPUBLISH_INTERNAL = "下架时出现内部错误，请重试"
+MSG_UNPUBLISH_POLL_FAILED = "多次查询下架结果都没有成功，请到开发者中心查看下架进度"
+_MSG_UNPUBLISH_TIMEOUT = "下架超过 {minutes} 分钟仍未结束，请到开发者中心查看"
 # 开发者中心 403 的错误码与给用户的说法。不在这里的 403（调用方没注册为 AppSpark 角色、网关没授权）要管理员处理。
 _FORBIDDEN_MESSAGES = {
     "APP_SPARK_APP_REQUIRED": MSG_APP_NOT_MANAGED,
@@ -115,3 +124,8 @@ def _describe_forbidden(exc: BkPaaSApiError) -> PublicationStepError:
 def make_deploy_timeout_message() -> str:
     """Return the reason recorded when a deployment outlives DEPLOY_TIMEOUT."""
     return _MSG_DEPLOY_TIMEOUT.format(minutes=int(DEPLOY_TIMEOUT.total_seconds() // 60))
+
+
+def make_unpublish_timeout_message() -> str:
+    """Return the reason recorded when an unpublish outlives DEPLOY_TIMEOUT."""
+    return _MSG_UNPUBLISH_TIMEOUT.format(minutes=int(DEPLOY_TIMEOUT.total_seconds() // 60))

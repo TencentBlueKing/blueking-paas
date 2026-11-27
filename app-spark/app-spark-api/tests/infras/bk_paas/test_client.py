@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""网关根地址和开发者中心页面链接按配置拼出来；校验应用 ID 和名称的结果按字段读出来。"""
+"""网关根地址和开发者中心页面链接按配置拼出来；校验应用 ID 和名称、中断、下架的请求按约定发出。"""
 
 import json
 
@@ -86,6 +86,33 @@ async def test_an_unreadable_validation_answer_counts_as_unavailable():
     async with make_client(httpx2.Response(200, json={"is_valid": False}), []) as client:
         with pytest.raises(BkPaaSUnavailableError):
             await client.validate_app_basic_info("Spark")
+
+
+async def test_interrupting_posts_the_operator_to_the_deployment():
+    requests: list[httpx2.Request] = []
+
+    async with make_client(httpx2.Response(200, json={}), requests) as client:
+        await client.interrupt_deployment("demo", "default", "d-1", "alice")
+
+    assert requests[0].method == "POST"
+    assert requests[0].url.path == (
+        "/api/bkpaas3/prod/system/bkapps/applications/demo/modules/default/deployments/d-1/interruptions/"
+    )
+    assert json.loads(requests[0].content) == {"operator": "alice"}
+
+
+async def test_offline_targets_prod_and_reads_the_operation_id():
+    requests: list[httpx2.Request] = []
+    answer = httpx2.Response(201, json={"offline_operation_id": "o-1"})
+
+    async with make_client(answer, requests) as client:
+        operation = await client.offline("demo", "default", "alice")
+
+    assert (
+        requests[0].url.path == "/api/bkpaas3/prod/system/bkapps/applications/demo/modules/default/envs/prod/offlines/"
+    )
+    assert json.loads(requests[0].content) == {"operator": "alice"}
+    assert operation.offline_operation_id == "o-1"
 
 
 @pytest.mark.parametrize(

@@ -32,6 +32,8 @@ class FinishGuard(StrEnum):
     BEFORE_DEPLOY_REQUEST = "before_deploy_request"
     # 只在还没记下部署 ID 时结束，免得判掉刚拿到部署 ID 的任务。
     BEFORE_DEPLOYMENT_SUBMITTED = "before_deployment_submitted"
+    # 只在还没记下下架操作 ID 时结束，免得判掉刚拿到下架操作 ID 的任务。
+    BEFORE_OFFLINE_SUBMITTED = "before_offline_submitted"
 
 
 async def afinish_task(
@@ -58,6 +60,9 @@ async def afinish_task(
 
     elif guard == FinishGuard.BEFORE_DEPLOYMENT_SUBMITTED:
         query = query.filter(deployment_id="")
+
+    elif guard == FinishGuard.BEFORE_OFFLINE_SUBMITTED:
+        query = query.filter(offline_operation_id="")
 
     ended = await query.aupdate(
         status=status,

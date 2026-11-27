@@ -66,4 +66,8 @@ def queued(monkeypatch) -> list[tuple]:
     monkeypatch.setattr(
         "app_spark_api.publication.tasks.schedule_deployment_poll", lambda *args: messages.append(("poll", *args))
     )
+    monkeypatch.setattr(
+        "app_spark_api.publication.tasks.schedule_unpublish_poll",
+        lambda *args: messages.append(("unpublish_poll", *args)),
+    )
     return messages

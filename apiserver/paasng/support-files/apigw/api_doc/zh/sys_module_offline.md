@@ -42,3 +42,15 @@ curl -X POST -H 'content-type: application/json' -H 'x-bkapi-authorization: {"bk
 | 字段 | 类型 | 描述 |
 | ------ | ------ | ------ |
 | offline_operation_id | string | 下架操作 ID |
+
+环境已经下架时不会新建下架操作，直接返回上一次成功的下架操作 ID。
+
+### 错误说明
+
+| HTTP 状态码 | 错误码 | 场景 |
+| ------ | ------ | ------ |
+| 400 | OFFLINE_ENV_NOT_DEPLOYED | 该环境从未部署过，没有可下架的内容 |
+| 400 | OFFLINE_ALREADY_IN_PROGRESS | 该环境已有正在进行的下架操作 |
+| 400 | CANNOT_OFFLINE_APP | 其他原因导致下架失败 |
+| 400 | SYSAPI_ENV_NOT_ALLOWED | 调用方不允许操作该环境（如 AppSpark 传了 stag） |
+| 403 | AI_AGENT_APP_REQUIRED / APP_SPARK_APP_REQUIRED / APP_SPARK_MODULE_REQUIRED | 目标应用或模块不归调用方管理 |

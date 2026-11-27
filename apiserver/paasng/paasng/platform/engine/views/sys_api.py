@@ -20,6 +20,8 @@
 这些接口注册在 `sys/api/` 路径下, 仅供 AIDEV / AppSpark 等固定的系统调用, 鉴权依赖 sysapi_client.
 """
 
+import logging
+
 from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.core.encoder import user_id_encoder
 from django.conf import settings
@@ -35,8 +37,10 @@ from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import SysManagedAppInPathMixin
+from paasng.platform.engine.deploy.archive import start_archive_step
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
-from paasng.platform.engine.exceptions import DeployInterruptionFailed
+from paasng.platform.engine.exceptions import DeployInterruptionFailed, OfflineOperationExistError
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.serializers import (
     CreateDeploymentResponseSLZ,
     DeploymentResultQuerySLZ,
@@ -50,6 +54,8 @@ from paasng.utils.error_codes import error_codes
 
 from .deploy import DeploymentCreateMixin, get_module_deployment, render_deployment_result
 from .misc import OfflineMixin
+
+logger = logging.getLogger(__name__)
 
 
 class SysDeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, SysManagedAppInPathMixin):
@@ -151,7 +157,19 @@ class SysOfflineViewSet(OfflineMixin, viewsets.ViewSet, SysManagedAppInPathMixin
 
         # operator 仅用于记录操作人，不做 IAM 角色校验：AIDEV 将用户加入应用成员后，IAM 权限存在生效延迟
         operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, serializer.data["operator"]))
-        offline_operation = self.do_offline(env, operator)
+
+        # 这两种情况用户态接口都报 CANNOT_OFFLINE_APP，系统调用方要按错误码分别处理（如未部署过视为已下架），
+        # 所以在这里先单独捕获；其余失败仍按 do_offline 的方式报错
+        try:
+            offline_operation = start_archive_step(env=env, operator=operator.pk)
+        except Deployment.DoesNotExist:
+            raise error_codes.OFFLINE_ENV_NOT_DEPLOYED
+        except OfflineOperationExistError:
+            raise error_codes.OFFLINE_ALREADY_IN_PROGRESS
+        except Exception as e:
+            logger.exception("sys app offline error")
+            raise error_codes.CANNOT_OFFLINE_APP.f(str(e))
+
         return JsonResponse(data={"offline_operation_id": offline_operation.id}, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(responses={200: OfflineOperationSLZ}, tags=["部署相关接口"])

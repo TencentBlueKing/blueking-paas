@@ -251,7 +251,7 @@ class TestSysOffline:
         operator = create_user()
         offline_op = OfflineOperation.objects.create(app_environment=bk_stag_env)
         with mock.patch(
-            "paasng.platform.engine.views.misc.start_archive_step", return_value=offline_op
+            "paasng.platform.engine.views.sys_api.start_archive_step", return_value=offline_op
         ) as start_archive_step:
             resp = sys_aidev_api_client.post(
                 _offline_url(ai_agent_app.code, bk_module.name), data={"operator": operator.username}
@@ -268,7 +268,7 @@ class TestSysOffline:
         _enable_admin_only_protection(bk_stag_env)
         offline_op = OfflineOperation.objects.create(app_environment=bk_stag_env)
         with (
-            mock.patch("paasng.platform.engine.views.misc.start_archive_step", return_value=offline_op),
+            mock.patch("paasng.platform.engine.views.sys_api.start_archive_step", return_value=offline_op),
             mock.patch("paasng.platform.engine.views.misc.fetch_user_roles") as fetch_user_roles,
         ):
             resp = sys_aidev_api_client.post(

@@ -47,6 +47,7 @@ from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.kres_entities import ImageCredentials
 from paas_wl.workloads.networking.constants import ExposedTypeName
 from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol
+from paas_wl.workloads.networking.ingress.txt_files.sync import delete_txt_file_ingresses
 from paasng.platform.applications.models import Application, ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -166,6 +167,7 @@ def delete_networking(env: ModuleEnvironment):
         crd.DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).delete(
             gen_domain_group_mapping_name(wl_app), namespace=wl_app.namespace
         )
+    delete_txt_file_ingresses(env)
 
 
 @define

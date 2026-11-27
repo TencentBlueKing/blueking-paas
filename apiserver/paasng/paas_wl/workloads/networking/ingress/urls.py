@@ -18,6 +18,7 @@
 from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views
+from .txt_files import views as txt_files_views
 
 urlpatterns = [
     re_path(
@@ -35,5 +36,15 @@ urlpatterns = [
         make_app_pattern(r"/process_ingresses/default$"),
         views.ProcessIngressesViewSet.as_view({"post": "update"}),
         name="api.process_ingresses.default",
+    ),
+    re_path(
+        make_app_pattern(r"/txt_files/$"),
+        txt_files_views.TxtFilesViewSet.as_view({"get": "list", "post": "create"}),
+        name="api.txt_files",
+    ),
+    re_path(
+        make_app_pattern(r"/txt_files/(?P<id>\d+)/$"),
+        txt_files_views.TxtFilesViewSet.as_view({"put": "update", "delete": "destroy"}),
+        name="api.txt_files.singular",
     ),
 ]

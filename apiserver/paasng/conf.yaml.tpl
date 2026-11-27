@@ -777,6 +777,7 @@ BK_AUDIT_ENDPOINT = ""
 # BUILD_EXTRA_ENV_VARS: {}
 
 ## slugbuilder build 的超时时间，单位秒，默认 15 分钟
+## 下列 API Server 超时项通过环境变量配置时使用 PAAS_ 前缀，Pod 存活阈值使用 PAAS_WL_ 前缀
 # BUILD_PROCESS_TIMEOUT: 900
 
 ## S-Mart 包构建进程超时时间，单位秒，默认 15 分钟
@@ -786,19 +787,22 @@ BK_AUDIT_ENDPOINT = ""
 # SMART_BUILD_LOCK_TIMEOUT: 900
 
 ## Slug Pod 最长存活时间，单位秒，默认 15 分钟
+## 延长 BUILD_PROCESS_TIMEOUT 时，确保此阈值不小于构建超时
 # MAX_SLUG_SECONDS: 900
 
-## S-Mart Builder 最长存活时间，单位秒，默认 15 分钟
-# MAX_SMART_BUILDER_SECONDS: 900
+## S-Mart Builder 最长存活时间，单位秒，默认 30 分钟
+## 延长 SMART_BUILD_PROCESS_TIMEOUT 时，确保此阈值不小于构建超时
+# MAX_SMART_BUILDER_SECONDS: 1800
 
 ## 部署协调器锁超时时间，单位秒，默认 15 分钟
 ## 锁从部署开始计时，长部署应按排队、构建、前置命令和就绪等待的总耗时配置
 # DEPLOY_LOCK_TIMEOUT: 900
 
 ## 部署后进程就绪等待上限，单位秒，默认 15 分钟
+## 云原生应用的等待时间需覆盖前置命令和进程就绪的总耗时
 # DEPLOYMENT_READY_TIMEOUT: 900
 
-## 云原生 Pre-Release Hook 执行超时通过 Operator 环境变量 HOOK_EXECUTE_TIMEOUT_THRESHOLD 配置，默认 900 秒
+## 云原生 Pre-Release Hook 执行超时通过 Operator ProjectConfig 的 hookExecuteTimeoutSeconds 配置，默认 900 秒
 
 ## 构建 token 的签名密钥（Ed25519 私钥，PKCS#8 PEM），轮换期间可同时配置多把
 ## 生成：python manage.py generate_build_token_signing_key --output <文件>

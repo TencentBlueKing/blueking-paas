@@ -183,7 +183,7 @@ MAX_RS_RETAIN = 3
 MAX_SLUG_SECONDS = int(settings.get("MAX_SLUG_SECONDS", 15 * 60))
 
 # S-Mart Builder 最长存活时间
-MAX_SMART_BUILDER_SECONDS = int(settings.get("MAX_SMART_BUILDER_SECONDS", 15 * 60))
+MAX_SMART_BUILDER_SECONDS = int(settings.get("MAX_SMART_BUILDER_SECONDS", 30 * 60))
 
 # 部署资源规则映射版本
 GLOBAL_DEFAULT_MAPPER_VERSION = "v1"

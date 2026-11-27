@@ -19,9 +19,14 @@
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	cfg "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 )
+
+// DefaultHookExecuteTimeout is the default time allowed for a pre-release hook.
+const DefaultHookExecuteTimeout = 15 * time.Minute
 
 // PlatformConfig contains the config for interacting with other service
 type PlatformConfig struct {
@@ -117,6 +122,9 @@ type ProjectConfig struct {
 	ResRequests  ResRequestsConfig `json:"resRequests"`
 	Autoscaling  AutoscalingConfig `json:"autoscaling"`
 	MaxProcesses int32             `json:"maxProcesses"`
+
+	// HookExecuteTimeoutSeconds is the pre-release hook execution timeout in seconds. Defaults to 900.
+	HookExecuteTimeoutSeconds int32 `json:"hookExecuteTimeoutSeconds,omitempty"`
 }
 
 // NewProjectConfig create project config
@@ -141,6 +149,7 @@ func NewProjectConfig() *ProjectConfig {
 	conf.ResRequests.ProcDefaultCPURequest = ""
 
 	conf.MaxProcesses = 8
+	conf.HookExecuteTimeoutSeconds = int32(DefaultHookExecuteTimeout / time.Second)
 
 	// log host path defaults
 	conf.LogHostPath.LegacyPath = "/data/bkapp/logs"
@@ -151,6 +160,14 @@ func NewProjectConfig() *ProjectConfig {
 
 func init() {
 	SchemeBuilder.Register(&ProjectConfig{})
+}
+
+// GetHookExecuteTimeout returns the pre-release hook execution timeout.
+func (p *ProjectConfig) GetHookExecuteTimeout() time.Duration {
+	if p.HookExecuteTimeoutSeconds <= 0 {
+		return DefaultHookExecuteTimeout
+	}
+	return time.Duration(p.HookExecuteTimeoutSeconds) * time.Second
 }
 
 // Below functions implements the ProjectConfigReader interface

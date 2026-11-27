@@ -93,6 +93,11 @@ spec:
                 description: ReadinessEndpointName, defaults to "readyz"
                 type: string
             type: object
+          hookExecuteTimeoutSeconds:
+            description: HookExecuteTimeoutSeconds is the pre-release hook execution
+              timeout in seconds. Defaults to 900.
+            format: int32
+            type: integer
           ingressPlugin:
             description: IngressPluginConfig contains the config for controlling ingress
               config

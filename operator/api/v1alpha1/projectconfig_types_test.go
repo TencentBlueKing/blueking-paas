@@ -20,6 +20,7 @@ package v1alpha1
 
 import (
 	"os"
+	"time"
 
 	"github.com/samber/lo"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -51,6 +52,7 @@ platform:
   bkAPIGatewayURL: "https://example.com"
   sentryDSN: "https://sentry.example.com"
   ingressClassName: nginx
+hookExecuteTimeoutSeconds: 1200
 `
 		file, err := os.CreateTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -75,6 +77,7 @@ platform:
 		Expect(projCfg.GetIngressClassName()).To(Equal("nginx"))
 		Expect(projCfg.Platform.CustomDomainIngressClassName).To(Equal(""))
 		Expect(projCfg.GetCustomDomainIngressClassName()).To(Equal("nginx"))
+		Expect(projCfg.GetHookExecuteTimeout()).To(Equal(20 * time.Minute))
 	})
 
 	It("test load from file with customDomainIngressClassName", func() {
@@ -168,5 +171,10 @@ logHostPath:
 		Expect(projCfg.ResLimits.ProcDefaultMemLimit).To(Equal("1024Mi"))
 		Expect(projCfg.ResLimits.MaxReplicas).To(Equal(int32(5)))
 		Expect(projCfg.MaxProcesses).To(Equal(int32(8)))
+		Expect(projCfg.GetHookExecuteTimeout()).To(Equal(15 * time.Minute))
+	})
+
+	It("uses the default hook timeout for an older config without the field", func() {
+		Expect((&ProjectConfig{}).GetHookExecuteTimeout()).To(Equal(15 * time.Minute))
 	})
 })

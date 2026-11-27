@@ -19,8 +19,6 @@
 package resources
 
 import (
-	"math"
-	"os"
 	"strconv"
 	"time"
 
@@ -30,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/labels"
@@ -40,25 +39,12 @@ import (
 )
 
 const (
-	defaultHookExecuteTimeoutThreshold = 15 * time.Minute
-	hookExecuteTimeoutThresholdEnvName = "HOOK_EXECUTE_TIMEOUT_THRESHOLD"
-
 	// HookExecuteFailedTimeoutThreshold 失败 Hook 的超时时间阈值
 	HookExecuteFailedTimeoutThreshold = time.Minute * 2
 )
 
-// HookExecuteTimeoutThreshold Hook 执行超时时间阈值
-var HookExecuteTimeoutThreshold = getHookExecuteTimeoutThreshold(
-	os.Getenv(hookExecuteTimeoutThresholdEnvName),
-)
-
-func getHookExecuteTimeoutThreshold(rawValue string) time.Duration {
-	seconds, err := strconv.ParseInt(rawValue, 10, 64)
-	if err != nil || seconds <= 0 || seconds > math.MaxInt64/int64(time.Second) {
-		return defaultHookExecuteTimeoutThreshold
-	}
-	return time.Duration(seconds) * time.Second
-}
+// HookExecuteTimeoutThreshold is the pre-release timeout loaded from ProjectConfig at startup.
+var HookExecuteTimeoutThreshold = paasv1alpha1.DefaultHookExecuteTimeout
 
 var (
 	// ErrHookPodExists 用于指定 Hook 的 Pod 已经存在

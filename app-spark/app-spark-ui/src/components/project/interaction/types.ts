@@ -1,3 +1,5 @@
+import type { AskUserQuestion } from '@/http/types';
+
 export type ChatRole = 'user' | 'assistant';
 
 export type ChatAttachmentStatus = 'queued' | 'uploading' | 'ready' | 'failed';
@@ -57,8 +59,25 @@ export interface ChatReasoning {
   endedAt?: number;
 }
 
+export type ChatAskUserState = 'streaming' | 'pending' | 'answered' | 'declined' | 'bypassed';
+
+/**
+ * Agent 发起的结构化澄清提问卡片，对应 `ask_user_question` 工具调用。
+ *
+ * 与普通 `tool` 块分开建模：工具调用是一行摘要，而提问卡片需要保留完整问题和选项，并在
+ * 收到 `TOOL_CALL_RESULT` 后原地收敛为已回答 / 已跳过 / 已旁路的摘要态。
+ */
+export interface ChatAskUser {
+  /** AG-UI 的 toolCallId，提交回答或回放结果时靠它定位对应卡片 */
+  id: string;
+  questions: AskUserQuestion[];
+  state: ChatAskUserState;
+  /** 已回答时，每个问题 header 对应的选项或自定义输入列表 */
+  answers?: Record<string, string[]>;
+}
+
 export interface ChatBlock {
-  type: 'text' | 'image' | 'file' | 'summary' | 'tool' | 'reasoning';
+  type: 'text' | 'image' | 'file' | 'summary' | 'tool' | 'reasoning' | 'ask-user';
   text?: string;
   items?: string[];
   src?: string;
@@ -67,6 +86,7 @@ export interface ChatBlock {
   size?: number;
   tool?: ChatToolCall;
   reasoning?: ChatReasoning;
+  askUser?: ChatAskUser;
 }
 
 export interface ChatMessage {

@@ -16,6 +16,10 @@ export const ApiErrorCode = {
   PREVIEW_PORT_TAKEN: 'PREVIEW_PORT_TAKEN',
   /** 要停的那一轮已经结束，或它所在的 Runtime 已经不在了。 */
   RUN_NOT_RUNNING: 'RUN_NOT_RUNNING',
+  /** 当前没有挂起的待确认问题，或提交的回答与挂起问题不匹配。 */
+  ASK_USER_CONFLICT: 'ASK_USER_CONFLICT',
+  /** 提交的问题回答未通过校验（例如漏答或选项不合法）。 */
+  ASK_USER_RESPONSE_INVALID: 'ASK_USER_RESPONSE_INVALID',
   /** 用户选择的模型已经不在当前推荐目录中，需要刷新目录并重新选择。 */
   MODEL_NOT_AVAILABLE: 'MODEL_NOT_AVAILABLE',
   /** 当前模型不支持图片输入，本轮不会开始。 */

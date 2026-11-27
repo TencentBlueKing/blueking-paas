@@ -170,6 +170,35 @@ export interface ConversationResponse {
 
 export type PagedConversationResponse = PagedResponse<ConversationResponse>;
 
+export interface AskUserOption {
+  label: string;
+  description?: string;
+}
+
+export interface AskUserQuestion {
+  question: string;
+  header: string;
+  options: AskUserOption[];
+  multi_select: boolean;
+}
+
+export interface PendingQuestion {
+  tool_call_id: string;
+  questions: AskUserQuestion[];
+}
+
+export interface AskUserAnswerInput {
+  header: string;
+  selected: string[];
+  custom_answer?: string | null;
+}
+
+export interface AskUserResponseInput {
+  tool_call_id: string;
+  answers: AskUserAnswerInput[];
+  cancelled?: boolean;
+}
+
 export interface RuntimeStateResponse {
   number: number;
   conversation_id: string;
@@ -196,6 +225,8 @@ export interface RuntimeStateResponse {
    * 刷新过页面就没有 SSE 里的 runId 了，只能从这里拿。
    */
   run_id?: string | null;
+  /** 上一轮通过 ask_user_question 暂停后挂起、等待用户回答的问题列表。 */
+  pending_questions?: PendingQuestion[];
 }
 
 /**
@@ -259,9 +290,10 @@ export interface ConversationAttachment {
 }
 
 export interface StartRunRequest {
-  content: string;
+  content?: string;
   model_id?: string;
   attachment_ids?: string[];
+  ask_user_responses?: AskUserResponseInput[];
 }
 
 export interface ListUiEventsQuery {

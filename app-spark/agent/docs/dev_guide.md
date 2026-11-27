@@ -148,13 +148,52 @@ APP_SPARK_FORGEJO_LIVE=1 uv run pytest tests/live_forgejo
 
 ### 真实模型（E2E）
 
-`tests/e2e/` 用 uvicorn 拉起真实 Runtime，基于真实模型跑 Agent 任务，所有断言都走 HTTP。不在 `make test` 里，
-没有完整的模型配置时跳过：它花钱也花时间。
+`tests/e2e/` 用 uvicorn 拉起真实 Runtime，基于真实模型跑 Agent 任务，所有断言都走 HTTP。不在 `make test` 里
+（`pyproject.toml` 默认不收集该目录，必须显式指定路径），没有完整的模型配置时跳过：它花钱也花时间。
+
+支持两种互斥的模型模式，不要混用（判定规则见 [ref_settings.md](ref_settings.md#模型)）：
+
+| 模式 | 需要的环境变量 |
+| --- | --- |
+| bkaidev 网关 | `APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN`（用户态 token）、`APP_SPARK_AGENT_MODEL_BASE_URL`（v1 地址）、`APP_SPARK_AGENT_MODEL_ID`（不带 vendor 前缀，如 `deepseek-v4-flash`） |
+| 官网直连 | `APP_SPARK_AGENT_MODEL_API_KEY`；`APP_SPARK_AGENT_MODEL` 可换模型，默认 `deepseek:deepseek-v4-flash` |
+
+#### 复用 `app-spark-api` 的真实模型配置
+
+如果本机已经按 [app-spark-api 真实模型测试](../../app-spark-api/docs/dev_guide.md#真实模型) 配好凭据，可以直接把变量映射过来，不用另抄一份：
+
+- **bkaidev 网关**（存在 `~/.app-spark-live-bkaidev.env` 时）：
 
 ```bash
-export APP_SPARK_AGENT_RUNTIME_TOKEN=replace-me
+set -a; . ~/.app-spark-live-bkaidev.env; set +a
+export APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN="$APP_SPARK_LIVE_BKAIDEV_ACCESS_TOKEN"
+export APP_SPARK_AGENT_MODEL_BASE_URL="$APP_SPARK_LIVE_BKAIDEV_BASE_URL"
+export APP_SPARK_AGENT_MODEL_ID="${APP_SPARK_LIVE_BKAIDEV_MODEL_IDS%%,*}"
+export APP_SPARK_AGENT_MODEL_ID="${APP_SPARK_AGENT_MODEL_ID:-deepseek-v4-flash}"
+export APP_SPARK_AGENT_MODEL=deepseek:deepseek-v4-flash
+uv run pytest tests/e2e -s
+```
+
+`APP_SPARK_LIVE_BKAIDEV_MODEL_IDS` 在 `app-spark-api` 里是逗号分隔的多模型列表，这里取第一个；要测其他模型直接覆盖 `APP_SPARK_AGENT_MODEL_ID`。
+
+- **直连 DeepSeek**（环境中已设 `DEEPSEEK_API_KEY` 时，需确保未设置任何网关三项）：
+
+```bash
+export APP_SPARK_AGENT_MODEL_API_KEY="$DEEPSEEK_API_KEY"
+export APP_SPARK_AGENT_MODEL="${APP_SPARK_LIVE_LLM_MODEL:-deepseek:deepseek-v4-flash}"
+uv run pytest tests/e2e -s
+```
+
+#### 手动配置
+
+也可以直接显式导出网关三项或 `APP_SPARK_AGENT_MODEL_API_KEY`（也可以写在当前目录的 `.env`）：
+
+```bash
 export APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN=replace-me
 export APP_SPARK_AGENT_MODEL_ID=deepseek-v4-flash
 export APP_SPARK_AGENT_MODEL_BASE_URL=https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1
 uv run pytest tests/e2e -s
 ```
+
+- 如果本地 `.env` 或当前 shell 里留着 `APP_SPARK_AGENT_MODEL=fake:*`，`tests/e2e` 会直接跳过；复用命令里显式设 `APP_SPARK_AGENT_MODEL` 就是为了覆盖它。
+- 建议保留 `-s` 查看每轮请求与工具调用进度；bkaidev 网关有调用频率限制（超了返回 429 `RATE_LIMIT_RESTRICTION`）。

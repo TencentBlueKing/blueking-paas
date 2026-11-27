@@ -18,10 +18,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar, get_origin
+from typing import TYPE_CHECKING, TypeVar, get_args, get_origin
 
 from cattrs import Converter
-from cattrs.cols import list_structure_factory
+from cattrs.cols import homogenous_tuple_structure_factory, list_structure_factory
 from cattrs.errors import BaseValidationError
 from cattrs.v import format_exception as format_cattrs_exception
 from cattrs.v import transform_error
@@ -87,9 +87,32 @@ def register_strict_list_hook(converter: Converter) -> None:
     converter.register_structure_hook_factory(lambda type_: get_origin(type_) is list, make_hook)
 
 
+def register_strict_tuple_hook(converter: Converter) -> None:
+    """Make converter refuse anything but a list or tuple where a homogeneous tuple field is declared."""
+
+    def is_homogeneous_tuple(type_: type) -> bool:
+        args = get_args(type_)
+        return get_origin(type_) is tuple and len(args) == 2 and args[1] is Ellipsis
+
+    def make_hook(type_: type) -> Callable[[object, type], tuple]:
+        structure_items = homogenous_tuple_structure_factory(type_, converter)
+
+        def structure(value: object, _: type) -> tuple:
+            # cattrs 默认把任何可迭代对象当成元组：字符串会被拆成单个字符，{} 和 "" 都会变成 ()。
+            if not isinstance(value, (list, tuple)):
+                raise TypeError(f"Expected list or tuple, got {type(value).__name__}")
+
+            return structure_items(value, type_)
+
+        return structure
+
+    converter.register_structure_hook_factory(is_homogeneous_tuple, make_hook)
+
+
 cattrs_converter = Converter(forbid_extra_keys=True)
 cattrs_converter.register_structure_hook(str, make_strict_structure_hook(str))
 register_strict_list_hook(cattrs_converter)
+register_strict_tuple_hook(cattrs_converter)
 
 
 def _describe_failure(exc: BaseException, type_: type | None) -> str:

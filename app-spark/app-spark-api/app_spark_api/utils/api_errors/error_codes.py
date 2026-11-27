@@ -172,6 +172,14 @@ class ErrorCodes:
         _("The previous turn's files have not been saved to this project's repository yet."),
         status_code=HTTPStatus.CONFLICT,
     )
+    ASK_USER_CONFLICT = ErrorCode(
+        _("There are no matching pending questions to answer."),
+        status_code=HTTPStatus.CONFLICT,
+    )
+    ASK_USER_RESPONSE_INVALID = ErrorCode(
+        _("The submitted answers do not match the pending questions."),
+        status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
     AGENT_UNAVAILABLE = ErrorCode(_("The Agent Runtime is unavailable."), status_code=HTTPStatus.BAD_GATEWAY)
 
     # --- Model access -----------------------------------------------------------------------------

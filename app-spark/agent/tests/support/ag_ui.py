@@ -41,6 +41,34 @@ def run_body(
     }
 
 
+def answer_run_body(
+    *,
+    conversation_id: str,
+    run_id: str,
+    context_version: int,
+    responses: Sequence[dict[str, object]],
+    model_id: str | None = None,
+) -> dict[str, object]:
+    """Build an AG-UI run request that answers one or more pending `ask_user_question` calls."""
+    forwarded_props: dict[str, object] = {
+        "contextVersion": context_version,
+        "askUserResponses": list(responses),
+    }
+    if model_id is not None:
+        forwarded_props["modelId"] = model_id
+
+    return {
+        "threadId": conversation_id,
+        "runId": run_id,
+        "protocolVersion": "1.0",
+        "state": {},
+        "messages": [],
+        "tools": [],
+        "context": [],
+        "forwardedProps": forwarded_props,
+    }
+
+
 def sse_events(body: str) -> list[dict[str, Any]]:
     """Parse an SSE response body into the JSON events it carried.
 

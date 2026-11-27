@@ -7,7 +7,7 @@ from typing import Any, Protocol, cast
 
 import httpx2
 from openai import AsyncOpenAI, DefaultAsyncHttpxClient
-from pydantic_ai import Agent
+from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai.capabilities import AbstractCapability, LocalWorkspace
 from pydantic_ai.messages import ModelMessage, ToolCallPart
 from pydantic_ai.models import Model, infer_model
@@ -17,6 +17,7 @@ from pydantic_ai.profiles import ModelProfile
 from pydantic_ai.providers import Provider, infer_provider_class
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai_harness import (
+    AskUser,
     ClampOversizedMessages,
     ClearToolResults,
     DeduplicateFileReads,
@@ -216,7 +217,7 @@ def create_agent(
     *,
     state_dir: Path | None = None,
     extra_tools: Sequence[Any] = (),
-) -> Agent[None, str]:
+) -> Agent[None, str | DeferredToolRequests]:
     """Create the coding agent scoped to workspace.
 
     The harness file tools bound paths to workspace and mark .git and common secret files
@@ -277,6 +278,9 @@ def create_agent(
             filenames=("AGENTS.md",),
             nested_traversal=True,
         ),
+        # answerer=None 让提问走 DeferredToolRequests 暂停本轮，而不是在进程内挂住 Future：
+        # 沙箱可随时空闲回收，暂停后会话回到 idle，用户既可以点卡片回答，也可以直接发新消息。
+        AskUser(answerer=None),
         build_compaction(model),
     ]
     return Agent(
@@ -284,4 +288,5 @@ def create_agent(
         instructions=settings.INSTRUCTIONS,
         capabilities=capabilities,
         tools=tools,
+        output_type=[str, DeferredToolRequests],
     )

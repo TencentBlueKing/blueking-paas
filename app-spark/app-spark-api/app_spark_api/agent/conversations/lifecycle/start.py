@@ -50,9 +50,15 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from app_spark_api.agent.conversations.models import Conversation
+    from app_spark_api.agent.conversations.models import Conversation, ConversationAttachment
     from app_spark_api.agent.model_catalog.services import ModelCatalog
-    from app_spark_api.agent.runtime import AgentRun, AgentRuntimeClient, PreviewStartOutcome, RuntimeHealth
+    from app_spark_api.agent.runtime import (
+        AgentRun,
+        AgentRuntimeClient,
+        AskUserResponseInput,
+        PreviewStartOutcome,
+        RuntimeHealth,
+    )
     from app_spark_api.infras.bk_access_token import UserCredential
 
 logger = logging.getLogger(__name__)
@@ -61,28 +67,32 @@ logger = logging.getLogger(__name__)
 async def start_run(
     conversation: Conversation,
     *,
-    content: str,
+    content: str = "",
     credential: UserCredential | None = None,
     model_id: str | None = None,
     attachment_ids: Sequence[UUID] = (),
+    ask_user_responses: Sequence[AskUserResponseInput] = (),
 ) -> AgentRun:
-    """Submit one turn and return its open event stream.
+    """Submit one turn or structured question answer and return its open event stream.
 
     The context version is read from ``/health`` immediately before the run rather than
     remembered between turns. Compaction can move it in the middle of a run, so a version
     carried over from the previous turn is not merely stale, it is wrong often enough to matter.
 
     :param conversation: Conversation the turn belongs to.
-    :param content: The user's message; may be empty when the turn carries attachments.
+    :param content: The user's message; may be empty when answering questions or carrying attachments.
     :param credential: The caller's BlueKing login, passed to :func:`~app_spark_api.agent.conversations.services.open_client`.
     :param model_id: The model this turn asked for; None runs it on the Runtime's default.
     :param attachment_ids: Files sent with this turn, in the order the user attached them.
+    :param ask_user_responses: Structured answers resuming paused `ask_user_question` call(s).
     :return: The accepted run, whose bytes are still to come.
     :raises ConversationClosedError: If the conversation has been closed.
     :raises ModelNotAvailableError: If the model list does not offer model_id.
     :raises APIError: ATTACHMENT_NOT_FOUND or ATTACHMENT_ALREADY_USED, see select_unsent.
     :raises ModelImageInputUnsupportedError: If the turn carries images its model cannot read.
     :raises AgentBusyError: If a run is already occupying the Runtime.
+    :raises AgentAskUserConflictError: If no matching pending questions remain on the Runtime.
+    :raises AgentAskUserValidationError: If the submitted answers fail Runtime validation.
     :raises AgentProvisionError: If no Runtime could be brought up.
     :raises ModelAccessConfigurationError: If the model source or its settings are invalid, or
         no model is left to run on.
@@ -99,10 +109,10 @@ async def start_run(
 
     # 附件归属、模型可用性和模型能力都在拉起沙箱、写入用户消息之前查：这一轮本来就不会发生，
     # 不该为它付启动成本，也不该在历史里留一条没有回答的输入。绑定时还会在锁下复查一次归属。
-    run_attachments = await acheck_run_attachments(conversation, attachment_ids)
+    run_attachments = () if ask_user_responses else await acheck_run_attachments(conversation, attachment_ids)
     sends_images = any(is_image(attachment.mime_type) for attachment in run_attachments)
 
-    # Runtime 会把最近几轮的历史图片也发给模型，所以本轮没带图也要看模型能不能读图：
+    # Runtime 会把最近几轮的历史图片也发给模型，所以本轮没带图（含回答提问恢复）也要看模型能不能读图：
     # 上一轮在多模态模型上发了图、这一轮换成纯文本模型时，图片不能跟着发过去。
     may_send_images = sends_images or await ahas_sent_images(conversation)
 
@@ -124,19 +134,95 @@ async def start_run(
         health.running,
     )
 
+    run_id = str(uuid4())
+    if ask_user_responses:
+        return await _start_ask_user_run(
+            conversation,
+            client,
+            context_version=health.context_version,
+            run_id=run_id,
+            model_id=forwarded_model_id,
+            image_input=image_input,
+            ask_user_responses=ask_user_responses,
+        )
+
+    return await _start_user_message_run(
+        conversation,
+        client,
+        content=content,
+        context_version=health.context_version,
+        run_id=run_id,
+        model_id=forwarded_model_id,
+        attachment_ids=attachment_ids,
+        run_attachments=run_attachments,
+        image_input=image_input,
+    )
+
+
+async def _start_ask_user_run(
+    conversation: Conversation,
+    client: AgentRuntimeClient,
+    *,
+    context_version: int,
+    run_id: str,
+    model_id: str | None,
+    image_input: bool,
+    ask_user_responses: Sequence[AskUserResponseInput],
+) -> AgentRun:
+    """Resume a paused ``ask_user_question`` call without recording a user message row."""
+    # 回答提问恢复的是一次挂起的工具调用，不写入 ConversationUserMessage，避免历史出现空白用户输入。
+    try:
+        run = await client.start_run(
+            context_version=context_version,
+            run_id=run_id,
+            model_id=model_id,
+            image_input=image_input,
+            ask_user_responses=ask_user_responses,
+        )
+    except AgentWorkspaceSavePendingError as exc:
+        # 409 不会进 API 的异常日志，而页面上的文案是固定的，沙箱地址和 Runtime 的说明只在这里。
+        logger.warning(
+            "Conversation %s at %s refused the ask_user resume because the previous turn is not saved yet: %s",
+            conversation.id,
+            client.handle.base_url,
+            exc,
+        )
+        raise
+
+    logger.info(
+        "Conversation %s accepted ask_user resume run %s at %s",
+        conversation.id,
+        run.run_id,
+        client.handle.base_url,
+    )
+    return run
+
+
+async def _start_user_message_run(
+    conversation: Conversation,
+    client: AgentRuntimeClient,
+    *,
+    content: str,
+    context_version: int,
+    run_id: str,
+    model_id: str | None,
+    attachment_ids: Sequence[UUID],
+    run_attachments: Sequence[ConversationAttachment],
+    image_input: bool,
+) -> AgentRun:
+    """Record a user message row and submit a normal turn to the Runtime."""
     # run_id 在请求 Runtime 之前就随消息落库。Runtime 一接受，/health 就会报出这个 run_id，前端随即可以
     # 拿它来停；要是等 Runtime 应答后再补写，这中间 stop_run 的归属校验会把一个真实的 run 当成不存在。
     # 落库在前，也就不会因为浏览器断开或任务取消而丢掉用户输入与 run 的关联。
-    run_id = str(uuid4())
     message = await sync_to_async(ConversationUserMessage.objects.create_for_conversation)(
         conversation, content=content, run_id=run_id, attachment_ids=attachment_ids
     )
     try:
         run = await client.start_run(
             content=content,
-            context_version=health.context_version,
+            context_version=context_version,
             run_id=run_id,
-            model_id=forwarded_model_id,
+            model_id=model_id,
             # 只传引用不传字节，Agent 在这一轮开始前自己把文件下载进工作区。
             attachments=[
                 AttachmentInput(

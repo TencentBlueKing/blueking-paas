@@ -6,7 +6,10 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from app_spark_agent.utils import killpg_ignore_absent, write_atomic
+import pytest
+from pydantic import BaseModel, ValidationError
+
+from app_spark_agent.utils import first_validation_error, killpg_ignore_absent, write_atomic
 
 
 def test_killpg_kills_the_whole_group() -> None:
@@ -39,3 +42,14 @@ def test_concurrent_atomic_writes_of_one_path_do_not_break_each_other(tmp_path: 
 
     assert target.read_bytes() in {f"writer {index}\n".encode() for index in range(4)}
     assert [path.name for path in tmp_path.iterdir()] == ["app_desc.yaml"]
+
+
+def test_first_validation_error_formats_field_path_and_message() -> None:
+    class Payload(BaseModel):
+        count: int
+
+    with pytest.raises(ValidationError) as exc_info:
+        Payload.model_validate({"count": "not-an-int"})
+
+    formatted = first_validation_error(exc_info.value)
+    assert formatted.startswith("count: ")

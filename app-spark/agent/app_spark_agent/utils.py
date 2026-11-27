@@ -11,6 +11,19 @@ import secrets
 import signal
 from pathlib import Path
 
+from pydantic import ValidationError
+
+
+def first_validation_error(exc: ValidationError) -> str:
+    """Return a concise, human-readable message for the first error in a Pydantic ValidationError."""
+    errors = exc.errors()
+    if not errors:
+        return str(exc)
+    first = errors[0]
+    loc = ".".join(str(segment) for segment in first.get("loc", ()))
+    msg = str(first.get("msg", "validation error"))
+    return f"{loc}: {msg}" if loc else msg
+
 
 def killpg_ignore_absent(pgid: int, sig: signal.Signals) -> None:
     """Send sig to the process group pgid. A group that has already exited is not an error."""

@@ -34,6 +34,7 @@ from app_spark_api.agent.conversations.entities import (
     AttachmentResponse,
     ConversationHistoryResponse,
     ConversationResponse,
+    PendingQuestionSchema,
     PreviewResponse,
     PreviewStartResponse,
     RunStopResponse,
@@ -169,6 +170,7 @@ async def start_run(
         credential=get_user_credential(request),
         model_id=payload.model_id,
         attachment_ids=payload.attachment_ids,
+        ask_user_responses=[item.to_runtime_input() for item in payload.ask_user_responses],
     )
 
     return StreamingHttpResponse(
@@ -517,4 +519,5 @@ def _to_state(conversation: Conversation, state: ConversationState) -> RuntimeSt
         replication_pending=state.replication_pending,
         runtime_ready=state.runtime_ready,
         run_id=state.run_id,
+        pending_questions=[PendingQuestionSchema.from_runtime(item) for item in state.pending_questions],
     )

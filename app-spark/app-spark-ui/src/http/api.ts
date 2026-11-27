@@ -33,6 +33,10 @@ import type {
 export type {
   AgUiEvent,
   AnonymousUserResponse,
+  AskUserAnswerInput,
+  AskUserOption,
+  AskUserQuestion,
+  AskUserResponseInput,
   AuthenticatedUserResponse,
   ConversationAttachment,
   ConversationHistoryRecord,
@@ -53,6 +57,7 @@ export type {
   PagedProjectResponse,
   PagedResponse,
   PageQuery,
+  PendingQuestion,
   PreviewResponse,
   PreviewStartResponse,
   PublicationAppNameValidationRet,

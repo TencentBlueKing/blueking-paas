@@ -21,8 +21,11 @@ from __future__ import annotations
 import pytest
 
 from app_spark_api.agent.runtime.entities import (
+    AskUserOption,
+    AskUserQuestion,
     DirectModelAccess,
     EventPage,
+    PendingQuestion,
     RuntimeHealth,
     structure_bkaidev_model_config,
     structure_direct_model_config,
@@ -289,6 +292,49 @@ def test_a_runtime_that_has_never_run_has_no_conversation_yet():
     assert health.conversation_id is None
 
 
+def test_pending_questions_are_structured_and_ignore_extra_keys():
+    health = RuntimeHealth.from_payload(
+        {
+            **HEALTHY_PAYLOAD,
+            "pending_questions": [
+                {
+                    "tool_call_id": "tc-1",
+                    "extra_call_field": True,
+                    "questions": [
+                        {
+                            "header": "Database",
+                            "question": "Which database?",
+                            "options": [
+                                {"label": "SQLite", "extra_opt_field": 1},
+                                {"label": "PostgreSQL", "description": "Production ready"},
+                            ],
+                            "multi_select": True,
+                            "extra_question_field": "ignored",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert health.pending_questions == (
+        PendingQuestion(
+            tool_call_id="tc-1",
+            questions=(
+                AskUserQuestion(
+                    header="Database",
+                    question="Which database?",
+                    options=(
+                        AskUserOption(label="SQLite", description=""),
+                        AskUserOption(label="PostgreSQL", description="Production ready"),
+                    ),
+                    multi_select=True,
+                ),
+            ),
+        ),
+    )
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -298,6 +344,40 @@ def test_a_runtime_that_has_never_run_has_no_conversation_yet():
         ),
         pytest.param({**HEALTHY_PAYLOAD, "context_version": "two"}, id="wrongly-typed"),
         pytest.param(["not", "an", "object"], id="not-an-object"),
+        pytest.param({**HEALTHY_PAYLOAD, "pending_questions": "not-a-list"}, id="pending-questions-str"),
+        pytest.param({**HEALTHY_PAYLOAD, "pending_questions": {}}, id="pending-questions-dict"),
+        pytest.param({**HEALTHY_PAYLOAD, "pending_questions": [{"tool_call_id": "tc-1"}]}, id="missing-questions"),
+        pytest.param(
+            {
+                **HEALTHY_PAYLOAD,
+                "pending_questions": [
+                    {
+                        "tool_call_id": "tc-1",
+                        "questions": [{"header": "H", "question": "Q", "options": {}}],
+                    }
+                ],
+            },
+            id="options-dict",
+        ),
+        pytest.param(
+            {
+                **HEALTHY_PAYLOAD,
+                "pending_questions": [
+                    {
+                        "tool_call_id": "tc-1",
+                        "questions": [
+                            {
+                                "header": "H",
+                                "question": "Q",
+                                "options": [{"label": "A"}],
+                                "multi_select": "false",
+                            }
+                        ],
+                    }
+                ],
+            },
+            id="multi-select-str",
+        ),
     ],
 )
 def test_an_unreadable_health_response_is_not_passed_on(payload):

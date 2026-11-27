@@ -24,6 +24,9 @@ from pathlib import PurePosixPath
 from typing import Any, Literal
 
 import attrs
+from cattrs import Converter
+from cattrs.errors import BaseValidationError
+from cattrs.v import transform_error
 
 from app_spark_api.agent.runtime.constants import ENV_PREFIX, MODEL_ENV_NAMES
 from app_spark_api.agent.runtime.exceptions import (
@@ -32,6 +35,14 @@ from app_spark_api.agent.runtime.exceptions import (
     ModelAccessConfigurationError,
 )
 from app_spark_api.utils import structure_config, validate_non_empty_string
+from app_spark_api.utils.attrs import make_strict_structure_hook, register_strict_tuple_hook
+
+# Agent Runtime 的 HTTP 响应未来会新增字段，不开 forbid_extra_keys；
+# 读到的字段按 JSON 类型严格校验，避免把 "false" 折成 True 或把 {} / "" 折成空元组。
+_payload_converter = Converter()
+_payload_converter.register_structure_hook(str, make_strict_structure_hook(str))
+_payload_converter.register_structure_hook(bool, make_strict_structure_hook(bool))
+register_strict_tuple_hook(_payload_converter)
 
 
 def validate_agent_extra_env(_: object, attribute: attrs.Attribute[dict[str, str]], value: dict[str, str]) -> None:
@@ -208,6 +219,65 @@ class AttachmentInput:
     url: str
     mime_type: str
     is_image: bool = False
+
+
+@attrs.frozen
+class AskUserOption:
+    """One selectable option inside a pending `ask_user_question` prompt."""
+
+    label: str
+    description: str = ""
+
+
+@attrs.frozen
+class AskUserQuestion:
+    """One structured question inside a pending `ask_user_question` prompt."""
+
+    header: str
+    question: str
+    options: tuple[AskUserOption, ...]
+    multi_select: bool = False
+
+
+@attrs.frozen
+class PendingQuestion:
+    """One unanswered `ask_user_question` tool call currently pausing the Runtime."""
+
+    tool_call_id: str
+    questions: tuple[AskUserQuestion, ...]
+
+
+@attrs.frozen
+class AskUserAnswerInput:
+    """One answered question sent to resume a paused `ask_user_question` call."""
+
+    header: str
+    selected: tuple[str, ...] = ()
+    custom_answer: str | None = None
+
+    def as_wire_payload(self) -> dict[str, Any]:
+        """Serialize to the camelCase wire format accepted by the Agent Runtime."""
+        payload: dict[str, Any] = {"header": self.header, "selected": list(self.selected)}
+        if self.custom_answer is not None:
+            payload["customAnswer"] = self.custom_answer
+        return payload
+
+
+@attrs.frozen
+class AskUserResponseInput:
+    """One deferred tool call response sent via `forwardedProps.askUserResponses`."""
+
+    tool_call_id: str
+    answers: tuple[AskUserAnswerInput, ...] = ()
+    cancelled: bool = False
+
+    def as_wire_payload(self) -> dict[str, Any]:
+        """Serialize to the camelCase wire format accepted by the Agent Runtime."""
+        return {
+            "toolCallId": self.tool_call_id,
+            "answers": [answer.as_wire_payload() for answer in self.answers],
+            "cancelled": self.cancelled,
+        }
 
 
 @attrs.frozen
@@ -412,6 +482,7 @@ class RuntimeHealth:
     dev_server_status: str | None = None
     run_id: str | None = None
     model_ready: bool = True
+    pending_questions: tuple[PendingQuestion, ...] = ()
 
     @classmethod
     def from_payload(cls, payload: Any) -> RuntimeHealth:
@@ -438,7 +509,14 @@ class RuntimeHealth:
                 ),
                 run_id=None if payload["run_id"] is None else str(payload["run_id"]),
                 model_ready=bool(payload["model_ready"]),
+                pending_questions=_payload_converter.structure(
+                    payload.get("pending_questions", []),
+                    tuple[PendingQuestion, ...],
+                ),
             )
+        except BaseValidationError as exc:
+            reasons = "; ".join(transform_error(exc, path="$.pending_questions"))
+            raise AgentUnavailableError(f"Unreadable /health response: {reasons}") from exc
         except (KeyError, TypeError, ValueError) as exc:
             raise AgentUnavailableError(f"Unreadable /health response: {exc}") from exc
 

@@ -23,9 +23,16 @@ from ag_ui.core import (
     UserMessage,
 )
 from fastapi import HTTPException, Request, status
+from pydantic_ai import DeferredToolResults
 from starlette.types import Message
 
 from app_spark_agent.attachments import ATTACHMENT_URI_SCHEME, IMAGE_MEDIA_TYPES, parse_attachment_id
+from app_spark_agent.cap.ask_user import (
+    AskUserConflictError,
+    AskUserValidationError,
+    PendingAskUser,
+    build_ask_user_deferred_results,
+)
 from app_spark_agent.state import AppendLog, ConversationContext
 
 # 用户消息里除了附件引用，也接受外部链接：沙箱本来就能访问外网，模型需要时自己去取。
@@ -35,7 +42,7 @@ ALLOWED_FILE_URL_SCHEMES = EXTERNAL_URL_SCHEMES | {ATTACHMENT_URI_SCHEME}
 
 @dataclass(frozen=True)
 class PreparedRun:
-    """Validated AG-UI input reduced to one new trusted user turn."""
+    """Validated AG-UI input reduced to one new trusted turn (a user message or question answers)."""
 
     conversation_id: str
     run_id: str
@@ -45,6 +52,8 @@ class PreparedRun:
     model_id: str | None = None
     # False when the control plane says this turn's model cannot read images.
     image_input: bool = True
+    # Populated when the caller is answering pending `ask_user_question` tool call(s).
+    deferred_tool_results: DeferredToolResults | None = None
 
 
 def prepare_run(
@@ -118,20 +127,18 @@ def prepare_run(
     model_id = _read_model_id(typed_forwarded_props)
     image_input = _read_image_input(typed_forwarded_props)
 
-    user_message = next(
-        (message for message in reversed(run_input.messages) if isinstance(message, UserMessage)),
-        None,
-    )
-    if user_message is None:
-        raise HTTPException(status_code=422, detail="A user message is required.")
-
-    checked_message = user_message.model_copy(update={"content": _check_user_content(user_message.content)})
+    if "askUserResponses" in typed_forwarded_props:
+        deferred_tool_results = _prepare_ask_user_responses(run_input, typed_forwarded_props, context)
+        filtered_messages: list[UserMessage] = []
+    else:
+        deferred_tool_results = None
+        filtered_messages = [_extract_user_message(run_input)]
 
     filtered_input = run_input.model_copy(
         update={
             "thread_id": conversation_id,
             "run_id": run_id,
-            "messages": [checked_message],
+            "messages": filtered_messages,
             "state": {},
             "tools": [],
             "context": [],
@@ -146,7 +153,44 @@ def prepare_run(
         body=filtered_input.model_dump_json(by_alias=True).encode(),
         model_id=model_id,
         image_input=image_input,
+        deferred_tool_results=deferred_tool_results,
     )
+
+
+def _prepare_ask_user_responses(
+    run_input: RunAgentInput,
+    forwarded_props: dict[str, object],
+    context: ConversationContext,
+) -> DeferredToolResults:
+    """Validate `forwardedProps.askUserResponses` and require an empty client message list."""
+    if run_input.messages:
+        raise HTTPException(
+            status_code=422,
+            detail="messages must be empty when forwardedProps.askUserResponses is provided.",
+        )
+    try:
+        return build_ask_user_deferred_results(
+            forwarded_props["askUserResponses"],
+            PendingAskUser(context.messages).tool_calls(),
+        )
+    except AskUserConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "ask_user_conflict", "message": str(exc)},
+        ) from exc
+    except AskUserValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+def _extract_user_message(run_input: RunAgentInput) -> UserMessage:
+    """Extract and validate the newest `UserMessage` from an inbound run request."""
+    user_message = next(
+        (message for message in reversed(run_input.messages) if isinstance(message, UserMessage)),
+        None,
+    )
+    if user_message is None:
+        raise HTTPException(status_code=422, detail="A user message is required.")
+    return user_message.model_copy(update={"content": _check_user_content(user_message.content)})
 
 
 def _check_user_content(content: str | Sequence[InputContent]) -> str | list[InputContent]:

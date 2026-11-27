@@ -30,7 +30,7 @@ import httpx2
 
 from app_spark_agent import settings
 from tests.support import console
-from tests.support.ag_ui import run_body
+from tests.support.ag_ui import answer_run_body, run_body
 
 ASGI_TARGET = "app_spark_agent.server.asgi:app"
 ENV_PREFIX = settings.ENV_PREFIX
@@ -187,7 +187,34 @@ class LiveRuntime:
         version = self.health()["context_version"] if context_version is None else context_version
         console.request("POST /runs", f"contextVersion={version}")
         console.line(f"{console.INDENT}user > {console.clip(prompt)}")
+        body = run_body(
+            conversation_id=conversation_id,
+            run_id=str(uuid4()),
+            context_version=version,
+            prompt=prompt,
+        )
+        return self._stream_run(body)
 
+    def answer(
+        self,
+        *,
+        conversation_id: str,
+        responses: Sequence[dict[str, object]],
+        context_version: int | None = None,
+    ) -> Turn:
+        """Submit structured answers for pending `ask_user_question` call(s) and stream the resumed run."""
+        version = self.health()["context_version"] if context_version is None else context_version
+        console.request("POST /runs", f"contextVersion={version} askUserResponses={len(responses)}")
+        console.line(f"{console.INDENT}answers > {console.clip(json.dumps(responses, ensure_ascii=False))}")
+        body = answer_run_body(
+            conversation_id=conversation_id,
+            run_id=str(uuid4()),
+            context_version=version,
+            responses=responses,
+        )
+        return self._stream_run(body)
+
+    def _stream_run(self, body: dict[str, object]) -> Turn:
         printer = console.StreamPrinter()
         events: list[dict[str, Any]] = []
         started = time.monotonic()
@@ -195,12 +222,7 @@ class LiveRuntime:
             "POST",
             "/runs",
             headers=SSE_HEADERS,
-            json=run_body(
-                conversation_id=conversation_id,
-                run_id=str(uuid4()),
-                context_version=version,
-                prompt=prompt,
-            ),
+            json=body,
         ) as response:
             if response.status_code != 200:
                 response.read()

@@ -3,13 +3,14 @@
 import asyncio
 import json
 from collections.abc import AsyncIterator
+from typing import Any
 
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelMessage, ModelRequest, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 
 
-def read_file_result(agent: Agent[None, str], path: str) -> str:
+def read_file_result(agent: Agent[None, Any], path: str) -> str:
     """Return what read_file answers the model for path, through a real run of agent."""
     issued = False
 

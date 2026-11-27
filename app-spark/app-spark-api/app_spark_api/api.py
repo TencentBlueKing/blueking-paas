@@ -41,6 +41,8 @@ from app_spark_api.agent.conversations.internal_api import router as conversatio
 from app_spark_api.agent.conversations.state import ConversationStateError
 from app_spark_api.agent.model_catalog.api import router as model_catalog_router
 from app_spark_api.agent.runtime import (
+    AgentAskUserConflictError,
+    AgentAskUserValidationError,
     AgentBusyError,
     AgentPreviewPortTakenError,
     AgentRuntimeError,
@@ -104,6 +106,8 @@ _EXCEPTION_ERROR_CODES: dict[type[Exception], APIError] = {
     AgentBusyError: error_codes.AGENT_BUSY,
     AgentWorkspaceBusyError: error_codes.AGENT_WORKSPACE_BUSY,
     AgentWorkspaceSavePendingError: error_codes.AGENT_WORKSPACE_SAVE_PENDING,
+    AgentAskUserConflictError: error_codes.ASK_USER_CONFLICT,
+    AgentAskUserValidationError: error_codes.ASK_USER_RESPONSE_INVALID,
     AgentPreviewPortTakenError: error_codes.PREVIEW_PORT_TAKEN,
     ModelAccessConfigurationError: error_codes.MODEL_ACCESS_CONFIGURATION_ERROR,
     ModelCredentialMissingError: error_codes.MODEL_CREDENTIAL_MISSING,

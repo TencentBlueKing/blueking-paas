@@ -35,3 +35,4 @@ After editing Python files, run `uv run ruff format {filename}` and `uv run mypy
 
 * All tests: `make test` (does not run `tests/e2e`)
 * ALWAYS prefer specifying test files for efficiency
+* Real-model E2E tests (`tests/e2e/`, run with `-s`) need `APP_SPARK_AGENT_*` model credentials. If `app-spark-api`'s `~/.app-spark-live-bkaidev.env` or `DEEPSEEK_API_KEY` is already present, map them over per `docs/dev_guide.md` "真实模型（E2E）".

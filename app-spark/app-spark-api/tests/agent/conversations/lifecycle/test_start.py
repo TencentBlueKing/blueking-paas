@@ -31,6 +31,7 @@ from app_spark_api.agent.conversations.exceptions import ModelImageInputUnsuppor
 from app_spark_api.agent.conversations.lifecycle import start
 from app_spark_api.agent.conversations.models import Conversation, ConversationAttachment, ConversationUserMessage
 from app_spark_api.agent.model_catalog import services as model_catalog_services
+from app_spark_api.agent.runtime import AskUserResponseInput
 from app_spark_api.core.projects.models import Project
 from app_spark_api.infras.bkaidev import GatewayModel, GatewayModelProperty
 from tests.agent.conversations.support import HANDLE, FakeClient, FakeProvider, FakeRun, install_fake_provider
@@ -162,14 +163,21 @@ def started(monkeypatch) -> list[dict[str, Any]]:
         async def start_run(
             self,
             *,
-            content: str,
+            content: str = "",
             context_version: int,
             run_id: str,
             model_id: str | None = None,
             attachments: Any = (),
             image_input: bool = True,
+            ask_user_responses: Any = (),
         ) -> FakeRun:
-            seen.append({"attachments": list(attachments), "image_input": image_input})
+            seen.append(
+                {
+                    "attachments": list(attachments),
+                    "image_input": image_input,
+                    "ask_user_responses": list(ask_user_responses),
+                }
+            )
             run = FakeRun([])
             run.run_id = run_id
             return run
@@ -249,3 +257,17 @@ async def test_an_image_turn_is_refused_on_a_model_that_cannot_read_images(conve
         await start.start_run(conversation, content="", model_id="hy3", attachment_ids=[image.id])
 
     assert started == []
+
+
+@pytest.mark.usefixtures("provider", "one_vision_model")
+async def test_answering_questions_skips_user_message_but_keeps_vision_guard(conversation, started):
+    await create_attachment(conversation, "image/png", sent=True)
+    answer = AskUserResponseInput(tool_call_id="call-ask-1", cancelled=True)
+
+    await start.start_run(conversation, model_id="hy3", ask_user_responses=[answer])
+
+    [turn] = started
+    assert turn["ask_user_responses"] == [answer]
+    assert turn["image_input"] is False
+    # Only the earlier fixture message exists; answering questions does not append an empty user message.
+    assert await ConversationUserMessage.objects.filter(conversation=conversation).acount() == 1

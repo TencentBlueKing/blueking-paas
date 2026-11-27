@@ -22,11 +22,12 @@ conversation must neither renew nor rebuild one, and has to say truthfully when 
 
 import attrs
 import pytest
+from django.utils import timezone
 
 from app_spark_api.agent.conversations import services
 from app_spark_api.agent.conversations.exceptions import RunNotFoundError, RunNotInProgressError
-from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
-from app_spark_api.agent.runtime import AgentUnavailableError
+from app_spark_api.agent.conversations.models import Conversation, ConversationUiEvent, ConversationUserMessage
+from app_spark_api.agent.runtime import AgentUnavailableError, AskUserOption, AskUserQuestion, PendingQuestion
 from app_spark_api.core.projects.models import Project
 from tests.agent.conversations.support import HEALTH, FakeClient, FakeProvider, FakeRun, install_fake_provider
 
@@ -111,6 +112,24 @@ async def test_the_state_names_the_turn_in_progress(provider, conversation):
     assert state.run_id == "run-1"
 
 
+async def test_the_state_exposes_pending_questions_from_runtime_health(provider, conversation):
+    pending = PendingQuestion(
+        tool_call_id="call-ask-1",
+        questions=(
+            AskUserQuestion(
+                header="Style",
+                question="Which style?",
+                options=(AskUserOption(label="Clean", description="Minimal"),),
+            ),
+        ),
+    )
+    FakeClient.answer = attrs.evolve(HEALTH, running=False, pending_questions=(pending,))
+
+    state = await services.get_state(conversation)
+
+    assert state.pending_questions == (pending,)
+
+
 # --- 停止一轮 ---------------------------------------------------------------------------------
 
 
@@ -143,6 +162,14 @@ async def test_a_run_of_another_conversation_is_never_asked_about(provider, conv
 
 
 @STOP_TESTS
+async def test_an_unknown_run_with_no_runtime_is_not_found(provider, conversation):
+    provider.handle = None
+
+    with pytest.raises(RunNotFoundError):
+        await services.stop_run(conversation, "run-never-existed")
+
+
+@STOP_TESTS
 async def test_a_turn_with_no_runtime_left_is_not_in_progress(provider, conversation):
     """只看不拉：为了停一轮去拉起一个 Runtime，只会多出一个空转的沙箱。"""
     await accepted_run(conversation, "run-1")
@@ -159,6 +186,32 @@ async def test_a_turn_that_has_already_ended_is_not_in_progress(provider, conver
 
     with pytest.raises(RunNotInProgressError):
         await services.stop_run(conversation, "run-1")
+
+
+@STOP_TESTS
+async def test_a_resumed_ask_user_run_can_be_stopped_via_runtime_health_run_id(provider, conversation):
+    """回答提问触发的恢复 run 不写 ConversationUserMessage，仍可通过会话专属 Runtime 的 health.run_id 确认归属并停止。"""
+    FakeClient.answer = attrs.evolve(HEALTH, run_id="run-answer-1")
+
+    await services.stop_run(conversation, "run-answer-1")
+
+    assert FakeClient.stopped == ["run-answer-1"]
+
+
+@STOP_TESTS
+async def test_a_finished_resumed_ask_user_run_reports_not_in_progress(provider, conversation):
+    """恢复 run 结束后事件已入库，再请求停止应返回 RunNotInProgressError 而非 RunNotFoundError。"""
+    await ConversationUiEvent.objects.acreate(
+        conversation=conversation,
+        seq=1,
+        run_id="run-answer-done",
+        payload={"type": "RUN_FINISHED"},
+        recorded_at=timezone.now(),
+    )
+    FakeClient.stop_accepted = False
+
+    with pytest.raises(RunNotInProgressError):
+        await services.stop_run(conversation, "run-answer-done")
 
 
 # --- 一轮结束时续期 ----------------------------------------------------------------------------

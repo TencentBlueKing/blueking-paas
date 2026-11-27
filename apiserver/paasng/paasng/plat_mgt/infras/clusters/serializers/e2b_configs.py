@@ -22,14 +22,26 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.infras.cluster.models import ClusterE2BConfig
+from paasng.platform.agent_sandbox.e2b.clusters import count_live_sandboxes
 
-class ClusterE2BConfigRetrieveOutputSLZ(serializers.Serializer):
-    """集群 e2b 沙箱配置详情，api_key 只写不读"""
+
+class ClusterE2BConfigOutputSLZ(serializers.Serializer):
+    """集群 e2b 沙箱配置，api_key 只写不读"""
 
     control_plane_url = serializers.CharField(help_text="e2b-gateway 控制面地址")
     data_plane_address = serializers.CharField(help_text="供 SDK 直连的数据面对外地址")
     namespace = serializers.CharField(help_text="e2b 沙箱模板下发的命名空间")
     enabled = serializers.BooleanField(help_text="是否参与 e2b 沙箱调度")
+
+
+class ClusterE2BConfigRetrieveOutputSLZ(ClusterE2BConfigOutputSLZ):
+    """集群 e2b 沙箱配置详情"""
+
+    live_sandbox_count = serializers.SerializerMethodField(help_text="集群上存活（运行中、已暂停）的沙箱数量")
+
+    def get_live_sandbox_count(self, obj: ClusterE2BConfig) -> int:
+        return count_live_sandboxes(obj.cluster.name)
 
 
 class ClusterE2BConfigUpsertInputSLZ(serializers.Serializer):

@@ -29,6 +29,7 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.infras.clusters.serializers import (
+    ClusterE2BConfigOutputSLZ,
     ClusterE2BConfigRetrieveOutputSLZ,
     ClusterE2BConfigUpsertInputSLZ,
 )
@@ -121,4 +122,4 @@ class ClusterE2BConfigViewSet(viewsets.GenericViewSet):
 
     @staticmethod
     def _to_audit_data(config: ClusterE2BConfig) -> Dict[str, Any]:
-        return dict(ClusterE2BConfigRetrieveOutputSLZ(config).data)
+        return dict(ClusterE2BConfigOutputSLZ(config).data)

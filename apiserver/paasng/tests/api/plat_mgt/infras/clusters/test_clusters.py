@@ -33,7 +33,7 @@ from paas_wl.infras.cluster.constants import (
     ClusterFeatureFlag,
 )
 from paas_wl.infras.cluster.entities import Domain, IngressConfig
-from paas_wl.infras.cluster.models import Cluster
+from paas_wl.infras.cluster.models import Cluster, ClusterE2BConfig
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.constants import AppEnvironment
@@ -71,7 +71,31 @@ class TestListClusters:
                 "支持 BCS Egress",
             ],
             "nodes": ["127.0.0.1", "127.0.0.2", "127.0.0.3"],
+            "e2b_config": None,
         }
+
+    def test_list_with_e2b_config(self, init_default_cluster, init_system_cluster, plat_mgt_api_client):
+        ClusterE2BConfig.objects.create(
+            cluster=init_default_cluster,
+            control_plane_url="http://e2b-gateway.bcs-system:8080",
+            data_plane_address="e2b.example.com",
+            api_key="real-gateway-key",
+            enabled=False,
+            tenant_id=init_default_cluster.tenant_id,
+        )
+
+        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster.list_create"))
+        assert resp.status_code == status.HTTP_200_OK
+
+        clusters = {c["name"]: c for c in resp.json()}
+        # api_key 只写不读
+        assert clusters[init_default_cluster.name]["e2b_config"] == {
+            "control_plane_url": "http://e2b-gateway.bcs-system:8080",
+            "data_plane_address": "e2b.example.com",
+            "namespace": "default",
+            "enabled": False,
+        }
+        assert clusters[init_system_cluster.name]["e2b_config"] is None
 
 
 class TestRetrieveCluster:

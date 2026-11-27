@@ -35,6 +35,7 @@ from paasng.plat_mgt.infras.clusters.constants import (
     TolerationEffect,
     TolerationOperator,
 )
+from paasng.plat_mgt.infras.clusters.serializers.e2b_configs import ClusterE2BConfigOutputSLZ
 from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.validators import Base64Validator
@@ -79,6 +80,7 @@ class ClusterListOutputSLZ(serializers.Serializer):
     available_tenants = serializers.SerializerMethodField(help_text="可用租户列表")
     feature_flags = serializers.SerializerMethodField(help_text="已启用的特性标志名称列表")
     nodes = serializers.SerializerMethodField(help_text="集群节点列表")
+    e2b_config = serializers.SerializerMethodField(help_text="e2b 沙箱配置，未配置时为 null")
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_tenant(self, obj: Cluster) -> str:
@@ -105,6 +107,14 @@ class ClusterListOutputSLZ(serializers.Serializer):
             return []
 
         return state.nodes_name
+
+    @swagger_serializer_method(serializer_or_field=ClusterE2BConfigOutputSLZ(allow_null=True))
+    def get_e2b_config(self, obj: Cluster) -> Dict[str, Any] | None:
+        config = getattr(obj, "e2b_config", None)
+        if config is None:
+            return None
+
+        return ClusterE2BConfigOutputSLZ(config).data
 
 
 class ClusterAppDomainSLZ(serializers.Serializer):

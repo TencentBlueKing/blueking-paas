@@ -67,7 +67,20 @@ class TestRetrieveE2BConfig:
             "data_plane_address": "e2b.example.com",
             "namespace": "default",
             "enabled": True,
+            "live_sandbox_count": 0,
         }
+
+    def test_retrieve_live_sandbox_count(self, plat_mgt_api_client, bk_app, init_default_cluster, e2b_config):
+        for sandbox_status in E2BSandboxStatus.active_values():
+            _create_sandbox(bk_app, init_default_cluster.name, sandbox_status)
+        # 已终止的沙箱、其他集群上的沙箱不计入
+        _create_sandbox(bk_app, init_default_cluster.name, E2BSandboxStatus.TERMINATED.value)
+        _create_sandbox(bk_app, "other-cluster", E2BSandboxStatus.RUNNING.value)
+
+        resp = plat_mgt_api_client.get(_url(init_default_cluster.name))
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["live_sandbox_count"] == len(E2BSandboxStatus.active_values())
 
     def test_not_configured(self, plat_mgt_api_client, init_default_cluster):
         resp = plat_mgt_api_client.get(_url(init_default_cluster.name))

@@ -7,6 +7,7 @@ clusters:
   - name: example-main
     description: example 应用集群
     cluster_source: bcs  # bcs / native_k8s
+    # cluster_source 为 bcs 时必填
     bcs_project_id: abcdef0123456789
     bcs_cluster_id: BCS-K8S-00000
     bk_biz_id: "100"
@@ -15,8 +16,6 @@ clusters:
       - https://bcs-api.example.com/clusters/BCS-K8S-00000
     auth_type: token  # token / cert（cert 时需提供 base64 编码的 ca / cert / key）
     token: your-cluster-token
-    container_log_dir: /var/lib/docker/containers
-    access_entry_ip: 10.0.0.1
     # 未启用日志平台方案时必填
     elastic_search_config:
       scheme: http
@@ -32,6 +31,8 @@ clusters:
       username: bkapps
       password: your-password
     # 以下为可选项（不填则用默认值）
+    # access_entry_ip: 10.0.0.1  # 集群访问入口（一般为 clb）IP
+    # container_log_dir: /var/lib/docker/containers
     # available_tenant_ids: [example]  # 默认为 [tenant_id]
     # app_address_type: subdomain  # subpath / subdomain
     # app_domains:

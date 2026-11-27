@@ -35,6 +35,7 @@ class TenantClusterSLZ(ClusterUpdateInputSLZ):
     context 需要提供 cur_tenant_id（集群所属租户）与 cur_cluster（未入库的同名集群对象）
     """
 
+    container_log_dir = serializers.CharField(help_text="容器日志目录", default="/var/lib/docker/containers")
     component_preferred_namespace = serializers.CharField(help_text="组件部署首选命名空间", default="blueking")
     component_image_registry = serializers.CharField(help_text="组件镜像仓库", default="hub.bktencent.com")
 

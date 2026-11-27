@@ -49,6 +49,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/controllers"
 	"bk.tencent.com/paas-app-operator/pkg/config"
+	hookres "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/hooks/resources"
 	dgmingress "bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping/ingress"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 
@@ -122,6 +123,7 @@ func main() {
 	}
 
 	config.SetConfig(projConf)
+	hookres.HookExecuteTimeoutThreshold = projConf.GetHookExecuteTimeout()
 
 	// Don't add autoscaling to scheme in init() as it is optional.
 	if config.Global.IsAutoscalingEnabled() {

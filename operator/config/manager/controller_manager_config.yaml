@@ -33,6 +33,7 @@ resRequests:
 autoscaling:
   enabled: false
 maxProcesses: 16
+hookExecuteTimeoutSeconds: 900
 
 ## leaderElectionReleaseOnCancel defines if the leader should step down volume
 ## when the Manager ends. This requires the binary to immediately end when the

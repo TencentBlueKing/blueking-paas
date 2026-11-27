@@ -130,6 +130,15 @@ class TestSmartBuildCoordinator:
         assert coordinator.acquire_lock()
         coordinator.release_lock()
 
+    def test_configured_lock_timeout(self, lock_key, settings):
+        timeout_ms = settings.SMART_BUILD_LOCK_TIMEOUT * 1000
+        coordinator = SmartBuildCoordinator(lock_key)
+        assert coordinator.acquire_lock()
+        try:
+            assert timeout_ms - 1000 < coordinator.redis.pttl(coordinator.key_name_lock) <= timeout_ms
+        finally:
+            coordinator.release_lock()
+
     def test_release_without_smart_build(self, smart_build, lock_key):
         coordinator = SmartBuildCoordinator(lock_key)
         coordinator.acquire_lock()

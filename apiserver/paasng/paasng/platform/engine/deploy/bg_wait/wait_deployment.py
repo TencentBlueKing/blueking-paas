@@ -24,6 +24,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Type
 
 from blue_krill.async_utils.poll_task import PollingMetadata, PollingResult, PollingStatus, TaskPoller
+from django.conf import settings
 
 from paas_wl.bk_app.processes.processes import PlainProcess, ProcessManager
 from paasng.platform.applications.models import ModuleEnvironment
@@ -101,7 +102,7 @@ class WaitProcedurePoller(TaskPoller):
     """
 
     max_retries_on_error = 30
-    overall_timeout_seconds = 15 * 60
+    overall_timeout_seconds = settings.DEPLOYMENT_READY_TIMEOUT
     default_retry_delay_seconds = 2
 
     # Abort policies were extra rules which were used to break current polling procedure
@@ -178,7 +179,7 @@ class WaitProcedurePoller(TaskPoller):
 class DynamicReadyTimeoutPolicy(AbortPolicy):
     """Calculate overall timeout dynamically based on current replicas"""
 
-    max_overall_timeout_seconds = 60 * 15
+    max_overall_timeout_seconds = settings.DEPLOYMENT_READY_TIMEOUT
 
     def get_reason(self) -> str:
         return "release took too long to complete"
@@ -258,7 +259,6 @@ class WaitForReleaseAllReady(WaitProcedurePoller):
     """Wait for processes to updated to a specified release version"""
 
     abort_policies = [DynamicReadyTimeoutPolicy(), TooManyRestartsPolicy(), UserInterruptedPolicy()]
-    overall_timeout_seconds = 60 * 15
 
     def __init__(self, params: Dict, metadata: PollingMetadata):
         super().__init__(params, metadata)

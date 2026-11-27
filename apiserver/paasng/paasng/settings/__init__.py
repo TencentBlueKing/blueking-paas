@@ -1374,6 +1374,8 @@ SMART_BUILDER_IMAGE = settings.get("SMART_BUILDER_IMAGE", "")
 
 # S-Mart 包构建进程超时, 单位为 秒
 SMART_BUILD_PROCESS_TIMEOUT = int(settings.get("SMART_BUILD_PROCESS_TIMEOUT", 60 * 15))
+# S-Mart 构建锁从提交请求开始计时，默认跟随构建超时，长构建可单独配置完整流程的时长。
+SMART_BUILD_LOCK_TIMEOUT = int(settings.get("SMART_BUILD_LOCK_TIMEOUT", SMART_BUILD_PROCESS_TIMEOUT))
 
 
 # ------------------
@@ -1410,6 +1412,12 @@ for image_conf in SMART_CNB_IMAGE_CONF.values():
 
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
+
+# 部署协调器锁超时时间，单位秒
+DEPLOY_LOCK_TIMEOUT = int(settings.get("DEPLOY_LOCK_TIMEOUT", 60 * 15))
+
+# 部署后进程就绪等待上限，单位秒
+DEPLOYMENT_READY_TIMEOUT = int(settings.get("DEPLOYMENT_READY_TIMEOUT", 60 * 15))
 
 # 构建 token 的签名密钥：Ed25519 私钥（PKCS#8 PEM）列表，轮换期间可同时配置多把。
 # 使用 `python manage.py generate_build_token_signing_key` 生成，

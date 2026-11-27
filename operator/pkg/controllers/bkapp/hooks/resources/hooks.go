@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/labels"
@@ -38,12 +39,12 @@ import (
 )
 
 const (
-	// HookExecuteTimeoutThreshold Hook执行超时时间阈值
-	HookExecuteTimeoutThreshold = time.Minute * 15
-
 	// HookExecuteFailedTimeoutThreshold 失败 Hook 的超时时间阈值
 	HookExecuteFailedTimeoutThreshold = time.Minute * 2
 )
+
+// HookExecuteTimeoutThreshold is the pre-release timeout loaded from ProjectConfig at startup.
+var HookExecuteTimeoutThreshold = paasv1alpha1.DefaultHookExecuteTimeout
 
 var (
 	// ErrHookPodExists 用于指定 Hook 的 Pod 已经存在

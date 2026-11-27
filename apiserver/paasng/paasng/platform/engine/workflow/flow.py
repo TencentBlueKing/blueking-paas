@@ -23,6 +23,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Optional
 
 import redis
+from django.conf import settings
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 
@@ -210,12 +211,12 @@ class DeploymentCoordinator:
     """Manage environment's deploy status to avoid duplicated deployments
 
     :param type: lock type, default to "deploy"
-    :param timeout: operation timeout, the default value is 15 minutes.
+    :param timeout: operation timeout, defaults to the configured deployment lock timeout.
     :param redis_db: optional redis database object
     """
 
     # The lock will be released anyway after {DEFAULT_LOCK_TIMEOUT} seconds
-    DEFAULT_LOCK_TIMEOUT = 15 * 60
+    DEFAULT_LOCK_TIMEOUT = settings.DEPLOY_LOCK_TIMEOUT
     # A placeholder value for lock
     DEFAULT_TOKEN = "None"
     # If not any poll in 90s, assume the poller is failed

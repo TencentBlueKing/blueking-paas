@@ -85,7 +85,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
     )
     def list(self, request, *args, **kwargs):
         """获取集群列表"""
-        clusters = self.get_queryset()
+        clusters = self.get_queryset().select_related("e2b_config")
         user_tenant_id = get_tenant(request.user).id
         tenants = BkUserClient(user_tenant_id).list_tenants()
         context = {"tenant_name_map": {t.id: t.name for t in tenants}}

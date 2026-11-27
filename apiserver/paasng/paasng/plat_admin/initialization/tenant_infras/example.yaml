@@ -1,0 +1,116 @@
+# 租户初始化配置示例：python manage.py init_tenant_infras -f example.yaml [--dry-run=false]
+# 只新建缺失的数据，已存在的一律跳过，修改请到平台管理端操作
+tenant_id: example
+
+# 新建的集群（集群归属于 tenant_id），字段与平台管理端「添加集群」表单一致
+clusters:
+  - name: example-main
+    description: example 应用集群
+    cluster_source: bcs  # bcs / native_k8s
+    # cluster_source 为 bcs 时必填
+    bcs_project_id: abcdef0123456789
+    bcs_cluster_id: BCS-K8S-00000
+    bk_biz_id: "100"
+    api_address_type: bcs_gateway  # bcs_gateway / custom
+    api_servers:
+      - https://bcs-api.example.com/clusters/BCS-K8S-00000
+    auth_type: token  # token / cert（cert 时需提供 base64 编码的 ca / cert / key）
+    token: your-cluster-token
+    # 未启用日志平台方案时必填
+    elastic_search_config:
+      scheme: http
+      host: es.example.com
+      port: 9200
+      username: elastic
+      password: your-password
+    # 非默认 / 运营租户必填
+    app_image_registry:
+      host: mirrors.example.com
+      skip_tls_verify: false
+      namespace: bkapps
+      username: bkapps
+      password: your-password
+    # 以下为可选项（不填则用默认值）
+    # access_entry_ip: 10.0.0.1  # 集群访问入口（一般为 clb）IP
+    # container_log_dir: /var/lib/docker/containers
+    # available_tenant_ids: [example]  # 默认为 [tenant_id]
+    # app_address_type: subdomain  # subpath / subdomain
+    # app_domains:
+    #   - name: example-apps.example.com
+    #     https_enabled: true
+    # component_preferred_namespace: blueking
+    # component_image_registry: hub.bktencent.com
+    # feature_flags: {}
+    # node_selector: {}
+    # tolerations: []
+
+# 已存在的集群，将 tenant_id 追加到其可用租户列表中
+# shared_clusters: []
+
+# 集群分配策略，结构与平台管理端一致
+cluster_allocation_policy:
+  type: uniform  # uniform / rule_based
+  allocation_policy:
+    env_specific: false
+    clusters: [example-main]
+
+# 增强服务，key 为服务名称；方案的 config 由对应服务自行校验
+services:
+  mysql:
+    plans:
+      - name: default
+        description: 默认方案
+        config:
+          host: mysql.example.com
+          port: 3306
+          user: admin
+          password: your-password
+    # 绑定策略可选，默认统一分配本次声明的所有可用方案；也可使用 env_plans: {stag: [...], prod: [...]}
+    # binding_policy:
+    #   plans: [default]
+  rabbitmq:
+    plans:
+      - name: default
+        description: 默认方案
+        config:
+          host: rabbitmq.example.com
+          port: 5672
+          management_api: http://rabbitmq.example.com:15672
+          admin: admin
+          password: your-password
+  otel:
+    plans:
+      - name: default
+        description: 默认方案
+  bkrepo:
+    plans:
+      - name: default
+        description: 默认方案
+        config:
+          endpoint_url: http://bkrepo.example.com
+          username: bksaas-addons
+          password: your-password
+          project: bksaas-addons
+  redis:
+    plans:
+      - name: 0shared
+        description: 共享实例
+        # 资源池实例，以 credentials 中的 host:port 判断是否已存在
+        # 每条实例记录只能分配一次，count 为同一实例的记录数（即可分配次数），重复执行时只补足缺少的数量
+        pre_created_instances:
+          - config: {}
+            count: 20
+            credentials:
+              host: redis-0.example.com
+              port: 6379
+              password: your-password
+      - name: 1exclusive
+        description: 独占实例
+
+# 租户日志配置（日志平台方案），可选
+# log_config:
+#   storage_cluster_id: 1
+#   retention: 14
+#   es_shards: 1
+#   storage_replicas: 1
+#   time_zone: 8

@@ -53,6 +53,8 @@ class ClientAction(StrStructuredEnum):
     GRANT_APIGW_PERMISSIONS = EnumField("sysapi:grant:apigw-permissions", label=_("授权网关 API 权限"))
     BUILD_SANDBOX_IMAGE = EnumField("sysapi:build:sandbox-image", label=_("构建沙箱镜像"))
     CREATE_AI_AGENT_APP = EnumField("sysapi:create:ai-agent-app", label=_("创建 AI Agent 应用"))
+    # 以用户凭证为 AI Agent 应用申请 AccessToken, 只给 AIDEV 使用
+    FETCH_APP_ACCESS_TOKEN = EnumField("sysapi:fetch:app-access-token", label=_("申请应用 AccessToken"))
 
     # AIDev 与 AppSpark 共用：各自只能操作自己管理的应用，归属由视图按调用方角色判断
     UPLOAD_SOURCE_PACKAGE = EnumField("sysapi:upload:source-package", label=_("上传源码包"))

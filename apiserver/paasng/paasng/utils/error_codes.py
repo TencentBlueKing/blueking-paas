@@ -118,6 +118,8 @@ class ErrorCodes:
     APP_SPARK_APP_REQUIRED = ErrorCode(_("应用不归 AppSpark 管理"), status_code=403)
     APP_SPARK_MODULE_REQUIRED = ErrorCode(_("AppSpark 只能操作应用的默认模块"), status_code=403)
     SYSAPI_ENV_NOT_ALLOWED = ErrorCode(_("当前调用方不允许操作该环境"))
+    # 应用态以用户身份签发 AccessToken 时, 用户与应用必须属于同一租户
+    USER_APP_TENANT_MISMATCH = ErrorCode(_("用户与目标应用不属于同一租户"), status_code=403)
     # 部署配置
     BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志
@@ -179,6 +181,8 @@ class ErrorCodes:
     CANNOT_GET_SMART_BUILD_PHASES = ErrorCode(_("无法获取 S-Mart 构建的阶段信息"))
     # 对外接口异常
     CANNOT_GET_BK_USER_CREDENTIAL = ErrorCode(_("无法获取用户凭证"))
+    # 上游登录服务不可用
+    USER_LOGIN_SERVICE_UNAVAILABLE = ErrorCode(_("用户登录服务暂不可用，请稍后重试"), status_code=503)
     # Oauth 相关错误
     OAUTH_UNKNOWN_BACKEND_NAME = ErrorCode(_("Oauth 后端类型无效"))
     # Feature Flag 相关错误

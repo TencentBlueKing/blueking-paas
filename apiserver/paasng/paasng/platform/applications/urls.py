@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.infras.accounts.views import OauthTokenViewSet
+from paasng.infras.accounts.views import OauthTokenViewSet, SysOauthTokenViewSet
 from paasng.utils.basic import re_path
 
 from . import views
@@ -231,6 +231,12 @@ urlpatterns += [
         r"^sys/api/bkapps/applications/(?P<code>[^/]+)/$",
         views.SysApplicationViewSet.as_view({"get": "retrieve"}),
         name="sys.api.applications.detail",
+    ),
+    # 以用户凭证为 AI Agent 应用申请 AccessToken, 仅 AIDEV 可调用
+    re_path(
+        r"^sys/api/bkapps/applications/(?P<code>[^/]+)/oauth/token/(?P<env_name>test|prod)/$",
+        SysOauthTokenViewSet.as_view({"get": "fetch_app_token"}),
+        name="sys.api.applications.oauth.token",
     ),
 ]
 

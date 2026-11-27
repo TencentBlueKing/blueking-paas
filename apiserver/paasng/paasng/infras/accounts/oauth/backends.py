@@ -24,7 +24,10 @@ from typing import ClassVar, Dict, List
 import cattr
 import requests
 from attrs import define, evolve, field
+from bkpaas_auth.core.exceptions import InvalidTokenCredentialsError, ResponseError, ServiceError
+from bkpaas_auth.core.token import AbstractRequestBackend, RequestBackend, TokenRequestBackend, UserAccount
 from django.conf import settings
+from django.utils.translation import gettext as _
 from requests.models import Response
 from requests_oauthlib import OAuth2Session
 
@@ -159,6 +162,8 @@ class BlueKingApplicationOauthMixin:
     # 不设置 type-hint, 以绕过 dataclass
     COOKIE_KEY = ""
     HEADER_KEY = ""
+    # 用用户凭证换出用户账号时使用的 request backend, 与凭证类型一一对应, 由子类指定
+    ACCOUNT_REQUEST_BACKEND_CLS: ClassVar[type[AbstractRequestBackend]]
 
     @classmethod
     def from_paasv3cli(cls):
@@ -197,6 +202,34 @@ class BlueKingApplicationOauthMixin:
             logger.exception("Unable to get user credentials")
             raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL.f(cls.COOKIE_KEY)
 
+    @classmethod
+    def get_user_credential_from_headers(cls, request):
+        credential = request.META.get(cls.HEADER_KEY)
+        if not credential:
+            # 报错给调用方看的是对外头名 (X-USER-BK-TOKEN), 而不是 Django 的 META key
+            raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL.f(cls.HEADER_KEY.removeprefix("HTTP_").replace("_", "-"))
+        return credential
+
+    @classmethod
+    def resolve_user_account(cls, user_credential: str) -> UserAccount:
+        """用用户凭证换出用户账号信息 (用户名与所属租户).
+
+        bk_ticket 换票要带用户名(rtx), 所以必须先换; bk_token 换票本身不需要, 但换出来既能统一审计的操作人.
+        """
+        try:
+            return cls.ACCOUNT_REQUEST_BACKEND_CLS().request_user_account(**{cls.COOKIE_KEY: user_credential})
+        except NotImplementedError:
+            # bkpaas-auth 没有实现 RTX 的 APIGW 换票. 目前该组合在多租户下无法启动.
+            raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL.f(
+                _("当前环境不支持用 bk_ticket 换取用户信息, 请使用 bk_token")
+            )
+        except InvalidTokenCredentialsError:
+            logger.warning("The user credential is invalid or expired")
+            raise error_codes.CANNOT_GET_BK_USER_CREDENTIAL.f(_("用户凭证无效或已过期"))
+        except (ServiceError, ResponseError):
+            logger.exception("The user login service is unavailable")
+            raise error_codes.USER_LOGIN_SERVICE_UNAVAILABLE
+
     def fetch_token(self, username: str, user_credential: str) -> dict:
         raise NotImplementedError
 
@@ -234,6 +267,8 @@ class BlueKingApplicationOauthMixin:
 class APIGateWayBackend(BlueKingApplicationOauthMixin):
     COOKIE_KEY = "bk_ticket"
     HEADER_KEY = "HTTP_X_USER_BK_TICKET"
+    # bk_ticket 由蓝鲸登录签发, 只有 RTX provider 的 request backend 认它
+    ACCOUNT_REQUEST_BACKEND_CLS = RequestBackend
 
     def fetch_token(self, username: str, user_credential: str) -> dict:
         try:
@@ -295,6 +330,8 @@ class APIGateWayBackend(BlueKingApplicationOauthMixin):
 class BKSSMBackend(BlueKingApplicationOauthMixin):
     COOKIE_KEY = "bk_token"
     HEADER_KEY = "HTTP_X_USER_BK_TOKEN"
+    # bk_token 由 SSM 签发, 走 BK provider 的 request backend
+    ACCOUNT_REQUEST_BACKEND_CLS = TokenRequestBackend
 
     def fetch_token(self, username: str, user_credential: str) -> dict:
         try:

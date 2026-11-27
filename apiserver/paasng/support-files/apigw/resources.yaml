@@ -741,6 +741,29 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Get the AI Agent application's info, deploy mode and exposed urls with system API credentials
+  /system/bkapps/applications/{app_code}/oauth/token/{env_name}/:
+    get:
+      operationId: sys_fetch_app_access_token
+      description: 应用态以用户凭证为 AI Agent 应用申请 AccessToken（仅供 AIDEV 使用）
+      tags:
+      - Oauth
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/oauth/token/{env_name}/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Fetch an access token for an AI Agent application on behalf of a user identified by the given credential
   /system/bkapps/applications/{app_code}/modules/{module}/repo/branches/:
     get:
       operationId: sys_get_repo_branches

@@ -167,6 +167,15 @@ class UserVerificationValidationView(APIView):
         return JsonResponse({"is_valid": is_valid})
 
 
+def make_access_token_detail(token_data: dict, env_name: str) -> DataDetail:
+    """构造签发 AccessToken 的审计详情.
+
+    审计记录对应用的所有成员可见, 所以只保留可追溯的元数据, 绝不写入令牌本身:
+    否则任何能查看该应用审计的人都能拿到代表 "该用户 + 该应用" 身份的凭证.
+    """
+    return DataDetail(data={"env_name": env_name, "expires_in": token_data.get("expires_in")})
+
+
 class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """
     以用户身份申请 BKApp 的 AccessToken
@@ -187,7 +196,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 username=request.user.username, user_credential=backend.get_user_credential_from_request(request)
             )
         except BKAppOauthError as e:
-            return Response(status=e.response_code, data={"message": e.error_message})
+            return Response(status=e.response_code or status.HTTP_400_BAD_REQUEST, data={"message": e.error_message})
         # 新建 token 成功后添加审计记录
         add_app_audit_record(
             app_code=app_code,
@@ -196,7 +205,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE,
             target=OperationTarget.ACCESS_TOKEN,
-            data_after=DataDetail(data=data),
+            data_after=make_access_token_detail(data, env_name),
         )
         return Response(data=data)
 
@@ -216,7 +225,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             data = backend.refresh_token(refresh_token=data["refresh_token"])
         except BKAppOauthError as e:
-            return Response(status=e.response_code, data={"message": e.error_message})
+            return Response(status=e.response_code or status.HTTP_400_BAD_REQUEST, data={"message": e.error_message})
         # 刷新 token 成功后添加审计记录
         add_app_audit_record(
             app_code=app_code,
@@ -225,7 +234,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.REFRESH,
             target=OperationTarget.ACCESS_TOKEN,
-            data_after=DataDetail(data=data),
+            data_after=make_access_token_detail(data, env_name),
         )
         return Response(data=data)
 

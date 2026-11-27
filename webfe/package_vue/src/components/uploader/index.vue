@@ -95,6 +95,8 @@
 </template>
 
 <script>
+import { resolveLocalLanguage } from '@/common/locale';
+
 export default {
   name: 'ImportConfigurationUpload',
   props: {
@@ -348,6 +350,7 @@ export default {
           xhr.setRequestHeader(headerKey, headerVal);
         }
       }
+      xhr.setRequestHeader('Accept-Language', resolveLocalLanguage());
       xhr.send(formData);
       return xhr;
     },

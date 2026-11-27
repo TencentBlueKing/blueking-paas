@@ -59,15 +59,12 @@ import tenant from './modules/tenant';
 import tenantOperations from './modules/tenant-operations';
 import tenantConfig from './modules/tenant-config';
 import http from '@/api';
-import cookie from 'cookie';
+import { resolveLocalLanguage } from '@/common/locale';
 import { validateAppCode, createSafeObject, safeSet, safeHas } from '@/utils/safe-object';
 
 Vue.use(Vuex);
 
-let localLanguage = cookie.parse(document.cookie).blueking_language || 'zh-cn';
-if (['zh-cn', 'zh-CN', 'None', 'none', ''].includes(localLanguage)) {
-  localLanguage = 'zh-cn';
-}
+const localLanguage = resolveLocalLanguage();
 
 const state = {
   userFeature: {},

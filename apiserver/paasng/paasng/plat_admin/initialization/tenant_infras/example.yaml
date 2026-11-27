@@ -30,20 +30,20 @@ clusters:
       namespace: bkapps
       username: bkapps
       password: your-password
-    # 以下为可选项
-    available_tenant_ids: [example]  # 默认为 [tenant_id]
-    app_address_type: subdomain  # subpath / subdomain
-    app_domains:
-      - name: example-apps.example.com
-        https_enabled: true
-    component_preferred_namespace: blueking
-    component_image_registry: hub.bktencent.com
-    feature_flags: {}
-    node_selector: {}
-    tolerations: []
+    # 以下为可选项（不填则用默认值）
+    # available_tenant_ids: [example]  # 默认为 [tenant_id]
+    # app_address_type: subdomain  # subpath / subdomain
+    # app_domains:
+    #   - name: example-apps.example.com
+    #     https_enabled: true
+    # component_preferred_namespace: blueking
+    # component_image_registry: hub.bktencent.com
+    # feature_flags: {}
+    # node_selector: {}
+    # tolerations: []
 
 # 已存在的集群，将 tenant_id 追加到其可用租户列表中
-shared_clusters: []
+# shared_clusters: []
 
 # 集群分配策略，结构与平台管理端一致
 cluster_allocation_policy:
@@ -64,8 +64,8 @@ services:
           user: admin
           password: your-password
     # 绑定策略可选，默认统一分配本次声明的所有可用方案；也可使用 env_plans: {stag: [...], prod: [...]}
-    binding_policy:
-      plans: [default]
+    # binding_policy:
+    #   plans: [default]
   rabbitmq:
     plans:
       - name: default
@@ -106,9 +106,9 @@ services:
         description: 独占实例
 
 # 租户日志配置（日志平台方案），可选
-log_config:
-  storage_cluster_id: 1
-  retention: 14
-  es_shards: 1
-  storage_replicas: 1
-  time_zone: 8
+# log_config:
+#   storage_cluster_id: 1
+#   retention: 14
+#   es_shards: 1
+#   storage_replicas: 1
+#   time_zone: 8

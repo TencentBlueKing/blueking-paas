@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from decimal import Decimal
 from typing import Any
 from unittest import mock
 
@@ -29,6 +30,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxAlreadyExists,
     SandboxError,
     SandboxImageValidateError,
+    SandboxResourceLimitExceeded,
 )
 from paasng.platform.agent_sandbox.models import Sandbox
 
@@ -167,6 +169,43 @@ class TestAgentSandboxViewSetCreate:
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.json()["code"] == "AGENT_SANDBOX_ACTIVE_COUNT_LIMIT_EXCEEDED"
+
+    def test_create_sandbox_with_resources(self, api_client: APIClient, bk_app: Any, sandbox_obj: Sandbox) -> None:
+        """Verify the requested cpu/memory are passed to create_sandbox."""
+        create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
+
+        with mock.patch(
+            "paasng.platform.agent_sandbox.views.api.create_sandbox", return_value=sandbox_obj
+        ) as mock_create:
+            resp = api_client.post(create_url, data={"cpu": "1.5", "memory": "0.5"}, format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        kwargs = mock_create.call_args.kwargs
+        assert (kwargs["cpu"], kwargs["memory"]) == (Decimal("1.5"), Decimal("0.5"))
+
+    @pytest.mark.parametrize("data", [{"cpu": "0"}, {"memory": "-1"}, {"cpu": "abc"}])
+    def test_create_sandbox_invalid_resources(self, api_client: APIClient, bk_app: Any, data: dict) -> None:
+        """Verify non-positive or malformed cpu/memory are rejected."""
+        create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
+
+        with mock.patch("paasng.platform.agent_sandbox.views.api.create_sandbox") as mock_create:
+            resp = api_client.post(create_url, data=data, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        mock_create.assert_not_called()
+
+    def test_create_sandbox_resource_limit_exceeded(self, api_client: APIClient, bk_app: Any) -> None:
+        """Verify the dedicated error is returned when the requested resources exceed the app's limits."""
+        create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
+
+        with mock.patch(
+            "paasng.platform.agent_sandbox.views.api.create_sandbox",
+            side_effect=SandboxResourceLimitExceeded("exceeded", max_cpu=Decimal(4), max_memory=Decimal(2)),
+        ):
+            resp = api_client.post(create_url, data={"cpu": "8"}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.json()["code"] == "AGENT_SANDBOX_RESOURCE_LIMIT_EXCEEDED"
 
     def test_create_sandbox_image_not_found(self, api_client: APIClient, bk_app: Any) -> None:
         """Verify sandbox creation returns proper error when snapshot image doesn't exist.

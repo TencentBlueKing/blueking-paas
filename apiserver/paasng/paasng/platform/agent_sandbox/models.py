@@ -263,7 +263,8 @@ class SandboxAppSettings(UuidAuditedModel):
     """沙箱的 app 级配置，各字段相互独立、按需填写，未填写的字段在创建沙箱时回退到平台默认值。
 
     当前已支持的配置项：
-    - cpu / memory：沙箱资源上限，未配置时回退到 DEFAULT_SANDBOX_CPU / DEFAULT_SANDBOX_MEMORY。
+    - cpu / memory：沙箱资源的默认值，同时也是创建时可申请的上限；未配置时默认值回退到
+      DEFAULT_SANDBOX_CPU / DEFAULT_SANDBOX_MEMORY，上限回退到 MAX_SANDBOX_CPU / MAX_SANDBOX_MEMORY。
     - max_active_sandbox_count：应用可同时存活的沙箱数量上限，未配置时回退到 DEFAULT_MAX_ACTIVE_SANDBOX_COUNT。
     """
 

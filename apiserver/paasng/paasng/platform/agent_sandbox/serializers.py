@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import re
+from decimal import Decimal
 
 from django.conf import settings
 from rest_framework import serializers
@@ -126,6 +127,26 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         required=False,
         default=SandboxWorkloadType.DEFAULT.value,
         help_text='沙箱运行时类型，可选值："default"（普通 Pod）、"sandbox_instance"，默认 "default"',
+    )
+    cpu = serializers.DecimalField(
+        label="CPU 上限（核）",
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="不能超过应用的沙箱资源上限，不提供则取默认值",
+    )
+    memory = serializers.DecimalField(
+        label="内存上限（GB）",
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="不能超过应用的沙箱资源上限，不提供则取默认值",
     )
 
     def validate_volume_mounts(self, value: list[dict]) -> list[dict]:

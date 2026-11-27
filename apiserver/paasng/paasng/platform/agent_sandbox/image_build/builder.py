@@ -48,8 +48,8 @@ logger = logging.getLogger(__name__)
 # Namespace for image build pods
 IMAGE_BUILD_NAMESPACE = "bkpaas-img-build"
 
-# Default build timeout: 10 minutes
-_DEFAULT_BUILD_TIMEOUT = 10 * 60
+# Default build timeout: 30 minutes
+_DEFAULT_BUILD_TIMEOUT = 30 * 60
 
 
 class KanikoBuildExecutor:

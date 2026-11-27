@@ -267,6 +267,9 @@ class ErrorCodes:
     AGENT_SANDBOX_ACTIVE_COUNT_LIMIT_EXCEEDED = ErrorCode(
         _("存活的 Agent 沙箱数量已达应用上限（{limit}），请先删除不再使用的沙箱"), status_code=400
     )
+    AGENT_SANDBOX_RESOURCE_LIMIT_EXCEEDED = ErrorCode(
+        _("申请的 Agent 沙箱资源超出应用上限（CPU {cpu} 核，内存 {memory} GB）"), status_code=400
+    )
 
     # Agent sandbox volume file (persistence)
     AGENT_SANDBOX_FILE_NOT_FOUND = ErrorCode(_("Agent 沙箱文件不存在"), status_code=404)

@@ -49,6 +49,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxFileNotPreviewable,
     SandboxFileTooLarge,
     SandboxImageValidateError,
+    SandboxResourceLimitExceeded,
     SandboxServiceNotReady,
     VolumeGranteeNotFound,
     VolumeInUse,
@@ -408,11 +409,15 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
                 ttl_seconds=data["ttl_seconds"],
                 volume_mounts=data.get("volume_mounts"),
                 workload_type=data.get("workload_type"),
+                cpu=data["cpu"],
+                memory=data["memory"],
             )
         except SandboxAlreadyExists:
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
         except SandboxActiveCountLimitExceeded as e:
             raise error_codes.AGENT_SANDBOX_ACTIVE_COUNT_LIMIT_EXCEEDED.f(limit=e.limit)
+        except SandboxResourceLimitExceeded as e:
+            raise error_codes.AGENT_SANDBOX_RESOURCE_LIMIT_EXCEEDED.f(cpu=e.max_cpu, memory=e.max_memory)
         except SandboxImageValidateError as e:
             logger.exception("Failed to validate snapshot image")
             raise error_codes.AGENT_SANDBOX_IMAGE_VALIDATE_FAILED.f(public_detail(e))

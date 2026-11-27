@@ -32,7 +32,7 @@ from paasng.plat_mgt.infras.services.serializers.pre_created_instances import Pr
 class TenantClusterSLZ(ClusterUpdateInputSLZ):
     """集群配置，字段与平台管理端的集群表单保持一致
 
-    context 需要提供 cur_tenant_id（集群所属租户）与 cur_cluster（已存在的集群，或未入库的同名集群对象）
+    context 需要提供 cur_tenant_id（集群所属租户）与 cur_cluster（未入库的同名集群对象）
     """
 
     component_preferred_namespace = serializers.CharField(help_text="组件部署首选命名空间", default="blueking")
@@ -57,9 +57,12 @@ def validate_clusters(tenant_id: str, clusters: list[dict[str, Any]]) -> list[di
             raise ValidationError(
                 {"clusters": f"集群 {name} 已属于租户 {cur_cluster.tenant_id}，如需共享请配置在 shared_clusters 中"}
             )
-        if not cur_cluster:
-            cur_cluster = Cluster(name=name, tenant_id=tenant_id, ingress_config=IngressConfig())
+        # 已存在的集群初始化时会跳过，其当前状态可能已在管理端变更，不再按配置校验
+        if cur_cluster:
+            results.append({"name": name})
+            continue
 
+        cur_cluster = Cluster(name=name, tenant_id=tenant_id, ingress_config=IngressConfig())
         slz = TenantClusterSLZ(data=raw, context={"cur_tenant_id": tenant_id, "cur_cluster": cur_cluster})
         if not slz.is_valid():
             raise ValidationError({"clusters": {idx: slz.errors}})
@@ -107,10 +110,15 @@ class PlanSLZ(serializers.Serializer):
     pre_created_instances = PreCreatedInstanceSLZ(help_text="资源池实例，仅资源池类服务可用", many=True, default=list)
 
     def validate_pre_created_instances(self, instances: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        identities = [instance_identity(ins["credentials"]) for ins in instances]
-        if duplicated := {i for i in identities if identities.count(i) > 1}:
-            raise ValidationError(f"实例 {', '.join(sorted(duplicated))} 重复，同一实例需要多份时请使用 count")
-        return instances
+        # 同一实例出现多次时合并为一条，数量累加
+        merged: dict[str, dict[str, Any]] = {}
+        for ins in instances:
+            identity = instance_identity(ins["credentials"])
+            if identity in merged:
+                merged[identity]["count"] += ins["count"]
+            else:
+                merged[identity] = ins
+        return list(merged.values())
 
 
 class EnvPlansSLZ(serializers.Serializer):

@@ -293,13 +293,20 @@ class TestValidation:
         with pytest.raises(InitializationError, match="not a resource pool service"):
             run_init(raw_config, dry_run=True)
 
-    def test_duplicated_instances(self, raw_config, pool_service):
+    def test_duplicated_instances_merged(self, raw_config, tenant_id, pool_service):
         instances = raw_config["services"][pool_service.name]["plans"][0]["pre_created_instances"]
         instances.append(copy.deepcopy(instances[0]))
 
+        run_init(raw_config)
+        creds = [json.loads(i.credentials) for i in PreCreatedInstance.objects.filter(tenant_id=tenant_id)]
+        assert sorted(c["host"] for c in creds) == ["redis-0", "redis-0", "redis-1"]
+
+    def test_existing_cluster_not_validated(self, raw_config):
+        run_init(raw_config)
+        raw_config["clusters"][0].pop("token")
+
         slz = TenantInfrasSLZ(data=raw_config)
-        assert not slz.is_valid()
-        assert "count" in str(slz.errors)
+        assert slz.is_valid(), slz.errors
 
     def test_unknown_binding_plan(self, raw_config, normal_service):
         raw_config["services"][normal_service.name]["binding_policy"] = {"plans": ["not-exists"]}
@@ -323,7 +330,9 @@ class TestCommand:
         path.write_text(yaml.safe_dump(raw_config))
 
         call_command("init_tenant_infras", "-f", str(path))
-        assert "DRY-RUN" in capsys.readouterr().out
+        out = capsys.readouterr().out
+        assert "DRY-RUN" in out
+        assert "initialized" not in out
         assert not Plan.objects.filter(tenant_id=tenant_id).exists()
 
         call_command("init_tenant_infras", "-f", str(path), "--dry-run=false")

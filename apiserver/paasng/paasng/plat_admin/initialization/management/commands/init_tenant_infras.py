@@ -66,6 +66,9 @@ class Command(BaseCommand):
             raise CommandError(
                 f"{len(failed)} service(s) failed: {', '.join(r.target for r in failed)}, fix and rerun to complete"
             )
+        if dry_run:
+            self.stdout.write(self.style.WARNING("DRY-RUN finished, no data written"))
+            return
         self.stdout.write(self.style.SUCCESS(f"tenant {initializer.tenant_id} initialized"))
 
     def _print_record(self, record: Record):

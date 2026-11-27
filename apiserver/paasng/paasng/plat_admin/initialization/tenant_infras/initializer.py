@@ -305,11 +305,7 @@ class TenantInfrasInitializer:
         if not self._should_create("plan", f"{service.name}/{plan_data['name']}", exists=exists):
             return
 
-        slz = PlanUpsertInputSLZ(
-            data={
-                k: plan_data[k] for k in ("name", "description", "is_active", "config", "properties") if k in plan_data
-            }
-        )
+        slz = PlanUpsertInputSLZ(data=plan_data)
         slz.is_valid(raise_exception=True)
         mixed_plan_mgr.create(service, plan_data={**slz.validated_data, "tenant_id": self.tenant_id})
 

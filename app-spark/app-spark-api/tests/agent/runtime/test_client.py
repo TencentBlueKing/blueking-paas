@@ -36,8 +36,15 @@ import pytest
 
 from app_spark_api.agent.runtime.client import AgentRuntimeClient
 from app_spark_api.agent.runtime.constants import PreviewStartOutcome
-from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, AttachmentInput
+from app_spark_api.agent.runtime.entities import (
+    AgentRuntimeHandle,
+    AskUserAnswerInput,
+    AskUserResponseInput,
+    AttachmentInput,
+)
 from app_spark_api.agent.runtime.exceptions import (
+    AgentAskUserConflictError,
+    AgentAskUserValidationError,
     AgentBusyError,
     AgentPreviewPortTakenError,
     AgentUnavailableError,
@@ -318,6 +325,56 @@ async def test_a_refusal_that_is_not_json_still_says_something_useful():
 
     with pytest.raises(AgentUnavailableError, match="upstream connect error"):
         await client.start_run(content="hello", context_version=1)
+
+
+async def test_start_run_sends_ask_user_responses_with_empty_messages():
+    sent: list[httpx2.Request] = []
+    client = runtime_answering({"/runs": (200, b"")}, sent)
+
+    run = await client.start_run(
+        context_version=2,
+        ask_user_responses=[
+            AskUserResponseInput(
+                tool_call_id="call-ask-1",
+                answers=(
+                    AskUserAnswerInput(header="Style", selected=("Bold",)),
+                    AskUserAnswerInput(header="Features", custom_answer="Keyboard only"),
+                ),
+            )
+        ],
+    )
+    await run.aclose()
+
+    body = json.loads(sent[0].content)
+    assert body["messages"] == []
+    assert body["forwardedProps"]["askUserResponses"] == [
+        {
+            "toolCallId": "call-ask-1",
+            "answers": [
+                {"header": "Style", "selected": ["Bold"]},
+                {"header": "Features", "selected": [], "customAnswer": "Keyboard only"},
+            ],
+            "cancelled": False,
+        }
+    ]
+
+
+async def test_ask_user_refusals_keep_distinct_conflict_and_validation_errors():
+    conflict_client = runtime_answering(
+        {"/runs": (409, b'{"detail":{"code":"ask_user_conflict","message":"No pending questions."}}')}
+    )
+    with pytest.raises(AgentAskUserConflictError, match=r"No pending questions\."):
+        await conflict_client.start_run(
+            context_version=1,
+            ask_user_responses=[AskUserResponseInput(tool_call_id="call-ask-1", cancelled=True)],
+        )
+
+    invalid_client = runtime_answering({"/runs": (422, b'{"detail":"Invalid option selected."}')})
+    with pytest.raises(AgentAskUserValidationError, match=r"Invalid option selected\."):
+        await invalid_client.start_run(
+            context_version=1,
+            ask_user_responses=[AskUserResponseInput(tool_call_id="call-ask-1", cancelled=True)],
+        )
 
 
 # --- Cold-start restores ---------------------------------------------------------------------

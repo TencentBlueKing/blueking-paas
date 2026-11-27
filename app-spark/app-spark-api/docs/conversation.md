@@ -39,6 +39,7 @@ stateDiagram-v2
 | 这一轮是否还在跑 | 会话状态接口的 `running` |
 | 这一轮是否已经全部落库 | `running` 与 `replication_pending` 都回到 `false`，见[复制是最终一致的](#复制是最终一致的) |
 | 下一轮能否直接复用现有 Runtime | `runtime_ready`，前端据此显示「正在准备运行环境」 |
+| 是否暂停在澄清提问上 | 会话状态接口的 `pending_questions`（非空时等待用户回答或发送新消息旁路） |
 
 会话列表刻意不报运行情况，否则一页 20 条就是 20 次对 Runtime 的健康检查。
 
@@ -52,6 +53,16 @@ stateDiagram-v2
 已做的部分仍然写入上下文，下一轮的模型看得到。
 
 因为一轮的结束和连接无关，e2b 沙箱的空闲计时也不看连接，而是在收到这一轮的最后一个事件时重新计算。
+
+### 澄清提问与暂停续跑
+
+模型调用 `ask_user_question` 时，本轮会正常收尾回到空闲（`running: false`），并把挂起问题暴露在会话状态的
+`pending_questions` 里——沙箱期间仍可随时空闲回收，下一轮按需冷恢复后再续跑。用户有两种方式继续：
+
+- **提交回答或跳过**：向 `/runs/` 发送 `ask_user_responses`（与 `content` / `attachment_ids` 互斥）。本服务不写
+  `ConversationUserMessage`，由 Agent 校验后通过 `TOOL_CALL_RESULT` 续跑；状态不匹配回 409 `ASK_USER_CONFLICT`，
+  回答不合法回 422 `ASK_USER_RESPONSE_INVALID`。
+- **直接发新消息**：按普通 `content` 发起新的一轮，Agent 会先用固定旁路结果关闭旧提问，再响应新消息。
 
 ## 结束会话
 

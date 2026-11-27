@@ -6,11 +6,18 @@ import {
   appendUserMessage,
   appendRunError,
   applyAgUiEvent,
+  collectPendingAskUsers,
   createApplyContext,
   currentTurnAssistant,
+  hydratePendingAskUsers,
   markRunStopped,
   messageHasContent,
 } from './ag-ui.ts';
+import {
+  ASK_USER_BYPASSED_RESULT,
+  ASK_USER_DECLINED_RESULT,
+  ASK_USER_TOOL_NAME,
+} from './ask-user.ts';
 
 const user = (id: string): ChatMessage => ({ id, role: 'user', blocks: [{ type: 'text', text: id }] });
 const assistant = (id: string, text = id): ChatMessage => ({
@@ -172,4 +179,94 @@ test('历史附件按后端 MIME 区分图片和下载文件，纯附件消息�
       size: 512,
     },
   ]);
+});
+
+test('ask_user_question 生成结构化提问块，超过 4KB 参数不截断，收到结果原地收敛', () => {
+  const ctx = createApplyContext([user('u1')]);
+  const longDescription = '说明'.repeat(2500);
+  const rawArgs = JSON.stringify({
+    questions: [
+      {
+        header: 'Style',
+        question: '请选择风格',
+        options: [
+          { label: 'Minimal', description: longDescription },
+          { label: 'Bold', description: '高对比配色' },
+        ],
+        multi_select: false,
+      },
+    ],
+  });
+  assert.ok(rawArgs.length > 4096);
+
+  applyAgUiEvent(ctx, {
+    type: 'TOOL_CALL_START',
+    toolCallId: 'call-ask-1',
+    toolCallName: ASK_USER_TOOL_NAME,
+  });
+  const reply = ctx.messages[1];
+  assert.equal(messageHasContent(reply), true);
+  assert.equal(reply.blocks[0].type, 'ask-user');
+  assert.equal(reply.blocks[0].askUser?.state, 'streaming');
+
+  applyAgUiEvent(ctx, { type: 'TOOL_CALL_ARGS', toolCallId: 'call-ask-1', delta: rawArgs.slice(0, 2000) });
+  applyAgUiEvent(ctx, { type: 'TOOL_CALL_ARGS', toolCallId: 'call-ask-1', delta: rawArgs.slice(2000) });
+  applyAgUiEvent(ctx, { type: 'TOOL_CALL_END', toolCallId: 'call-ask-1' });
+
+  assert.equal(reply.blocks[0].askUser?.state, 'pending');
+  assert.equal(reply.blocks[0].askUser?.questions.length, 1);
+  assert.equal(reply.blocks[0].askUser?.questions[0].options[0].description, longDescription);
+  assert.equal(collectPendingAskUsers(reply).length, 1);
+
+  applyAgUiEvent(ctx, {
+    type: 'TOOL_CALL_RESULT',
+    toolCallId: 'call-ask-1',
+    content: JSON.stringify({ Style: ['Bold'] }),
+  });
+  assert.equal(reply.blocks[0].askUser?.state, 'answered');
+  assert.deepEqual(reply.blocks[0].askUser?.answers, { Style: ['Bold'] });
+  assert.deepEqual(collectPendingAskUsers(reply), []);
+});
+
+test('ask_user_question 的跳过与旁路结果都能更新原卡片，且支持用 pending_questions 补全', () => {
+  const ctx = createApplyContext([user('u1')]);
+  applyAgUiEvent(ctx, {
+    type: 'TOOL_CALL_START',
+    toolCallId: 'call-skip',
+    toolCallName: ASK_USER_TOOL_NAME,
+  });
+  hydratePendingAskUsers(ctx.messages, [
+    {
+      tool_call_id: 'call-skip',
+      questions: [
+        {
+          header: 'Scope',
+          question: 'Need auth?',
+          options: [{ label: 'Yes' }, { label: 'No' }],
+          multi_select: false,
+        },
+      ],
+    },
+  ]);
+  assert.equal(ctx.messages[1].blocks[0].askUser?.state, 'pending');
+  assert.equal(ctx.messages[1].blocks[0].askUser?.questions[0].header, 'Scope');
+
+  applyAgUiEvent(ctx, {
+    type: 'TOOL_CALL_RESULT',
+    toolCallId: 'call-skip',
+    content: ASK_USER_DECLINED_RESULT,
+  });
+  assert.equal(ctx.messages[1].blocks[0].askUser?.state, 'declined');
+
+  applyAgUiEvent(ctx, {
+    type: 'TOOL_CALL_START',
+    toolCallId: 'call-bypass',
+    toolCallName: ASK_USER_TOOL_NAME,
+  });
+  applyAgUiEvent(ctx, {
+    type: 'TOOL_CALL_RESULT',
+    toolCallId: 'call-bypass',
+    content: ASK_USER_BYPASSED_RESULT,
+  });
+  assert.equal(ctx.messages[1].blocks[1].askUser?.state, 'bypassed');
 });

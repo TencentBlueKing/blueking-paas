@@ -276,3 +276,134 @@ test('停止请求失败时提示，并放开按钮好再试', async () => {
   assert.equal(store.canStop, true);
   assert.equal(shownMessages.length, 1);
 });
+
+const samplePendingQuestion = {
+  tool_call_id: 'call-ask-1',
+  questions: [
+    {
+      header: 'Style',
+      question: 'Choose a visual style',
+      options: [{ label: 'Minimal' }, { label: 'Bold' }],
+      multi_select: false,
+    },
+  ],
+};
+
+test('ask_user_question 暂停后暴露 pendingQuestions 且不补「本轮对话已结束。」，回答后原地更新卡片并续跑', async () => {
+  const pauseSse = controlledSse();
+  handlers.startConversationRun = async () => pauseSse.response;
+  const firstTurn = store.sendMessage('帮我做个记账应用');
+  await settle();
+
+  pauseSse.send({ type: 'RUN_STARTED', runId: 'run-pause' });
+  pauseSse.send({
+    type: 'TOOL_CALL_START',
+    toolCallId: 'call-ask-1',
+    toolCallName: 'ask_user_question',
+  });
+  pauseSse.send({
+    type: 'TOOL_CALL_ARGS',
+    toolCallId: 'call-ask-1',
+    delta: JSON.stringify({ questions: samplePendingQuestion.questions }),
+  });
+  pauseSse.send({ type: 'TOOL_CALL_END', toolCallId: 'call-ask-1' });
+  serverState = conversationState({
+    ui_event_seq: 4,
+    pending_questions: [samplePendingQuestion],
+  });
+  pauseSse.send({ type: 'RUN_FINISHED' });
+  pauseSse.close();
+  await firstTurn;
+
+  assert.equal(store.status, 'idle');
+  assert.equal(store.hasPendingQuestions, true);
+  assert.deepEqual(store.pendingQuestions, [samplePendingQuestion]);
+  const pausedReply = store.messages[store.messages.length - 1];
+  // 卡片本身是可见内容，不应在上方多补一句「本轮对话已结束。」。
+  assert.equal(pausedReply.blocks.some(block => block.type === 'text' && Boolean(block.text)), false);
+  const askBlock = pausedReply.blocks.find(block => block.type === 'ask-user');
+  assert.equal(askBlock?.askUser?.state, 'pending');
+
+  const resumeSse = controlledSse();
+  handlers.startConversationRun = async () => resumeSse.response;
+  const userMessageCountBefore = store.messages.filter(item => item.role === 'user').length;
+  const answering = store.answerQuestions([
+    {
+      tool_call_id: 'call-ask-1',
+      answers: [{ header: 'Style', selected: ['Bold'] }],
+      cancelled: false,
+    },
+  ], 'model-x');
+  await settle();
+
+  // 回答不新增用户气泡，只发 ask_user_responses。
+  assert.equal(store.messages.filter(item => item.role === 'user').length, userMessageCountBefore);
+  const lastRunCall = callsOf('startConversationRun')[callsOf('startConversationRun').length - 1];
+  assert.deepEqual(lastRunCall[2], {
+    ask_user_responses: [
+      {
+        tool_call_id: 'call-ask-1',
+        answers: [{ header: 'Style', selected: ['Bold'] }],
+        cancelled: false,
+      },
+    ],
+    model_id: 'model-x',
+  });
+
+  resumeSse.send({ type: 'RUN_STARTED', runId: 'run-resume' });
+  resumeSse.send({
+    type: 'TOOL_CALL_RESULT',
+    toolCallId: 'call-ask-1',
+    content: JSON.stringify({ Style: ['Bold'] }),
+  });
+  resumeSse.send({ type: 'TEXT_MESSAGE_START', messageId: 'm2', role: 'assistant' });
+  resumeSse.send({ type: 'TEXT_MESSAGE_CONTENT', messageId: 'm2', delta: '好的，使用 Bold 风格。' });
+  resumeSse.send({ type: 'TEXT_MESSAGE_END', messageId: 'm2' });
+  serverState = conversationState({ ui_event_seq: 8, pending_questions: [] });
+  resumeSse.send({ type: 'RUN_FINISHED' });
+  resumeSse.close();
+  const ok = await answering;
+
+  assert.equal(ok, true);
+  assert.equal(store.hasPendingQuestions, false);
+  assert.equal(askBlock?.askUser?.state, 'answered');
+  assert.deepEqual(askBlock?.askUser?.answers, { Style: ['Bold'] });
+  const resumedReply = store.messages[store.messages.length - 1];
+  assert.equal(resumedReply.blocks.some(block => block.text === '好的，使用 Bold 风格。'), true);
+});
+
+test('提交回答被 422 拒绝时保留挂起卡片并撤回空占位消息；409 冲突时同步服务端状态', async () => {
+  serverState = conversationState({ pending_questions: [samplePendingQuestion] });
+  await store.enterProject(PROJECT, NUMBER);
+  assert.equal(store.hasPendingQuestions, true);
+  const messageCountBefore = store.messages.length;
+
+  handlers.startConversationRun = async () => {
+    throw new RequestError('ASK_USER_RESPONSE_INVALID', 'Invalid option selected');
+  };
+  const invalidResult = await store.answerQuestions([
+    {
+      tool_call_id: 'call-ask-1',
+      answers: [{ header: 'Style', selected: ['Unknown'] }],
+      cancelled: false,
+    },
+  ]);
+
+  assert.equal(invalidResult, false);
+  assert.equal(store.messages.length, messageCountBefore);
+  assert.deepEqual(store.pendingQuestions, [samplePendingQuestion]);
+  assert.equal(shownMessages[shownMessages.length - 1].theme, 'warning');
+
+  serverState = conversationState({ pending_questions: [] });
+  handlers.startConversationRun = async () => {
+    throw new RequestError('ASK_USER_CONFLICT', 'No pending questions');
+  };
+  const conflictResult = await store.answerQuestions([
+    { tool_call_id: 'call-ask-1', answers: [], cancelled: true },
+  ]);
+
+  assert.equal(conflictResult, false);
+  assert.equal(store.messages.length, messageCountBefore);
+  assert.deepEqual(store.pendingQuestions, []);
+  assert.equal(shownMessages[shownMessages.length - 1].theme, 'warning');
+});

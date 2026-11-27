@@ -34,6 +34,8 @@ import httpx2
 from app_spark_api.agent.runtime.constants import PreviewStartOutcome
 from app_spark_api.agent.runtime.entities import EventPage, RuntimeHealth
 from app_spark_api.agent.runtime.exceptions import (
+    AgentAskUserConflictError,
+    AgentAskUserValidationError,
     AgentBusyError,
     AgentPreviewPortTakenError,
     AgentUnavailableError,
@@ -44,6 +46,9 @@ from app_spark_api.agent.runtime.exceptions import (
 # a constant because it is a wire contract with the agent, not a message.
 WORKSPACE_SAVE_PENDING_CODE = "workspace_save_pending"
 
+# The Runtime's code when submitted askUserResponses no longer match any pending question call.
+ASK_USER_CONFLICT_CODE = "ask_user_conflict"
+
 # The Runtime's codes for the two ways it turns down starting the preview, same kind of contract.
 PREVIEW_NO_PROJECT_CODE = "no_project"
 PREVIEW_PORT_TAKEN_CODE = "port_taken"
@@ -51,7 +56,7 @@ PREVIEW_PORT_TAKEN_CODE = "port_taken"
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
 
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, AttachmentInput
+    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, AskUserResponseInput, AttachmentInput
 
 # What the AG-UI protocol asks for when it wants the event stream rather than a buffered body.
 SSE_HEADERS = {"Accept": "text/event-stream", "Content-Type": "application/json"}
@@ -282,19 +287,22 @@ class AgentRuntimeClient:
     async def start_run(
         self,
         *,
-        content: str,
+        content: str = "",
         context_version: int,
         run_id: str | None = None,
         model_id: str | None = None,
         attachments: Sequence[AttachmentInput] = (),
         image_input: bool = True,
+        ask_user_responses: Sequence[AskUserResponseInput] = (),
     ) -> AgentRun:
-        """Submit one conversation turn and return its still-open event stream.
+        """Submit one conversation turn or structured question answer and return its open event stream.
 
-        Only the new user message is sent. The Runtime owns the history and rejects anything a
-        client tries to resend, so there is nothing here to keep in step with it.
+        Only the new user message (or `ask_user_responses`) is sent. The Runtime owns the history
+        and rejects anything a client tries to resend, so there is nothing here to keep in step
+        with it.
 
-        :param content: The user's message for this turn; may be empty when files are attached.
+        :param content: The user's message for this turn; empty when answering pending questions
+            or when only files are attached.
         :param context_version: Version read from ``/health`` immediately beforehand. Compaction
             can move it in the middle of a run, so a value carried over from an earlier turn is
             not good enough.
@@ -304,8 +312,12 @@ class AgentRuntimeClient:
         :param attachments: Files sent with this turn, as references the Runtime resolves itself.
         :param image_input: False when this turn's model cannot read images, so the Runtime
             sends it none of the conversation's earlier images either.
+        :param ask_user_responses: Structured answers resuming paused `ask_user_question` call(s).
+            When non-empty, ``messages`` is sent empty as required by the Agent Runtime.
         :return: The accepted run.
         :raises AgentBusyError: If a run is already occupying the Runtime.
+        :raises AgentAskUserConflictError: If no matching pending questions remain on the Runtime.
+        :raises AgentAskUserValidationError: If the submitted answers fail Runtime validation.
         :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the turn.
         """
         run_id = run_id or str(uuid4())
@@ -318,6 +330,12 @@ class AgentRuntimeClient:
         if not image_input:
             forwarded_props["imageInput"] = False
 
+        if ask_user_responses:
+            forwarded_props["askUserResponses"] = [item.as_wire_payload() for item in ask_user_responses]
+            messages: list[dict[str, Any]] = []
+        else:
+            messages = [{"id": str(uuid4()), "role": "user", "content": _build_user_content(content, attachments)}]
+
         body = {
             # AG-UI's own document, so it keeps AG-UI's camelCase -- `threadId` included, which
             # is the protocol's name for what everything else here calls a conversation.
@@ -326,7 +344,7 @@ class AgentRuntimeClient:
             # The Runtime speaks AG-UI 1.0 only and refuses a request that does not say so.
             "protocolVersion": "1.0",
             "state": {},
-            "messages": [{"id": str(uuid4()), "role": "user", "content": _build_user_content(content, attachments)}],
+            "messages": messages,
             "tools": [],
             "context": [],
             "forwardedProps": forwarded_props,
@@ -350,11 +368,15 @@ class AgentRuntimeClient:
             await response.aclose()
             await client.aclose()
             if response.status_code == HTTPStatus.CONFLICT:
-                # The Runtime refuses a turn for two unrelated reasons and reports both as 409;
+                # The Runtime refuses a turn for unrelated reasons and reports them as 409;
                 # only the code tells them apart, and the caller needs to know which it was.
                 if code == WORKSPACE_SAVE_PENDING_CODE:
                     raise AgentWorkspaceSavePendingError(detail)
+                if code == ASK_USER_CONFLICT_CODE:
+                    raise AgentAskUserConflictError(detail)
                 raise AgentBusyError(detail)
+            if response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY and ask_user_responses:
+                raise AgentAskUserValidationError(detail)
             raise AgentUnavailableError(f"The Agent Runtime refused the run with {response.status_code}: {detail}")
 
         return AgentRun(run_id, client, response)

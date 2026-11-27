@@ -37,6 +37,14 @@
           :reasoning="block.reasoning"
           :live="message.id === liveMessageId"
         />
+        <AskUserBlock
+          v-else-if="block.type === 'ask-user' && block.askUser"
+          :ask-user="block.askUser"
+          :live="message.id === liveMessageId"
+          :interactive="isAskUserInteractive(block.askUser.id, block.askUser.state)"
+          :busy="busy"
+          @submit="handleAnswerSubmit"
+        />
         <figure v-else-if="block.type === 'image'" class="chat-message__image">
           <button
             v-if="block.src"
@@ -125,22 +133,45 @@
 import { computed, ref } from 'vue';
 import { Done } from 'bkui-vue/lib/icon';
 import AppIcon from '@/components/AppIcon.vue';
+import type { AskUserResponseInput } from '@/http/types';
 import { currentTurnAssistant, messageHasContent } from '@/services/agent/ag-ui';
 import type { ProjectStatus } from '@/store/project';
+import AskUserBlock from './AskUserBlock.vue';
 import { formatAttachmentSize } from './attachment';
 import ImageLightbox from './ImageLightbox.vue';
 import LiveDot from './LiveDot.vue';
 import ReasoningBlock from './ReasoningBlock.vue';
 import ToolCallBlock from './ToolCallBlock.vue';
 import { renderMarkdown } from './render-markdown';
-import type { ChatMessage } from './types';
+import type { ChatAskUserState, ChatMessage } from './types';
 
 const props = defineProps<{
   messages: ChatMessage[];
   status?: ProjectStatus;
+  /** 当前仍由服务端挂起、允许用户提交回答的 tool_call_id 列表。 */
+  pendingAskUserIds?: string[];
+  /** 会话是否活跃（归档会话中的卡片一律只读）。 */
+  interactive?: boolean;
+  busy?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: 'answer-questions', response: AskUserResponseInput): void;
 }>();
 
 const previewImage = ref<{ src: string; alt: string } | null>(null);
+const pendingAskUserIdSet = computed(() => new Set(props.pendingAskUserIds || []));
+
+const isAskUserInteractive = (toolCallId: string, state: ChatAskUserState) => (
+  Boolean(props.interactive)
+  && !props.busy
+  && state === 'pending'
+  && pendingAskUserIdSet.value.has(toolCallId)
+);
+
+const handleAnswerSubmit = (response: AskUserResponseInput) => {
+  emit('answer-questions', response);
+};
 
 const visibleMessages = computed(() => (
   props.messages.filter(message => message.id !== 'welcome')

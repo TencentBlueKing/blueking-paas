@@ -81,3 +81,11 @@ class AgentWorkspaceSavePendingError(AgentRuntimeError):
     different one. Collapsing the two would tell the user their agent is busy while it is in fact
     idle and unable to save.
     """
+
+
+class AgentAskUserConflictError(AgentRuntimeError):
+    """The conversation is no longer waiting on the referenced pending question(s) (HTTP 409)."""
+
+
+class AgentAskUserValidationError(AgentRuntimeError):
+    """The submitted answers do not satisfy the pending question schema or options (HTTP 422)."""

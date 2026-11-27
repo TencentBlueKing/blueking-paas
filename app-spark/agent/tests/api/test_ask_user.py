@@ -363,6 +363,7 @@ def test_answer_validation_and_conflict_status_codes(tmp_path: Path) -> None:
         responses=[{"toolCallId": "call-ask-1", "cancelled": True}],
     )
     assert no_pending.status_code == 409
+    assert no_pending.json()["detail"]["code"] == "ask_user_conflict"
 
     # Pause with a real question.
     run_turn(client, conversation_id=conversation_id, prompt="build an app")
@@ -384,6 +385,7 @@ def test_answer_validation_and_conflict_status_codes(tmp_path: Path) -> None:
         responses=[{"toolCallId": "call-other", "cancelled": True}],
     )
     assert wrong_id.status_code == 409
+    assert wrong_id.json()["detail"]["code"] == "ask_user_conflict"
 
     # Invalid option -> 422.
     bad_option = answer_request(

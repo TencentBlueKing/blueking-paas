@@ -31,6 +31,10 @@ from app_spark_api.agent.runtime.client import AgentRun, AgentRuntimeClient
 from app_spark_api.agent.runtime.constants import AgentRuntimeProviderType, ModelSource, PreviewStartOutcome
 from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
+    AskUserAnswerInput,
+    AskUserOption,
+    AskUserQuestion,
+    AskUserResponseInput,
     BkAidevModelAccess,
     DirectModelAccess,
     E2BConfig,
@@ -39,11 +43,14 @@ from app_spark_api.agent.runtime.entities import (
     LocalProcessConfig,
     ModelAccess,
     ModelAccessResolver,
+    PendingQuestion,
     PreviewTarget,
     RuntimeHealth,
     StateCallback,
 )
 from app_spark_api.agent.runtime.exceptions import (
+    AgentAskUserConflictError,
+    AgentAskUserValidationError,
     AgentBusyError,
     AgentConfigurationError,
     AgentPreviewPortTakenError,
@@ -59,6 +66,8 @@ from app_spark_api.agent.runtime.exceptions import (
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
 
 __all__ = [
+    "AgentAskUserConflictError",
+    "AgentAskUserValidationError",
     "AgentBusyError",
     "AgentConfigurationError",
     "AgentPreviewPortTakenError",
@@ -72,6 +81,10 @@ __all__ = [
     "AgentUnavailableError",
     "AgentWorkspaceBusyError",
     "AgentWorkspaceSavePendingError",
+    "AskUserAnswerInput",
+    "AskUserOption",
+    "AskUserQuestion",
+    "AskUserResponseInput",
     "BkAidevModelAccess",
     "DirectModelAccess",
     "E2BConfig",
@@ -84,6 +97,7 @@ __all__ = [
     "ModelCredentialMissingError",
     "ModelNotAvailableError",
     "ModelSource",
+    "PendingQuestion",
     "PreviewStartOutcome",
     "PreviewTarget",
     "RuntimeHealth",

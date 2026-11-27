@@ -46,7 +46,12 @@ from app_spark_api.agent.conversations.exceptions import (
     RunNotInProgressError,
 )
 from app_spark_api.agent.conversations.internal_api import state_ingest_path
-from app_spark_api.agent.conversations.models import Conversation, ConversationAttachment, ConversationUserMessage
+from app_spark_api.agent.conversations.models import (
+    Conversation,
+    ConversationAttachment,
+    ConversationUiEvent,
+    ConversationUserMessage,
+)
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.conversations.tokens import mint_state_token
 from app_spark_api.agent.model_catalog.services import resolve_model_access
@@ -67,7 +72,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
-    from app_spark_api.agent.runtime import AgentRun, PreviewTarget
+    from app_spark_api.agent.runtime import AgentRun, PendingQuestion, PreviewTarget
     from app_spark_api.core.projects.models import Project
     from app_spark_api.infras.bk_access_token import UserCredential
     from app_spark_api.repository.git.models import ProjectGitRepository
@@ -115,6 +120,7 @@ class ConversationState:
     dev_server_status: str | None = None
     runtime_ready: bool = False
     run_id: str | None = None
+    pending_questions: tuple[PendingQuestion, ...] = ()
 
 
 async def get_dev_server_status(conversation: Conversation) -> str | None:
@@ -406,6 +412,7 @@ async def get_state(conversation: Conversation) -> ConversationState:
         model=health.model,
         dev_server_status=health.dev_server_status,
         run_id=health.run_id,
+        pending_questions=health.pending_questions,
         # 有一轮在跑时 ensure 不会换掉它（超龄也一样），下一轮要么复用、要么因忙被拒，都不用准备。
         runtime_ready=health.running or not await provider.needs_replacement(str(conversation.id)),
     )
@@ -449,14 +456,32 @@ async def stop_run(conversation: Conversation, run_id: str) -> None:
     :raises RunNotInProgressError: 这一轮已经结束，或者它所在的 Runtime 已经不在了。
     :raises AgentUnavailableError: Runtime 联系不上，或者回了不该回的东西。
     """
-    # 先认归属，再问 Runtime：run_id 是客户端传来的，不能让它借这个会话的 Runtime 去试探别的会话。
-    if not await ConversationUserMessage.objects.filter(conversation=conversation, run_id=run_id).aexists():
+    handle = await get_agent_runtime_provider().peek(str(conversation.id))
+    if handle is None:
+        # 没有活跃 Runtime 时不可能有在跑的一轮；按库里记录区分「已结束」还是「查无此轮」。
+        if await _has_recorded_run(conversation, run_id):
+            raise RunNotInProgressError(f"Run {run_id} of conversation {conversation.id} is not in progress")
         raise RunNotFoundError(f"Conversation {conversation.id} has no run {run_id}")
 
-    handle = await get_agent_runtime_provider().peek(str(conversation.id))
-    if handle is None or not await AgentRuntimeClient(handle).stop_run(run_id):
+    client = AgentRuntimeClient(handle)
+
+    # 先认归属，再发停止：run_id 是客户端传来的，不能借这个会话的 Runtime 去试探别的会话。
+    # 普通对话在启动前就写了 ConversationUserMessage，已结束的恢复 run 会留在 ConversationUiEvent；
+    # 正在跑的 ask_user 恢复 run 尚未落库，库里查不到时再用这台会话专属 Runtime 的 /health.run_id 确认归属。
+    if not await _has_recorded_run(conversation, run_id) and (await client.health()).run_id != run_id:
+        raise RunNotFoundError(f"Conversation {conversation.id} has no run {run_id}")
+
+    if not await client.stop_run(run_id):
         raise RunNotInProgressError(f"Run {run_id} of conversation {conversation.id} is not in progress")
     logger.info("Conversation %s asked its Agent Runtime to stop run %s", conversation.id, run_id)
+
+
+async def _has_recorded_run(conversation: Conversation, run_id: str) -> bool:
+    """Return whether ``run_id`` is already persisted under ``conversation``."""
+    return (
+        await ConversationUserMessage.objects.filter(conversation=conversation, run_id=run_id).aexists()
+        or await ConversationUiEvent.objects.filter(conversation=conversation, run_id=run_id).aexists()
+    )
 
 
 def _state_callback(conversation: Conversation) -> StateCallback:

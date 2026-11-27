@@ -1,4 +1,5 @@
 import type {
+  ChatAskUser,
   ChatBlock,
   ChatMessage,
   ChatReasoning,
@@ -6,7 +7,12 @@ import type {
 } from '@/components/project/interaction/types';
 import { isImageAttachmentMimeType } from '@/components/project/interaction/attachment';
 import { toAttachmentBlock } from '@/components/project/interaction/message-attachment';
-import type { AgUiEvent, UserMessageRecord } from '@/http/types';
+import type { AgUiEvent, PendingQuestion, UserMessageRecord } from '@/http/types';
+import {
+  ASK_USER_TOOL_NAME,
+  parseAskUserQuestions,
+  parseAskUserResult,
+} from '@/services/agent/ask-user';
 import { describeToolCall } from '@/services/agent/tool-call';
 
 export type AgUiRunStatus = 'idle' | 'thinking' | 'streaming';
@@ -21,11 +27,19 @@ interface PendingToolCall {
   args: string;
 }
 
+interface PendingAskUser {
+  askUser: ChatAskUser;
+  /** 完整参数 JSON（含问题与选项描述），上限单独放宽到 64KB 避免截断。 */
+  args: string;
+}
+
 export interface AgUiApplyContext {
   messages: ChatMessage[];
   byId: Map<string, ChatMessage>;
   /** toolCallId -> 那次调用，后续的参数与结果事件靠它找回自己那一行 */
   toolCalls: Map<string, PendingToolCall>;
+  /** toolCallId -> 澄清提问卡片，跨续跑 run 仍保留索引以便 TOOL_CALL_RESULT 原地更新 */
+  askUsers: Map<string, PendingAskUser>;
   /** 思考事件的 messageId -> 还没说完的那段思考 */
   reasonings: Map<string, ChatReasoning>;
 }
@@ -43,6 +57,7 @@ export const createApplyContext = (messages: ChatMessage[]): AgUiApplyContext =>
   messages,
   byId: new Map(),
   toolCalls: new Map(),
+  askUsers: new Map(),
   reasonings: new Map(),
 });
 
@@ -130,6 +145,8 @@ const currentAssistant = (ctx: AgUiApplyContext): ChatMessage => {
 
 /** 参数只用来抽一行摘要，留个开头就够，其余的直接丢掉。 */
 const MAX_TOOL_ARGS = 4096;
+/** `ask_user_question` 参数需要完整解析所有问题与选项描述，不能按普通工具 4KB 截断。 */
+const MAX_ASK_USER_ARGS = 65536;
 
 const refreshToolCall = (pending: PendingToolCall) => {
   const display = describeToolCall(pending.tool.name, pending.args);
@@ -139,9 +156,24 @@ const refreshToolCall = (pending: PendingToolCall) => {
 
 const getToolCallId = (event: AgUiEvent) => String(event.toolCallId ?? '');
 
+const startAskUserCall = (ctx: AgUiApplyContext, toolCallId: string) => {
+  const block = appendBlock(currentAssistant(ctx), {
+    type: 'ask-user',
+    askUser: { id: toolCallId, questions: [], state: 'streaming' },
+  });
+  if (block.type !== 'ask-user' || !block.askUser) return;
+  if (toolCallId) {
+    ctx.askUsers.set(toolCallId, { askUser: block.askUser, args: '' });
+  }
+};
+
 const startToolCall = (ctx: AgUiApplyContext, event: AgUiEvent) => {
   const toolCallId = getToolCallId(event);
   const name = String(event.toolCallName ?? '');
+  if (name === ASK_USER_TOOL_NAME) {
+    startAskUserCall(ctx, toolCallId);
+    return;
+  }
   const block = appendBlock(currentAssistant(ctx), {
     type: 'tool',
     tool: { id: toolCallId, name, label: '', detail: '', state: 'running' },
@@ -155,8 +187,18 @@ const startToolCall = (ctx: AgUiApplyContext, event: AgUiEvent) => {
 };
 
 const growToolCallArgs = (ctx: AgUiApplyContext, event: AgUiEvent, delta: string) => {
-  const pending = ctx.toolCalls.get(getToolCallId(event));
-  if (!pending || !delta) return;
+  const toolCallId = getToolCallId(event);
+  if (!delta) return;
+  const pendingAsk = ctx.askUsers.get(toolCallId);
+  if (pendingAsk) {
+    const room = MAX_ASK_USER_ARGS - pendingAsk.args.length;
+    if (room > 0) {
+      pendingAsk.args += delta.slice(0, room);
+    }
+    return;
+  }
+  const pending = ctx.toolCalls.get(toolCallId);
+  if (!pending) return;
   // 按剩下的额度裁掉再接，而不是「没超就整片接上」：一片本身就可能是整份文件——write_file 完全
   // 可以把 content 一次送完——那样第一片就把上限冲过去了，上限也就白设了。
   const room = MAX_TOOL_ARGS - pending.args.length;
@@ -165,6 +207,36 @@ const growToolCallArgs = (ctx: AgUiApplyContext, event: AgUiEvent, delta: string
   }
   // 摘要一旦抽出来就不再逐片重算：参数可以有几万片，而要找的那个字段在开头就传完了。
   if (!pending.tool.detail) refreshToolCall(pending);
+};
+
+const finishToolCallArgs = (ctx: AgUiApplyContext, event: AgUiEvent) => {
+  const toolCallId = getToolCallId(event);
+  const pendingAsk = ctx.askUsers.get(toolCallId);
+  if (pendingAsk) {
+    const questions = parseAskUserQuestions(pendingAsk.args);
+    if (questions) pendingAsk.askUser.questions = questions;
+    if (pendingAsk.askUser.state === 'streaming') {
+      pendingAsk.askUser.state = 'pending';
+    }
+    return;
+  }
+  // 参数齐了，用完整的 JSON 再算一次，盖掉流式期间那份可能不准的摘要。
+  const pending = ctx.toolCalls.get(toolCallId);
+  if (pending) refreshToolCall(pending);
+};
+
+const finishToolCallResult = (ctx: AgUiApplyContext, event: AgUiEvent) => {
+  const toolCallId = getToolCallId(event);
+  const pendingAsk = ctx.askUsers.get(toolCallId);
+  if (pendingAsk) {
+    const parsed = parseAskUserResult(event.content);
+    pendingAsk.askUser.state = parsed.state;
+    pendingAsk.askUser.answers = parsed.answers;
+    return;
+  }
+  // 只记「跑完了」，不展示返回值：read_file 之类的返回值就是整个文件。
+  const pending = ctx.toolCalls.get(toolCallId);
+  if (pending) pending.tool.state = 'done';
 };
 
 /**
@@ -265,18 +337,12 @@ export const applyAgUiEvent = (
     case 'TOOL_CALL_ARGS':
       growToolCallArgs(ctx, event, delta);
       return {};
-    case 'TOOL_CALL_END': {
-      // 参数齐了，用完整的 JSON 再算一次，盖掉流式期间那份可能不准的摘要。
-      const pending = ctx.toolCalls.get(getToolCallId(event));
-      if (pending) refreshToolCall(pending);
+    case 'TOOL_CALL_END':
+      finishToolCallArgs(ctx, event);
       return {};
-    }
-    case 'TOOL_CALL_RESULT': {
-      // 只记「跑完了」，不展示返回值：read_file 之类的返回值就是整个文件。
-      const pending = ctx.toolCalls.get(getToolCallId(event));
-      if (pending) pending.tool.state = 'done';
+    case 'TOOL_CALL_RESULT':
+      finishToolCallResult(ctx, event);
       return {};
-    }
     // 思考：REASONING_START → MESSAGE_START → CONTENT… → MESSAGE_END → REASONING_END。落库回放
     // 的那份把 CONTENT 合成了一条，走的是同一条路。
     case 'REASONING_MESSAGE_START':
@@ -355,8 +421,53 @@ export const messageHasContent = (message: ChatMessage) => (
     || (block.type === 'summary' && Boolean(block.items?.length))
     || (block.type === 'tool' && Boolean(block.tool))
     || (block.type === 'reasoning' && Boolean(block.reasoning))
+    || (block.type === 'ask-user' && Boolean(block.askUser))
   ))
 );
+
+/**
+ * 用服务端 `pending_questions` 补全历史回放中缺问题体或仍停在 streaming 的提问卡片。
+ */
+export const hydratePendingAskUsers = (
+  messages: ChatMessage[],
+  pendingQuestions: PendingQuestion[],
+) => {
+  if (!pendingQuestions.length) return;
+  const byId = new Map(pendingQuestions.map(item => [item.tool_call_id, item]));
+  for (const message of messages) {
+    for (const block of message.blocks) {
+      if (block.type !== 'ask-user' || !block.askUser) continue;
+      const pending = byId.get(block.askUser.id);
+      if (!pending) continue;
+      if (!block.askUser.questions.length && pending.questions.length) {
+        block.askUser.questions = pending.questions;
+      }
+      if (block.askUser.state === 'streaming') {
+        block.askUser.state = 'pending';
+      }
+    }
+  }
+};
+
+/** 从指定助手消息里提取当前处于 `pending` 态的提问，用作同步状态返回前的兜底列表。 */
+export const collectPendingAskUsers = (message: ChatMessage | undefined): PendingQuestion[] => {
+  if (!message) return [];
+  const items: PendingQuestion[] = [];
+  for (const block of message.blocks) {
+    if (
+      block.type === 'ask-user'
+      && block.askUser
+      && block.askUser.state === 'pending'
+      && block.askUser.questions.length
+    ) {
+      items.push({
+        tool_call_id: block.askUser.id,
+        questions: block.askUser.questions,
+      });
+    }
+  }
+  return items;
+};
 
 export const hasConversationContent = (messages: ChatMessage[]) => (
   messages.some(message => message.id !== 'welcome' && messageHasContent(message))

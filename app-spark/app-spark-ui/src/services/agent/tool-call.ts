@@ -33,6 +33,7 @@ const TOOL_SPECS: Record<string, { label: string; key?: string }> = {
   check_command: { label: '查看命令', key: 'command_id' },
   stop_command: { label: '停止命令', key: 'command_id' },
   read_app_log: { label: '读取应用日志' },
+  ask_user_question: { label: '确认需求细节' },
 };
 
 /** 一行能显示的长度，超了就截断——这里是摘要，不是日志。 */

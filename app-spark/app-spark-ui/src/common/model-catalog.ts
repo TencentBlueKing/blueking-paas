@@ -1,4 +1,4 @@
-import type { ModelCatalogItem, StartRunRequest } from '../http/types';
+import type { AskUserResponseInput, ModelCatalogItem, StartRunRequest } from '../http/types';
 
 export const resolveModelId = (
   models: ModelCatalogItem[],
@@ -38,4 +38,12 @@ export const createStartRunRequest = (
   content,
   ...(modelId ? { model_id: modelId } : {}),
   ...(attachmentIds.length ? { attachment_ids: attachmentIds } : {}),
+});
+
+export const createAnswerRunRequest = (
+  responses: AskUserResponseInput[],
+  modelId?: string,
+): StartRunRequest => ({
+  ask_user_responses: responses,
+  ...(modelId ? { model_id: modelId } : {}),
 });

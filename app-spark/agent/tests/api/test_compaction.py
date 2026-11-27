@@ -4,10 +4,15 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pydantic_ai_harness import ClearToolResults, SummarizingCompaction, TieredCompaction
 
+from app_spark_agent import settings
+from app_spark_agent.agent import create_agent
+from app_spark_agent.server import create_runtime_app
 from tests.api.support import (
+    AuthedTestClient,
     build_test_client,
     get_context,
     get_transcript_messages,
@@ -74,6 +79,40 @@ def test_compaction_advances_the_context_version_inside_a_run(tmp_path: Path) ->
     # version by more than one. Runs and context versions are deliberately not in step.
     assert health["context_version"] > 1
     assert persisted_version == health["context_version"]
+
+
+def test_non_compacting_multi_step_run_with_full_agent_advances_context_version_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Counterpart to mid-run compaction: without compaction, a multi-request turn commits once.
+
+    Uses the real ``create_agent`` capability stack (including ``RepoContext``, whose
+    append-on-change instruction projection copies ``request_context.messages`` on every model
+    request) so wire-only projections can never masquerade as compaction and inflate
+    ``context_version``.
+    """
+    monkeypatch.setattr(settings, "MODEL", "fake:write-file")
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    app = create_runtime_app(
+        workspace=workspace,
+        state_dir=tmp_path / "state",
+        agent=create_agent(workspace=workspace),
+    )
+    conversation_id = str(uuid4())
+
+    with AuthedTestClient(app) as client:
+        # `fake:write-file` performs 2 model requests (tool call + final reply) without compacting.
+        first = run_request(client, conversation_id=conversation_id, context_version=0)
+        assert first.status_code == 200, first.text
+        assert client.get("/health").json()["context_version"] == 1
+        assert get_context(client)["context_version"] == 1
+
+        second = run_request(client, conversation_id=conversation_id, context_version=1)
+        assert second.status_code == 200, second.text
+        assert client.get("/health").json()["context_version"] == 2
+        assert get_context(client)["context_version"] == 2
 
 
 def test_summary_enters_the_context_but_never_the_transcript(tmp_path: Path) -> None:

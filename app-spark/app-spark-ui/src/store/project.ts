@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue';
 import { defineStore } from 'pinia';
 import Message from '@/common/message';
-import { createStartRunRequest } from '@/common/model-catalog';
+import { createAnswerRunRequest, createStartRunRequest } from '@/common/model-catalog';
 import type {
   ChatAttachment,
   ChatMessage,
@@ -23,10 +23,13 @@ import {
   stopConversationRun,
 } from '@/http/api';
 import type {
+  AskUserResponseInput,
   ConversationHistoryRecord,
   ConversationResponse,
+  PendingQuestion,
   ProjectIntRenamingResponse,
   RuntimeStateResponse,
+  StartRunRequest,
 } from '@/http/types';
 import { ApiErrorCode, isApiError } from '@/http/error-codes';
 import RequestError from '@/http/fetch/request-error';
@@ -35,14 +38,18 @@ import {
   appendRunError,
   appendUserMessage,
   applyAgUiEvent,
+  collectPendingAskUsers,
   createApplyContext,
   createWelcomeMessage,
   currentTurnAssistant,
   getRecordSeq,
   hasConversationContent,
+  hydratePendingAskUsers,
   markRunStopped,
+  messageHasContent,
   readSseEvents,
 } from '@/services/agent/ag-ui';
+import { ASK_USER_TOOL_NAME } from '@/services/agent/ask-user';
 import { useModelCatalogStore } from '@/store/model-catalog';
 
 export type ProjectStatus = 'idle' | 'thinking' | 'streaming';
@@ -78,6 +85,7 @@ const READ_ONLY_WORKSPACE_TOOLS = new Set([
   'search_files',
   'check_command',
   'read_app_log',
+  ASK_USER_TOOL_NAME,
 ]);
 
 const createId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -102,6 +110,9 @@ export const useProjectStore = defineStore('project', () => {
   const running = ref(false);
   /** 正在跑的那一轮的 ID，停止时要点名它。直播时取自 RUN_STARTED，其余时候取自会话状态。 */
   const runId = ref<string | null>(null);
+  /** 上一轮通过 ask_user_question 暂停后挂起、等待用户回答的问题。 */
+  const pendingQuestions = ref<PendingQuestion[]>([]);
+  const hasPendingQuestions = computed(() => pendingQuestions.value.length > 0);
   /** 本页发出的这一轮还没被 Runtime 接受（多半在准备运行环境），这时还没有 run ID 可点名。 */
   const awaitingRunStart = ref(false);
   /** 已经请求停止，等这一轮收尾。回到空闲就清掉，见下面对 status 的 watch。 */
@@ -224,6 +235,7 @@ export const useProjectStore = defineStore('project', () => {
     applyCtx.messages = messages.value;
     applyCtx.byId = new Map();
     applyCtx.toolCalls = new Map();
+    applyCtx.askUsers = new Map();
     applyCtx.reasonings = new Map();
   };
 
@@ -343,6 +355,10 @@ export const useProjectStore = defineStore('project', () => {
     isLive.value = state.is_live;
     running.value = state.running;
     runId.value = state.run_id ?? null;
+    pendingQuestions.value = state.pending_questions ?? [];
+    if (pendingQuestions.value.length) {
+      hydratePendingAskUsers(messages.value, pendingQuestions.value);
+    }
     replicationPending.value = state.replication_pending;
     runtimeReady.value = state.runtime_ready;
     // 直播的 SSE 在 RUN_STARTED 之前断了，按停止时没能点名的那一轮要靠这里拿到的 run ID 补发。
@@ -377,6 +393,7 @@ export const useProjectStore = defineStore('project', () => {
     uiEventSeq.value = 0;
     running.value = false;
     runId.value = null;
+    pendingQuestions.value = [];
     awaitingRunStart.value = false;
     replicationPending.value = false;
     runtimeReady.value = false;
@@ -488,6 +505,9 @@ export const useProjectStore = defineStore('project', () => {
     // 界），而「频道到哪了」是频道自己的事，一并给出来就省掉一次额外的状态查询。
     advanceUiEventSeq(data.last_seq);
     historyCursor.value = data.next_cursor;
+    if (pendingQuestions.value.length) {
+      hydratePendingAskUsers(messages.value, pendingQuestions.value);
+    }
     fallbackToWelcome();
     return true;
   };
@@ -1000,6 +1020,7 @@ export const useProjectStore = defineStore('project', () => {
     }
     running.value = false;
     runId.value = null;
+    pendingQuestions.value = [];
     replicationPending.value = false;
     runtimeReady.value = false;
     uiEventSeq.value = 0;
@@ -1193,69 +1214,28 @@ export const useProjectStore = defineStore('project', () => {
     }
   };
 
-  const sendMessage = async (
-    text: string,
-    attachments: ChatAttachment[] = [],
-    modelId?: string,
-    lifecycle?: ChatSendLifecycle,
-  ) => {
-    const content = text.trim();
-    const readyAttachments = attachments.filter(attachment => (
-      attachment.status === 'ready' && Boolean(attachment.attachmentId)
-    ));
-    const attachmentIds = [...new Set(readyAttachments
-      .map(attachment => attachment.attachmentId)
-      .filter((id): id is string => Boolean(id)))];
-    const restoreRejectedDraft = () => {
-      try {
-        lifecycle?.onRejected?.();
-      } catch (error) {
-        console.error('[project] 恢复被拒绝的草稿失败', error);
-      }
-    };
-    if (
-      (!content && !attachmentIds.length)
-      || attachments.length !== readyAttachments.length
-      || attachmentIds.length !== readyAttachments.length
-      || attachmentIds.length > MAX_ATTACHMENT_COUNT
-      || (
-        readyAttachments.some(attachment => attachment.kind === 'image')
-        && !modelCatalogStore.supportsImageInput
-      )
-      || busy.value
-      || !projectId.value
-      || conversationNumber.value == null
-      || !isLive.value
-    ) {
-      restoreRejectedDraft();
-      return;
+  const removeMessagesById = (ids: string[]) => {
+    const idSet = new Set(ids);
+    for (let index = messages.value.length - 1; index >= 0; index--) {
+      if (idSet.has(messages.value[index].id)) messages.value.splice(index, 1);
     }
+  };
 
-    // 自己发消息就改由这条 SSE 来画。补历史如果还在飞，不能再写进同一条消息。
-    stopCatchUp();
-    liveRunGeneration += 1;
+  interface ExecuteRunOptions {
+    payload: StartRunRequest;
+    liveAssistant: ChatMessage;
+    /** 后端直接拒绝（4xx/5xx）或抛错时的收尾钩子；返回 true 表示已完成错误展示与清理。 */
+    onError: (error: unknown, refused: boolean) => Promise<boolean>;
+  }
 
-    const userMessage: ChatMessage = {
-      id: createId(),
-      role: 'user',
-      blocks: [
-        ...(content ? [{ type: 'text' as const, text: content }] : []),
-        ...readyAttachments.map(attachment => toAttachmentBlock({
-          kind: attachment.kind === 'image' ? 'image' : 'file',
-          filename: attachment.name,
-          size: attachment.size,
-          url: attachment.url,
-          preview: attachment.preview,
-        })),
-      ],
-    };
-    const assistantMessage: ChatMessage = {
-      id: createId(),
-      role: 'assistant',
-      blocks: [{ type: 'text', text: '' }],
-    };
+  /**
+   * 发起一轮 `/runs/` SSE 并推进界面状态，供普通发送消息与提交澄清回答共用。
+   */
+  const executeRun = async ({ payload, liveAssistant, onError }: ExecuteRunOptions) => {
     const runProjectId = projectId.value;
     const runNumber = conversationNumber.value;
+    if (!runProjectId || runNumber == null) return false;
+
     const runGeneration = liveRunGeneration;
     // 读 SSE 时游标不前进，所以它一直是「这一轮之前」的位置。
     const seqBeforeRun = uiEventSeq.value;
@@ -1267,6 +1247,7 @@ export const useProjectStore = defineStore('project', () => {
     let workspaceMayHaveChanged = false;
     // 服务端明确拒绝了这一轮（4xx/5xx 响应）：没有一轮在跑，眼前的报错就是结果，不用去对齐。
     let refused = false;
+    let failed = false;
     const controller = new AbortController();
     liveRunAbort = controller;
     // 代数在取消时立刻加一，比项目号、会话号变得更早：openConversation 还在等接口时，
@@ -1277,7 +1258,6 @@ export const useProjectStore = defineStore('project', () => {
       && conversationNumber.value === runNumber
     );
 
-    messages.value.push(userMessage, assistantMessage);
     syncApplyCtx();
     runEndedWithError.value = false;
     failedRunMayHaveChangedWorkspace.value = false;
@@ -1285,8 +1265,6 @@ export const useProjectStore = defineStore('project', () => {
     runId.value = null;
     awaitingRunStart.value = true;
 
-    // 经响应式代理改 progress：直接改 assistantMessage 这个原始对象，界面不会跟着变。
-    const liveAssistant = messages.value[messages.value.length - 1];
     // 本轮开始输出或已经失败后就不再提示：迟到的状态查询不能把提示又盖回去。
     let preparingOver = false;
     const showPreparingRuntime = () => {
@@ -1312,15 +1290,15 @@ export const useProjectStore = defineStore('project', () => {
       const pendingPreview = previewStartInFlight;
       if (pendingPreview?.projectId === runProjectId && pendingPreview.number === runNumber) {
         await pendingPreview.done;
-        if (!stillCurrent()) return;
+        if (!stillCurrent()) return false;
       }
       const response = await startConversationRun(
         runProjectId,
         runNumber,
-        createStartRunRequest(content, modelId, attachmentIds),
+        payload,
         controller.signal,
       );
-      if (!stillCurrent()) return;
+      if (!stillCurrent()) return false;
       for await (const event of readSseEvents(response)) {
         // 读到的是上一轮的事件。列表已经换成别的项目或会话，不能再 syncApplyCtx 跟着写过去。
         if (!stillCurrent()) break;
@@ -1366,61 +1344,37 @@ export const useProjectStore = defineStore('project', () => {
         syncApplyCtx();
         applyResult(applyCtx, applyAgUiEvent(applyCtx, event, { ignoreUser: true }));
       }
-    } catch (error) {
-      // 切走时 abort 会落到这里。那条助手消息已经不在眼前的列表里，错误不能写到新对话上。
-      if (!stillCurrent()) return;
-      refused = error instanceof RequestError;
-      if (refused) restoreRejectedDraft();
-      const modelUnavailable = isApiError(error, ApiErrorCode.MODEL_NOT_AVAILABLE);
-      const imageInputUnsupported = isApiError(error, ApiErrorCode.MODEL_IMAGE_INPUT_UNSUPPORTED);
-      const attachmentNotFound = isApiError(error, ApiErrorCode.ATTACHMENT_NOT_FOUND);
-      const attachmentAlreadyUsed = isApiError(error, ApiErrorCode.ATTACHMENT_ALREADY_USED);
-      if (imageInputUnsupported) {
-        try {
-          lifecycle?.onImageInputUnsupported?.();
-        } catch (lifecycleError) {
-          console.error('[project] 更新图片模型能力失败', lifecycleError);
-        }
-        const optimisticIds = new Set([userMessage.id, assistantMessage.id]);
-        for (let index = messages.value.length - 1; index >= 0; index--) {
-          if (optimisticIds.has(messages.value[index].id)) messages.value.splice(index, 1);
-        }
-        resetApplyCtx();
-        Message({ theme: 'warning', message: '当前模型不支持图片输入' });
-        return;
+      if (sawRunFinished && stillCurrent()) {
+        // 先按本轮事件流里挂起的提问兜底，紧接着 `syncConversationOnce` 会用服务端权威状态覆盖。
+        pendingQuestions.value = collectPendingAskUsers(currentTurnAssistant(messages.value));
       }
-      const textBlock = liveAssistant.blocks.find(block => block.type === 'text');
-      let detail = error instanceof Error ? error.message : '发起对话失败';
-      if (modelUnavailable) detail = '该模型已不可用，请重新选择后重试。';
-      else if (attachmentNotFound) detail = '附件已不可用，请重新添加后重试。';
-      else if (attachmentAlreadyUsed) detail = '附件已经随另一轮发出，请重新添加后重试。';
+      return true;
+    } catch (error) {
+      failed = true;
+      // 切走时 abort 会落到这里。那条助手消息已经不在眼前的列表里，错误不能写到新对话上。
+      if (!stillCurrent()) return false;
+      refused = error instanceof RequestError;
+      const handled = await onError(error, refused);
+      if (handled) return false;
+      const detail = error instanceof Error ? error.message : '发起对话失败';
       liveAssistant.tone = 'error';
+      const textBlock = liveAssistant.blocks.find(block => block.type === 'text');
       if (textBlock && !textBlock.text) {
         textBlock.text = detail;
       } else {
         liveAssistant.blocks.push({ type: 'text', text: detail });
       }
-      if (modelUnavailable) {
-        Message({ theme: 'warning', message: '该模型已不可用' });
-        await modelCatalogStore.recoverFromUnavailableModel();
-      }
-      if (attachmentNotFound || attachmentAlreadyUsed) {
-        try {
-          lifecycle?.onAttachmentsInvalid?.(attachmentIds);
-        } catch (lifecycleError) {
-          console.error('[project] 清理失效附件草稿失败', lifecycleError);
-        }
-        Message({ theme: 'warning', message: detail });
-      }
+      return false;
     } finally {
       preparingOver = true;
       if (liveRunAbort === controller) liveRunAbort = null;
       if (stillCurrent()) {
         awaitingRunStart.value = false;
-        assistantMessage.progress = '';
-        const textBlock = assistantMessage.blocks.find(block => block.type === 'text');
-        // 被停下的一轮自己会标「已停止」，不用再补这一句。
-        if (textBlock && !textBlock.text && !assistantMessage.stopped) {
+        liveAssistant.progress = '';
+        const stillInMessages = messages.value.some(item => item.id === liveAssistant.id);
+        const textBlock = liveAssistant.blocks.find(block => block.type === 'text');
+        // 已有可见内容（提问卡片、工具调用、思考或已停止）或消息已撤回时，不再补兜底文案。
+        if (stillInMessages && textBlock && !messageHasContent(liveAssistant)) {
           textBlock.text = '本轮对话已结束。';
         }
         if (!sawRunFinished && !refused) {
@@ -1433,9 +1387,13 @@ export const useProjectStore = defineStore('project', () => {
           }
         } else {
           status.value = 'idle';
-          if (projectId.value && conversationNumber.value != null) {
+          if (
+            !failed
+            && projectId.value
+            && conversationNumber.value != null
+          ) {
             try {
-              // 这一轮已经完整画出来了：游标直接拨到最新，不再把本轮入库的事件接一遍。
+              // 这一轮已经完整画出来了：游标直接拨到最新，并拉回服务端权威的 pending_questions。
               await syncConversationOnce();
             } catch {
               // 发送结果已展示，追赶失败不覆盖当前消息
@@ -1450,6 +1408,210 @@ export const useProjectStore = defineStore('project', () => {
     }
   };
 
+  const sendMessage = async (
+    text: string,
+    attachments: ChatAttachment[] = [],
+    modelId?: string,
+    lifecycle?: ChatSendLifecycle,
+  ) => {
+    const content = text.trim();
+    const readyAttachments = attachments.filter(attachment => (
+      attachment.status === 'ready' && Boolean(attachment.attachmentId)
+    ));
+    const attachmentIds = [...new Set(readyAttachments
+      .map(attachment => attachment.attachmentId)
+      .filter((id): id is string => Boolean(id)))];
+    const restoreRejectedDraft = () => {
+      try {
+        lifecycle?.onRejected?.();
+      } catch (error) {
+        console.error('[project] 恢复被拒绝的草稿失败', error);
+      }
+    };
+    if (
+      (!content && !attachmentIds.length)
+      || attachments.length !== readyAttachments.length
+      || attachmentIds.length !== readyAttachments.length
+      || attachmentIds.length > MAX_ATTACHMENT_COUNT
+      || (
+        readyAttachments.some(attachment => attachment.kind === 'image')
+        && !modelCatalogStore.supportsImageInput
+      )
+      || busy.value
+      || !projectId.value
+      || conversationNumber.value == null
+      || !isLive.value
+    ) {
+      restoreRejectedDraft();
+      return;
+    }
+
+    // 自己发消息就改由这条 SSE 来画。补历史如果还在飞，不能再写进同一条消息。
+    stopCatchUp();
+    liveRunGeneration += 1;
+    const previousPending = [...pendingQuestions.value];
+    pendingQuestions.value = [];
+
+    const userMessage: ChatMessage = {
+      id: createId(),
+      role: 'user',
+      blocks: [
+        ...(content ? [{ type: 'text' as const, text: content }] : []),
+        ...readyAttachments.map(attachment => toAttachmentBlock({
+          kind: attachment.kind === 'image' ? 'image' : 'file',
+          filename: attachment.name,
+          size: attachment.size,
+          url: attachment.url,
+          preview: attachment.preview,
+        })),
+      ],
+    };
+    const assistantMessage: ChatMessage = {
+      id: createId(),
+      role: 'assistant',
+      blocks: [{ type: 'text', text: '' }],
+    };
+
+    messages.value.push(userMessage, assistantMessage);
+    // 经响应式代理改 progress / blocks：直接改原始对象，界面不会跟着变。
+    const liveAssistant = messages.value[messages.value.length - 1];
+
+    await executeRun({
+      payload: createStartRunRequest(content, modelId, attachmentIds),
+      liveAssistant,
+      onError: async (error, refused) => {
+        if (refused) {
+          restoreRejectedDraft();
+          pendingQuestions.value = previousPending;
+        }
+        const modelUnavailable = isApiError(error, ApiErrorCode.MODEL_NOT_AVAILABLE);
+        const imageInputUnsupported = isApiError(error, ApiErrorCode.MODEL_IMAGE_INPUT_UNSUPPORTED);
+        const attachmentNotFound = isApiError(error, ApiErrorCode.ATTACHMENT_NOT_FOUND);
+        const attachmentAlreadyUsed = isApiError(error, ApiErrorCode.ATTACHMENT_ALREADY_USED);
+        if (imageInputUnsupported) {
+          try {
+            lifecycle?.onImageInputUnsupported?.();
+          } catch (lifecycleError) {
+            console.error('[project] 更新图片模型能力失败', lifecycleError);
+          }
+          removeMessagesById([userMessage.id, assistantMessage.id]);
+          resetApplyCtx();
+          Message({ theme: 'warning', message: '当前模型不支持图片输入' });
+          return true;
+        }
+        const textBlock = liveAssistant.blocks.find(block => block.type === 'text');
+        let detail = error instanceof Error ? error.message : '发起对话失败';
+        if (modelUnavailable) detail = '该模型已不可用，请重新选择后重试。';
+        else if (attachmentNotFound) detail = '附件已不可用，请重新添加后重试。';
+        else if (attachmentAlreadyUsed) detail = '附件已经随另一轮发出，请重新添加后重试。';
+        liveAssistant.tone = 'error';
+        if (textBlock && !textBlock.text) {
+          textBlock.text = detail;
+        } else {
+          liveAssistant.blocks.push({ type: 'text', text: detail });
+        }
+        if (modelUnavailable) {
+          Message({ theme: 'warning', message: '该模型已不可用' });
+          await modelCatalogStore.recoverFromUnavailableModel();
+        }
+        if (attachmentNotFound || attachmentAlreadyUsed) {
+          try {
+            lifecycle?.onAttachmentsInvalid?.(attachmentIds);
+          } catch (lifecycleError) {
+            console.error('[project] 清理失效附件草稿失败', lifecycleError);
+          }
+          Message({ theme: 'warning', message: detail });
+        }
+        return true;
+      },
+    });
+  };
+
+  /**
+   * 提交待确认问题的回答（或跳过）以继续被暂停的对话。
+   *
+   * 不会新增用户气泡（与后端不写 `ConversationUserMessage` 对齐，确保历史回放一致）；
+   * 仅追加一条空的助手占位消息承载加载点与续跑回复，拒绝时撤回该占位并保留原卡片。
+   */
+  const answerQuestions = async (
+    responses: AskUserResponseInput[],
+    modelId?: string,
+  ): Promise<boolean> => {
+    if (
+      !responses.length
+      || busy.value
+      || !projectId.value
+      || conversationNumber.value == null
+      || !isLive.value
+    ) {
+      return false;
+    }
+
+    stopCatchUp();
+    liveRunGeneration += 1;
+    const previousPending = [...pendingQuestions.value];
+    // 一轮极少数情况下可能挂起多个 ask_user_question 调用，后端要求一次提交覆盖全部 tool_call_id。
+    const coveredIds = new Set(responses.map(item => item.tool_call_id));
+    const normalizedResponses: AskUserResponseInput[] = [
+      ...responses,
+      ...previousPending
+        .filter(item => !coveredIds.has(item.tool_call_id))
+        .map(item => ({ tool_call_id: item.tool_call_id, answers: [], cancelled: true })),
+    ];
+    pendingQuestions.value = [];
+
+    const assistantMessage: ChatMessage = {
+      id: createId(),
+      role: 'assistant',
+      blocks: [{ type: 'text', text: '' }],
+    };
+    messages.value.push(assistantMessage);
+    const liveAssistant = messages.value[messages.value.length - 1];
+
+    return executeRun({
+      payload: createAnswerRunRequest(normalizedResponses, modelId),
+      liveAssistant,
+      onError: async (error, refused) => {
+        // 续跑请求在服务端被拒：撤回刚压入的空助手气泡，避免对话区留下孤立报错。
+        if (refused && !messageHasContent(liveAssistant)) {
+          removeMessagesById([assistantMessage.id]);
+        }
+        if (isApiError(error, ApiErrorCode.ASK_USER_CONFLICT)) {
+          Message({ theme: 'warning', message: '待确认问题状态已变化，正在同步最新对话' });
+          try {
+            await syncConversationOnce();
+          } catch {
+            // 同步失败时保持空闲态，用户可手动刷新
+          }
+          return true;
+        }
+        if (refused) {
+          pendingQuestions.value = previousPending;
+        }
+        if (isApiError(error, ApiErrorCode.ASK_USER_RESPONSE_INVALID)) {
+          Message({
+            theme: 'warning',
+            message: error instanceof Error ? error.message : '回答内容不符合要求，请检查后重试',
+          });
+          return true;
+        }
+        if (isApiError(error, ApiErrorCode.MODEL_NOT_AVAILABLE)) {
+          Message({ theme: 'warning', message: '该模型已不可用' });
+          await modelCatalogStore.recoverFromUnavailableModel();
+          return true;
+        }
+        if (refused) {
+          Message({
+            theme: 'error',
+            message: error instanceof Error ? error.message : '提交回答失败',
+          });
+          return true;
+        }
+        return false;
+      },
+    });
+  };
+
   return {
     projectId,
     projectName,
@@ -1461,6 +1623,8 @@ export const useProjectStore = defineStore('project', () => {
     uiEventSeq,
     running,
     runId,
+    pendingQuestions,
+    hasPendingQuestions,
     stopping,
     canStop,
     replicationPending,
@@ -1490,6 +1654,7 @@ export const useProjectStore = defineStore('project', () => {
     setProjectName,
     pollProjectIntRenaming,
     sendMessage,
+    answerQuestions,
     stopRun,
   };
 });

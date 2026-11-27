@@ -161,6 +161,13 @@ async def chat_agent(settings, tmp_path, workspace_root, live_server) -> AsyncIt
         yield None
 
 
+@pytest.fixture
+async def ask_user_agent(settings, tmp_path, workspace_root, live_server) -> AsyncIterator[None]:
+    """Point the service at an agent that pauses with ask_user_question and echoes answers on resume."""
+    async for _ in _configured_agent(settings, tmp_path, workspace_root, live_server, "fake:ask-user"):
+        yield None
+
+
 async def _configured_agent(
     settings: Any,
     tmp_path: Path,
@@ -210,9 +217,20 @@ async def create_conversation(client: AsyncClient) -> dict[str, Any]:
     return json.loads(response.content)
 
 
-async def post_run(client: AsyncClient, number: int, prompt: str, *, model_id: str | None = None) -> Any:
-    """Submit one turn without judging how it was answered."""
-    payload: dict[str, Any] = {"content": prompt}
+async def post_run(
+    client: AsyncClient,
+    number: int,
+    prompt: str = "",
+    *,
+    model_id: str | None = None,
+    ask_user_responses: list[dict[str, Any]] | None = None,
+) -> Any:
+    """Submit one turn or structured ask-user response without judging how it was answered."""
+    payload: dict[str, Any] = {}
+    if ask_user_responses is not None:
+        payload["ask_user_responses"] = ask_user_responses
+    if prompt or ask_user_responses is None:
+        payload["content"] = prompt
     if model_id is not None:
         payload["model_id"] = model_id
     return await client.post(
@@ -1032,6 +1050,133 @@ async def test_ending_a_conversation_hands_the_project_back(aapi_client, project
     # And the freed workspace is genuinely usable again, which is what the caller came for.
     second = await create_conversation(aapi_client)
     assert second["number"] == first["number"] + 1
+
+
+async def test_ask_user_pauses_exposes_pending_questions_and_resumes_end_to_end(aapi_client, project, ask_user_agent):
+    """Real Agent process under fake:ask-user pauses, exposes pending_questions, and resumes on answer."""
+    initial = await create_conversation(aapi_client)
+    number = initial["number"]
+    assert initial["pending_questions"] == []
+
+    # Turn 1 pauses with a structured question.
+    paused_events = await run_turn(aapi_client, number, "build a tracker")
+    assert event_types(paused_events)[-1] == "RUN_FINISHED"
+
+    paused_state = await wait_for_replication(aapi_client, number, after=initial)
+    pending = paused_state["pending_questions"]
+    assert len(pending) == 1
+    tool_call_id = pending[0]["tool_call_id"]
+    assert paused_events[-1]["outcome"]["pendingToolCallIds"] == [tool_call_id]
+
+    # Submitting an invalid option is rejected by the Runtime and mapped to 422 ASK_USER_RESPONSE_INVALID.
+    invalid_resp = await post_run(
+        aapi_client,
+        number,
+        ask_user_responses=[
+            {
+                "tool_call_id": tool_call_id,
+                "answers": [
+                    {"header": "Style", "selected": ["NonexistentOption"]},
+                    {"header": "Features", "selected": ["Search"]},
+                ],
+            }
+        ],
+    )
+    assert invalid_resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, invalid_resp.content
+    assert json.loads(invalid_resp.content)["code"] == "ASK_USER_RESPONSE_INVALID"
+
+    # Turn 2 submits structured answers and resumes cleanly.
+    resumed_resp = await post_run(
+        aapi_client,
+        number,
+        ask_user_responses=[
+            {
+                "tool_call_id": tool_call_id,
+                "answers": [
+                    {"header": "Style", "selected": ["Playful"]},
+                    {"header": "Features", "selected": ["Search", "Export CSV"]},
+                ],
+            }
+        ],
+    )
+    assert resumed_resp.status_code == HTTPStatus.OK, resumed_resp.content
+    reply = assistant_reply(await collect_events(resumed_resp))
+    assert "Playful" in reply
+    assert "Export CSV" in reply
+
+    settled = await wait_for_replication(aapi_client, number, after=paused_state)
+    assert settled["pending_questions"] == []
+
+    # Re-submitting after the question is closed returns 409 ASK_USER_CONFLICT.
+    conflict = await post_run(
+        aapi_client,
+        number,
+        ask_user_responses=[{"tool_call_id": tool_call_id, "cancelled": True}],
+    )
+    assert conflict.status_code == HTTPStatus.CONFLICT, conflict.content
+    assert json.loads(conflict.content)["code"] == "ASK_USER_CONFLICT"
+
+    # History contains only the one real user message (no phantom empty user message from the answer run).
+    history = await read_history(aapi_client, number)
+    user_messages = [rec["user_message"] for rec in history if rec["user_message"] is not None]
+    assert [msg["content"] for msg in user_messages] == ["build a tracker"]
+
+
+async def test_ask_user_resumes_after_runtime_reclamation_cold_start(aapi_client, project, ask_user_agent):
+    """A paused ask_user_question survives full Runtime reclamation and resumes on cold start."""
+    initial = await create_conversation(aapi_client)
+    number, conversation_id = initial["number"], initial["conversation_id"]
+
+    await run_turn(aapi_client, number, "build a tracker")
+    paused_state = await wait_for_replication(aapi_client, number, after=initial)
+    tool_call_id = paused_state["pending_questions"][0]["tool_call_id"]
+
+    # Reclaim the Runtime completely (process terminated + state_dir wiped), as happens on idle timeout.
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    await provider.terminate(conversation_id)
+    shutil.rmtree(provider.state_dir(conversation_id))
+
+    # Reading state stays free (does not spawn a Runtime), so live pending_questions is empty while cold.
+    cold_state = await read_state(aapi_client, number)
+    assert cold_state["pending_questions"] == []
+
+    # Answering the question brings up a fresh Runtime, cold-restores the paused context, and finishes.
+    resumed_resp = await post_run(
+        aapi_client,
+        number,
+        ask_user_responses=[
+            {
+                "tool_call_id": tool_call_id,
+                "answers": [
+                    {"header": "Style", "selected": ["Minimal (Recommended)"]},
+                    {"header": "Features", "selected": ["Search"]},
+                ],
+            }
+        ],
+    )
+    assert resumed_resp.status_code == HTTPStatus.OK, resumed_resp.content
+    reply = assistant_reply(await collect_events(resumed_resp))
+    assert "Minimal (Recommended)" in reply
+    assert "Search" in reply
+
+    settled = await wait_for_replication(aapi_client, number, after=paused_state)
+    assert settled["pending_questions"] == []
+
+
+async def test_ask_user_can_be_bypassed_by_a_normal_message_end_to_end(aapi_client, project, ask_user_agent):
+    """Sending a normal chat message while a question is pending closes the question and answers the new message."""
+    initial = await create_conversation(aapi_client)
+    number = initial["number"]
+
+    await run_turn(aapi_client, number, "build an app")
+    paused_state = await wait_for_replication(aapi_client, number, after=initial)
+    assert len(paused_state["pending_questions"]) == 1
+
+    bypassed_events = await run_turn(aapi_client, number, "actually make a simple timer")
+    assert "actually make a simple timer" in assistant_reply(bypassed_events)
+
+    settled = await wait_for_replication(aapi_client, number, after=paused_state)
+    assert settled["pending_questions"] == []
 
 
 async def test_anonymous_callers_are_refused(aanonymous_api_client, project):

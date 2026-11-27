@@ -24,13 +24,21 @@
           加载更多
         </bk-button>
       </div>
-      <ChatMessageList :messages="messages" :status="status" />
+      <ChatMessageList
+        :messages="messages"
+        :status="status"
+        :pending-ask-user-ids="pendingAskUserIds"
+        :interactive="isLive"
+        :busy="busy"
+        @answer-questions="handleAnswerQuestions"
+      />
     </div>
     <ChatComposer
       v-if="!viewingArchive"
       :disabled="composerDisabled"
       :enable-upload="true"
       :hint="composerHint"
+      :placeholder="composerPlaceholder"
       :running="status !== 'idle'"
       :can-stop="canStop"
       @send="handleSend"
@@ -60,18 +68,23 @@ import { storeToRefs } from 'pinia';
 import Message from '@/common/message';
 import AppIcon from '@/components/AppIcon.vue';
 import AppBreadcrumb from '@/components/project/header/AppBreadcrumb.vue';
+import type { AskUserResponseInput } from '@/http/types';
+import { useModelCatalogStore } from '@/store/model-catalog';
 import ChatComposer from './ChatComposer.vue';
 import ChatMessageList from './ChatMessageList.vue';
 import ConversationMenu from './ConversationMenu.vue';
 import { useProjectStore } from '@/store/project';
 
 const projectStore = useProjectStore();
+const modelCatalogStore = useModelCatalogStore();
 const {
   messages,
   status,
   busy,
   conversationNumber,
   isLive,
+  pendingQuestions,
+  hasPendingQuestions,
   loadingEarlier,
   hasEarlierHistory,
   viewingArchive,
@@ -81,9 +94,16 @@ const {
 } = storeToRefs(projectStore);
 const scrollerRef = ref<HTMLElement>();
 const pinnedToBottom = ref(true);
+const pendingAskUserIds = computed(() => pendingQuestions.value.map(item => item.tool_call_id));
 
 const composerDisabled = computed(() => (
   busy.value || !isLive.value || !conversationNumber.value
+));
+
+const composerPlaceholder = computed(() => (
+  hasPendingQuestions.value
+    ? '可在上方卡片确认细节，或直接输入新消息继续'
+    : undefined
 ));
 
 const composerHint = computed(() => {
@@ -104,6 +124,11 @@ const handleScroll = () => {
 const handleSend: typeof projectStore.sendMessage = (...args) => {
   pinnedToBottom.value = true;
   return projectStore.sendMessage(...args);
+};
+
+const handleAnswerQuestions = (response: AskUserResponseInput) => {
+  pinnedToBottom.value = true;
+  void projectStore.answerQuestions([response], modelCatalogStore.requestModelId);
 };
 
 const handleStop = () => {

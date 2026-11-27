@@ -174,7 +174,10 @@ def _prepare_ask_user_responses(
             PendingAskUser(context.messages).tool_calls(),
         )
     except AskUserConflictError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "ask_user_conflict", "message": str(exc)},
+        ) from exc
     except AskUserValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

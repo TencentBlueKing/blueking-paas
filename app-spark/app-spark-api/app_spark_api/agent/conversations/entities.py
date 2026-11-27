@@ -21,6 +21,114 @@ from uuid import UUID
 from ninja import Field, Schema
 from pydantic import StringConstraints, model_validator
 
+from app_spark_api.agent.runtime.entities import AskUserAnswerInput, AskUserResponseInput, PendingQuestion
+
+# 用户单轮输入的字符上限。
+#
+# 必须在这里单独设限，不能靠请求体的大小兜底：``DATA_UPLOAD_MAX_MEMORY_SIZE`` 被 Runtime 的状态
+# 回写抬到了 64MB（见 settings），而那是给内部接口用的额度。
+#
+# 32K 字符对一次对话输入是很宽的（贴一整份报错日志也够），同时远小于 Agent 侧一份 context 的压缩
+# 预算（COMPACTION_TARGET_TOKENS，480,000 token），不会先于压缩成为瓶颈。
+MAX_RUN_CONTENT_LENGTH = 32 * 1024
+
+# 模型 ID 的长度上限。
+MAX_MODEL_ID_LENGTH = 128
+
+# 一轮对话最多引用几个附件，与前端一致。
+MAX_ATTACHMENTS_PER_RUN = 3
+
+
+# ------------------------------------------------------------------------------
+# Ask-User（结构化提问与回答）相关 Schema
+# ------------------------------------------------------------------------------
+
+
+class AskUserOptionSchema(Schema):
+    """结构化提问中的一个候选项。"""
+
+    label: str = Field(description="选项文案")
+    description: str = Field(default="", description="选项说明")
+
+
+class AskUserQuestionSchema(Schema):
+    """结构化提问中的一道问题。"""
+
+    header: str = Field(description="问题短标题，提交回答时按此匹配")
+    question: str = Field(description="完整问题正文")
+    options: list[AskUserOptionSchema] = Field(description="候选项列表")
+    multi_select: bool = Field(default=False, description="是否允许多选")
+
+
+class PendingQuestionSchema(Schema):
+    """一次挂起等待用户回答的 ask_user_question 工具调用。"""
+
+    tool_call_id: str = Field(description="挂起的工具调用 ID")
+    questions: list[AskUserQuestionSchema] = Field(description="待回答的问题列表")
+
+    @classmethod
+    def from_runtime(cls, item: PendingQuestion) -> Self:
+        """Convert a Runtime-layer :class:`PendingQuestion` into an API response schema."""
+        return cls(
+            tool_call_id=item.tool_call_id,
+            questions=[
+                AskUserQuestionSchema(
+                    header=question.header,
+                    question=question.question,
+                    options=[
+                        AskUserOptionSchema(label=option.label, description=option.description)
+                        for option in question.options
+                    ],
+                    multi_select=question.multi_select,
+                )
+                for question in item.questions
+            ],
+        )
+
+
+class AskUserAnswerSchema(Schema):
+    """对单道结构化提问的回答：选择候选项或填写自定义回答。"""
+
+    header: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] = Field(
+        description="对应提问中的 header"
+    )
+    selected: list[str] = Field(default_factory=list, description="选中的候选项 label 列表")
+    custom_answer: str | None = Field(
+        default=None,
+        max_length=MAX_RUN_CONTENT_LENGTH,
+        description="自定义回答文本；与 selected 互斥",
+    )
+
+
+class AskUserResponseSchema(Schema):
+    """对一次挂起 ask_user_question 调用的完整回答。"""
+
+    tool_call_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] = Field(
+        description="挂起的工具调用 ID"
+    )
+    answers: list[AskUserAnswerSchema] = Field(default_factory=list, description="各问题的回答列表")
+    cancelled: bool = Field(default=False, description="是否跳过/取消回答；为 true 时 answers 必须为空")
+
+    def to_runtime_input(self) -> AskUserResponseInput:
+        """Convert this request schema to the Runtime client's input value object."""
+        return AskUserResponseInput(
+            tool_call_id=self.tool_call_id,
+            answers=tuple(
+                AskUserAnswerInput(
+                    header=answer.header,
+                    selected=tuple(answer.selected),
+                    custom_answer=answer.custom_answer,
+                )
+                for answer in self.answers
+            ),
+            cancelled=self.cancelled,
+        )
+
+
+# ------------------------------------------------------------------------------
+# 会话、状态与历史相关 Schema
+# ------------------------------------------------------------------------------
+
 
 class ConversationResponse(Schema):
     """一个会话在列表里的样子，只有本服务库里的东西，不含任何 Runtime 的现状。
@@ -84,22 +192,10 @@ class RuntimeStateResponse(Schema):
             "（首次对话、空闲回收后、Agent 不可用或到达最长存活期）"
         )
     )
-
-
-# 用户单轮输入的字符上限。
-#
-# 必须在这里单独设限，不能靠请求体的大小兜底：``DATA_UPLOAD_MAX_MEMORY_SIZE`` 被 Runtime 的状态
-# 回写抬到了 64MB（见 settings），而那是给内部接口用的额度。
-#
-# 32K 字符对一次对话输入是很宽的（贴一整份报错日志也够），同时远小于 Agent 侧一份 context 的压缩
-# 预算（COMPACTION_TARGET_TOKENS，480,000 token），不会先于压缩成为瓶颈。
-MAX_RUN_CONTENT_LENGTH = 32 * 1024
-
-# 模型 ID 的长度上限。
-MAX_MODEL_ID_LENGTH = 128
-
-# 一轮对话最多引用几个附件，与前端一致。
-MAX_ATTACHMENTS_PER_RUN = 3
+    pending_questions: list[PendingQuestionSchema] = Field(
+        default_factory=list,
+        description="当前挂起等待用户回答的结构化提问列表；没有待回答提问或没有活跃 Runtime 时为空列表",
+    )
 
 
 class PreviewResponse(Schema):
@@ -161,14 +257,14 @@ class AttachmentResponse(Schema):
 class StartRunRequest(Schema):
     """推进一次会话交互的请求体。
 
-    仅包含本次需要发送的新信息：Runtime 中已经有了历史，如果重复发送会让会话中出现两种版本，进而
-    导致冲突。
+    仅包含本次需要发送的新信息：普通消息（``content`` / ``attachment_ids``）或结构化提问的回答
+    （``ask_user_responses``），两者互斥。Runtime 中已经有了历史，重复发送会导致冲突。
     """
 
     content: str = Field(
         "",
         max_length=MAX_RUN_CONTENT_LENGTH,
-        description="用户本轮发送的内容；带了附件时可以为空，否则不能为空",
+        description="用户本轮发送的内容；带了附件或提交提问回答时可以为空，否则不能为空",
     )
     attachment_ids: list[UUID] = Field(
         default_factory=list,
@@ -177,6 +273,10 @@ class StartRunRequest(Schema):
             "本轮引用的文件附件，取自上传附件接口返回的 id，每个只能随一轮发出。"
             "其中有图片而所选模型不支持图片时返回 422 MODEL_IMAGE_INPUT_UNSUPPORTED"
         ),
+    )
+    ask_user_responses: list[AskUserResponseSchema] = Field(
+        default_factory=list,
+        description="回答挂起的结构化提问并恢复 Agent；不能与 content 或 attachment_ids 同时提供",
     )
     # 先去掉首尾空白再量长度：纯空白在这里就是 422，带空格的 ID 也不会原样转发给网关。
     model_id: (
@@ -191,9 +291,14 @@ class StartRunRequest(Schema):
 
     @model_validator(mode="after")
     def check_has_input(self) -> Self:
+        has_user_input = bool(self.content.strip()) or bool(self.attachment_ids)
+        has_ask_user = bool(self.ask_user_responses)
+        if has_user_input and has_ask_user:
+            raise ValueError("ask_user_responses cannot be combined with content or attachment_ids")
+
         # 纯空白和空串一样算没说话：只发一个空格给模型，换来的只会是一句「请问有什么可以帮你」。
-        if not self.content.strip() and not self.attachment_ids:
-            raise ValueError("content and attachment_ids cannot both be empty")
+        if not has_user_input and not has_ask_user:
+            raise ValueError("content, attachment_ids, and ask_user_responses cannot all be empty")
 
         # 同一个附件在一轮里出现两次，模型会以为用户发了两份，绑定时也只会记一次。
         if len(set(self.attachment_ids)) != len(self.attachment_ids):

@@ -141,10 +141,10 @@ def raw_config(tenant_id, pool_service, normal_service) -> dict[str, Any]:
     }
 
 
-def run_init(raw: dict[str, Any], dry_run: bool = False, overwrite: bool = False) -> list[Record]:
+def run_init(raw: dict[str, Any], dry_run: bool = False) -> list[Record]:
     slz = TenantInfrasSLZ(data=copy.deepcopy(raw))
     slz.is_valid(raise_exception=True)
-    return TenantInfrasInitializer(slz.validated_data, overwrite=overwrite, dry_run=dry_run).run()
+    return TenantInfrasInitializer(slz.validated_data, dry_run=dry_run).run()
 
 
 def actions(records: list[Record]) -> dict[str, str]:
@@ -198,11 +198,15 @@ class TestInitialize:
 
         assert TenantLogConfig.objects.get(tenant_id=tenant_id).storage_cluster_id == 3
 
-    def test_rerun_skips_existing(self, raw_config, tenant_id):
+    def test_rerun_skips_existing(self, raw_config, tenant_id, normal_service):
         run_init(raw_config)
+        raw_config["clusters"][0]["description"] = "updated"
+        raw_config["services"][normal_service.name]["plans"][0]["description"] = "updated plan"
         records = run_init(raw_config)
 
         assert all(r.action == Action.SKIP for r in records)
+        assert Cluster.objects.get(name=raw_config["clusters"][0]["name"]).description == "tenant cluster"
+        assert Plan.objects.get(service=normal_service, tenant_id=tenant_id).description == "default plan"
         assert PreCreatedInstance.objects.filter(tenant_id=tenant_id).count() == 2
 
     def test_rerun_appends_new_instance(self, raw_config, tenant_id, pool_service):
@@ -214,26 +218,6 @@ class TestInitialize:
 
         assert actions(records)[f"pre_created_instance:{pool_service.name}/0shared/redis-2:6379"] == Action.CREATE
         assert PreCreatedInstance.objects.filter(tenant_id=tenant_id).count() == 3
-
-    def test_overwrite(self, raw_config, tenant_id, pool_service, normal_service):
-        run_init(raw_config)
-        cluster_name = raw_config["clusters"][0]["name"]
-        raw_config["clusters"][0]["description"] = "updated"
-        raw_config["services"][normal_service.name]["plans"][0]["description"] = "updated plan"
-        raw_config["services"][pool_service.name]["plans"][0]["pre_created_instances"][0]["credentials"][
-            "password"
-        ] = "new-p0"
-        raw_config["log_config"]["retention"] = 30
-
-        records = run_init(raw_config, overwrite=True)
-
-        assert actions(records)[f"cluster:{cluster_name}"] == Action.UPDATE
-        assert Cluster.objects.get(name=cluster_name).description == "updated"
-        assert Plan.objects.get(service=normal_service, tenant_id=tenant_id).description == "updated plan"
-        creds = [json.loads(i.credentials) for i in PreCreatedInstance.objects.filter(tenant_id=tenant_id)]
-        assert len(creds) == 2
-        assert {c["host"]: c["password"] for c in creds}["redis-0"] == "new-p0"
-        assert TenantLogConfig.objects.get(tenant_id=tenant_id).retention == 30
 
     def test_instance_count(self, raw_config, tenant_id, pool_service):
         instances = raw_config["services"][pool_service.name]["plans"][0]["pre_created_instances"]
@@ -252,58 +236,6 @@ class TestInitialize:
         records = run_init(raw_config)
         assert actions(records)[target] == Action.SKIP
         assert PreCreatedInstance.objects.filter(tenant_id=tenant_id).count() == 6
-
-    def test_overwrite_updates_all_duplicated_instances(self, raw_config, tenant_id, pool_service):
-        instance = raw_config["services"][pool_service.name]["plans"][0]["pre_created_instances"][0]
-        instance["count"] = 3
-        run_init(raw_config)
-
-        instance["credentials"]["password"] = "new-p0"
-        run_init(raw_config, overwrite=True)
-
-        creds = [json.loads(i.credentials) for i in PreCreatedInstance.objects.filter(tenant_id=tenant_id)]
-        assert [c["password"] for c in creds if c["host"] == "redis-0"] == ["new-p0"] * 3
-
-    def test_overwrite_keeps_shared_bk_biz_id(self, raw_config, tenant_id):
-        raw_config["log_config"]["shared_bk_biz_id"] = 100
-        run_init(raw_config)
-
-        raw_config["log_config"].pop("shared_bk_biz_id")
-        raw_config["log_config"]["retention"] = 30
-        run_init(raw_config, overwrite=True)
-
-        log_config = TenantLogConfig.objects.get(tenant_id=tenant_id)
-        assert log_config.retention == 30
-        assert log_config.shared_bk_biz_id == 100
-
-    def test_overwrite_removing_available_tenants(self, raw_config, tenant_id):
-        run_init(raw_config)
-        cluster = Cluster.objects.get(name=raw_config["clusters"][0]["name"])
-        cluster.available_tenant_ids = [tenant_id, "other"]
-        cluster.save(update_fields=["available_tenant_ids"])
-        raw_config["clusters"][0]["description"] = "updated"
-
-        with pytest.raises(InitializationError, match="would remove tenants other"):
-            run_init(raw_config, overwrite=True)
-        cluster.refresh_from_db()
-        assert cluster.description == "tenant cluster"
-
-        raw_config["clusters"][0]["available_tenant_ids"] = [tenant_id, "other"]
-        run_init(raw_config, overwrite=True)
-        cluster.refresh_from_db()
-        assert cluster.description == "updated"
-
-    def test_overwrite_keeps_undeclared_plan_config(self, raw_config, tenant_id, normal_service):
-        run_init(raw_config)
-        plan_data = raw_config["services"][normal_service.name]["plans"][0]
-        plan_data.pop("config")
-        plan_data["description"] = "updated plan"
-
-        run_init(raw_config, overwrite=True)
-
-        plan = Plan.objects.get(service=normal_service, tenant_id=tenant_id)
-        assert plan.description == "updated plan"
-        assert json.loads(plan.config) == {"host": "db"}
 
     def test_cluster_inaccessible(self, raw_config, tenant_id, mock_k8s_accessible):
         mock_k8s_accessible.return_value = False

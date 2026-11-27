@@ -1,7 +1,8 @@
-# 租户初始化配置示例：python manage.py init_tenant_infras -f example.yaml [--dry-run=false] [--overwrite]
+# 租户初始化配置示例：python manage.py init_tenant_infras -f example.yaml [--dry-run=false]
+# 只新建缺失的数据，已存在的一律跳过，修改请到平台管理端操作
 tenant_id: example
 
-# 新建或更新的集群（集群归属于 tenant_id），字段与平台管理端「添加集群」表单一致
+# 新建的集群（集群归属于 tenant_id），字段与平台管理端「添加集群」表单一致
 clusters:
   - name: example-main
     description: example 应用集群

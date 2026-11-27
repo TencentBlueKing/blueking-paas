@@ -78,10 +78,10 @@ class TenantInfrasInitializer:
     """租户基础设施初始化
 
     执行顺序：预检（任一失败则不写入） -> 集群 -> 共享集群 -> 集群分配策略 -> 各增强服务 -> 日志配置。
+    只新建缺失的数据，已存在的一律跳过，修改请到平台管理端操作。
     单个增强服务失败不影响其他服务，失败信息记录在 records 中，修正后重新执行即可补齐。
 
     :param data: 经 TenantInfrasSLZ 校验后的数据
-    :param overwrite: 已存在的数据是否按配置更新，否则跳过
     :param dry_run: 只计算变更，不写入
     :param on_record: 每产生一条变更记录时的回调
     """
@@ -89,13 +89,11 @@ class TenantInfrasInitializer:
     def __init__(
         self,
         data: dict[str, Any],
-        overwrite: bool = False,
         dry_run: bool = True,
         on_record: Optional[Callable[[Record], None]] = None,
     ):
         self.data = data
         self.tenant_id: str = data["tenant_id"]
-        self.overwrite = overwrite
         self.dry_run = dry_run
         self.on_record = on_record
         self.records: list[Record] = []
@@ -121,12 +119,12 @@ class TenantInfrasInitializer:
         if self.on_record:
             self.on_record(record)
 
-    def _should_write(self, kind: str, target: str, exists: bool) -> bool:
+    def _should_create(self, kind: str, target: str, exists: bool) -> bool:
         """记录本项的变更动作，返回是否需要实际写入"""
-        if exists and not self.overwrite:
+        if exists:
             self._record(kind, target, Action.SKIP, "already exists")
             return False
-        self._record(kind, target, Action.UPDATE if exists else Action.CREATE)
+        self._record(kind, target, Action.CREATE)
         return not self.dry_run
 
     # 预检
@@ -140,17 +138,7 @@ class TenantInfrasInitializer:
         services = {name: self._check_service(name, svc_data) for name, svc_data in self.data["services"].items()}
 
         for cluster_data in self.data["clusters"]:
-            cluster = Cluster.objects.filter(name=cluster_data["name"]).first()
-            if (
-                self.overwrite
-                and cluster
-                and (removed := set(cluster.available_tenant_ids) - set(cluster_data["available_tenant_ids"]))
-            ):
-                raise InitializationError(
-                    f"overwriting cluster {cluster_data['name']} would remove tenants {', '.join(sorted(removed))} "
-                    "from its available tenants, please add them to available_tenant_ids"
-                )
-            if not self._cluster_needs_access_check(cluster, cluster_data):
+            if Cluster.objects.filter(name=cluster_data["name"]).exists():
                 continue
             if not check_k8s_accessible(
                 cluster_data["api_servers"],
@@ -210,92 +198,59 @@ class TenantInfrasInitializer:
                 )
         return service
 
-    def _cluster_needs_access_check(self, cluster: Optional[Cluster], data: dict[str, Any]) -> bool:
-        if cluster is None:
-            return True
-        if not self.overwrite:
-            return False
-        auth_modified = (data["ca"], data["cert"], data["key"], data["token"]) != (
-            cluster.ca_data,
-            cluster.cert_data,
-            cluster.key_data,
-            cluster.token_value,
-        )
-        exists_api_servers = set(cluster.api_servers.values_list("host", flat=True))
-        return auth_modified or exists_api_servers != set(data["api_servers"])
-
     # 集群
 
     def _init_clusters(self):
-        modified = False
+        created = False
         for cluster_data in self.data["clusters"]:
             name = cluster_data["name"]
-            cluster = Cluster.objects.filter(name=name).first()
-            if not self._should_write("cluster", name, exists=cluster is not None):
+            if not self._should_create("cluster", name, exists=Cluster.objects.filter(name=name).exists()):
                 continue
 
             with transaction.atomic(using="workloads"):
-                self._upsert_cluster(cluster, cluster_data)
-            modified = True
+                self._create_cluster(cluster_data)
+            created = True
 
-        if modified:
+        if created:
             invalidate_global_configuration_pool()
 
-    def _upsert_cluster(self, cluster: Optional[Cluster], data: dict[str, Any]):
-        created = cluster is None
-        if cluster is None:
-            cluster = Cluster(
-                name=data["name"],
-                tenant_id=self.tenant_id,
-                type=ClusterType.NORMAL,
-                token_type=ClusterTokenType.SERVICE_ACCOUNT,
-            )
-
-        cluster.available_tenant_ids = data["available_tenant_ids"]
-        cluster.description = data["description"]
-        cluster.exposed_url_type = (
-            ExposedURLType.SUBPATH if data["app_address_type"] == AddressType.SUBPATH else ExposedURLType.SUBDOMAIN
+    def _create_cluster(self, data: dict[str, Any]):
+        cluster = Cluster.objects.create(
+            name=data["name"],
+            tenant_id=self.tenant_id,
+            type=ClusterType.NORMAL,
+            token_type=ClusterTokenType.SERVICE_ACCOUNT,
+            available_tenant_ids=data["available_tenant_ids"],
+            description=data["description"],
+            exposed_url_type=(
+                ExposedURLType.SUBPATH if data["app_address_type"] == AddressType.SUBPATH else ExposedURLType.SUBDOMAIN
+            ),
+            ingress_config=data["ingress_config"],
+            annotations=data["annotations"],
+            ca_data=data["ca"],
+            cert_data=data["cert"],
+            key_data=data["key"],
+            token_value=data["token"],
+            default_tolerations=data["tolerations"],
+            default_node_selector=data["node_selector"],
+            container_log_dir=data["container_log_dir"],
+            component_preferred_namespace=data["component_preferred_namespace"],
+            component_image_registry=data["component_image_registry"],
+            feature_flags=data["feature_flags"],
         )
-        cluster.ingress_config = data["ingress_config"]
-        cluster.annotations = {**cluster.annotations, **data["annotations"]}
-        cluster.ca_data = data["ca"]
-        cluster.cert_data = data["cert"]
-        cluster.key_data = data["key"]
-        cluster.token_value = data["token"]
-        cluster.default_tolerations = data["tolerations"]
-        cluster.default_node_selector = data["node_selector"]
-        cluster.container_log_dir = data["container_log_dir"]
-        cluster.component_preferred_namespace = data["component_preferred_namespace"]
-        cluster.component_image_registry = data["component_image_registry"]
-        cluster.feature_flags = data["feature_flags"]
-        cluster.save()
-
-        cluster.api_servers.all().delete()
         APIServer.objects.bulk_create(
             [APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in data["api_servers"]]
         )
-
-        if created:
-            ClusterComponent.objects.bulk_create(
-                [
-                    ClusterComponent(cluster=cluster, name=cfg["name"], required=cfg["required"])
-                    for cfg in get_default_component_configs()
-                ]
-            )
-
+        ClusterComponent.objects.bulk_create(
+            [
+                ClusterComponent(cluster=cluster, name=cfg["name"], required=cfg["required"])
+                for cfg in get_default_component_configs()
+            ]
+        )
         if es_cfg := data.get("elastic_search_config"):
-            ClusterElasticSearchConfig.objects.update_or_create(
-                cluster=cluster, tenant_id=cluster.tenant_id, defaults=es_cfg
-            )
-        else:
-            ClusterElasticSearchConfig.objects.filter(cluster=cluster).delete()
-
+            ClusterElasticSearchConfig.objects.create(cluster=cluster, tenant_id=cluster.tenant_id, **es_cfg)
         if image_registry := data.get("app_image_registry"):
-            ClusterAppImageRegistry.objects.update_or_create(
-                cluster=cluster, tenant_id=cluster.tenant_id, defaults=image_registry
-            )
-        else:
-            ClusterAppImageRegistry.objects.filter(cluster=cluster).delete()
+            ClusterAppImageRegistry.objects.create(cluster=cluster, tenant_id=cluster.tenant_id, **image_registry)
 
     def _init_shared_clusters(self):
         for name in self.data["shared_clusters"]:
@@ -315,16 +270,8 @@ class TenantInfrasInitializer:
         if not data:
             return
 
-        policy = ClusterAllocationPolicy.objects.filter(tenant_id=self.tenant_id).first()
-        if not self._should_write("cluster_allocation_policy", self.tenant_id, exists=policy is not None):
-            return
-
-        if policy:
-            policy.type = data["type"]
-            policy.allocation_policy = data["allocation_policy"]
-            policy.allocation_precedence_policies = data["allocation_precedence_policies"]
-            policy.save(update_fields=["type", "allocation_policy", "allocation_precedence_policies", "updated"])
-        else:
+        exists = ClusterAllocationPolicy.objects.filter(tenant_id=self.tenant_id).exists()
+        if self._should_create("cluster_allocation_policy", self.tenant_id, exists=exists):
             ClusterAllocationPolicy.objects.create(tenant_id=self.tenant_id, **data)
 
     # 增强服务
@@ -339,13 +286,13 @@ class TenantInfrasInitializer:
 
     def _init_service(self, service: ServiceObj, svc_data: dict[str, Any]):
         for plan_data in svc_data["plans"]:
-            self._upsert_plan(service, plan_data)
+            self._create_plan(service, plan_data)
 
         # 远程服务的方案在 store 中刷新，需要重新获取服务对象
         service = mixed_service_mgr.get(service.uuid)
         if _is_pool_service(service):
             for plan_data in svc_data["plans"]:
-                self._upsert_pre_created_instances(service, plan_data)
+                self._create_pre_created_instances(service, plan_data)
 
         self._init_binding_policy(service, svc_data)
 
@@ -353,9 +300,9 @@ class TenantInfrasInitializer:
         plans = service.get_plans_by_tenant_id(self.tenant_id, is_active=NOTSET)
         return next((p for p in plans if p.name == name), None)
 
-    def _upsert_plan(self, service: ServiceObj, plan_data: dict[str, Any]):
-        plan = self._find_plan(service, plan_data["name"])
-        if not self._should_write("plan", f"{service.name}/{plan_data['name']}", exists=plan is not None):
+    def _create_plan(self, service: ServiceObj, plan_data: dict[str, Any]):
+        exists = self._find_plan(service, plan_data["name"]) is not None
+        if not self._should_create("plan", f"{service.name}/{plan_data['name']}", exists=exists):
             return
 
         slz = PlanUpsertInputSLZ(
@@ -364,18 +311,9 @@ class TenantInfrasInitializer:
             }
         )
         slz.is_valid(raise_exception=True)
-        payload = slz.validated_data
-        payload["tenant_id"] = self.tenant_id
-        if plan:
-            # 未声明的字段沿用当前值，避免被序列化器的默认值（空字典）覆盖
-            for field in ("config", "properties"):
-                if field not in plan_data:
-                    payload[field] = getattr(plan, field)
-            mixed_plan_mgr.update(service, plan_id=plan.uuid, plan_data=payload)
-        else:
-            mixed_plan_mgr.create(service, plan_data=payload)
+        mixed_plan_mgr.create(service, plan_data={**slz.validated_data, "tenant_id": self.tenant_id})
 
-    def _upsert_pre_created_instances(self, service: ServiceObj, plan_data: dict[str, Any]):
+    def _create_pre_created_instances(self, service: ServiceObj, plan_data: dict[str, Any]):
         if not plan_data["pre_created_instances"]:
             return
 
@@ -388,37 +326,29 @@ class TenantInfrasInitializer:
             identity = instance_identity(ins_data["credentials"])
             display = identity if "host" in ins_data["credentials"] else f"#{idx}"
             target = f"{service.name}/{plan_data['name']}/{display}"
-            instances = existing.get(identity, [])
             # 只补足缺少的数量，多出的实例不会删除
-            missing = ins_data["count"] - len(instances)
-            fields = {
-                "config": ins_data["config"],
-                "credentials": json.dumps(ins_data["credentials"]),
-                "allocation_type": ins_data["allocation_type"],
-                "binding_policy": ins_data.get("binding_policy") or {},
-            }
-
-            if instances and self.overwrite:
-                self._record(kind, target, Action.UPDATE, f"{len(instances)} instance(s)")
-                if not self.dry_run:
-                    for instance in instances:
-                        for k, v in fields.items():
-                            setattr(instance, k, v)
-                        instance.save()
-
-            if missing > 0:
-                self._record(kind, target, Action.CREATE, f"{missing} instance(s)")
-                if not self.dry_run:
-                    assert plan is not None
-                    for _ in range(missing):
-                        PreCreatedInstance.objects.create(plan=plan, tenant_id=plan.tenant_id, **fields)
-            elif not self.overwrite:
+            missing = ins_data["count"] - len(existing.get(identity, []))
+            if missing <= 0:
                 self._record(kind, target, Action.SKIP, "already exists")
+                continue
+
+            self._record(kind, target, Action.CREATE, f"{missing} instance(s)")
+            if self.dry_run:
+                continue
+            assert plan is not None
+            for _ in range(missing):
+                PreCreatedInstance.objects.create(
+                    plan=plan,
+                    tenant_id=plan.tenant_id,
+                    config=ins_data["config"],
+                    credentials=json.dumps(ins_data["credentials"]),
+                    allocation_type=ins_data["allocation_type"],
+                    binding_policy=ins_data.get("binding_policy") or {},
+                )
 
     def _init_binding_policy(self, service: ServiceObj, svc_data: dict[str, Any]):
         mgr = SvcBindingPolicyManager(service, self.tenant_id)
-        exists = mgr.get_comb_cfg() is not None
-        if exists and not self.overwrite:
+        if mgr.get_comb_cfg() is not None:
             self._record("binding_policy", service.name, Action.SKIP, "already exists")
             return
 
@@ -426,7 +356,7 @@ class TenantInfrasInitializer:
         if not _policy_plan_names(policy):
             return
 
-        self._record("binding_policy", service.name, Action.UPDATE if exists else Action.CREATE)
+        self._record("binding_policy", service.name, Action.CREATE)
         if self.dry_run:
             return
 
@@ -445,13 +375,8 @@ class TenantInfrasInitializer:
             return
 
         exists = TenantLogConfig.objects.filter(tenant_id=self.tenant_id).exists()
-        if not self._should_write("log_config", self.tenant_id, exists=exists):
-            return
-
-        defaults = dict(data)
-        if exists and defaults.get("shared_bk_biz_id") is None:
-            defaults.pop("shared_bk_biz_id", None)
-        TenantLogConfig.objects.update_or_create(tenant_id=self.tenant_id, defaults=defaults)
+        if self._should_create("log_config", self.tenant_id, exists=exists):
+            TenantLogConfig.objects.create(tenant_id=self.tenant_id, **data)
 
 
 def _is_pool_service(service: ServiceObj) -> bool:

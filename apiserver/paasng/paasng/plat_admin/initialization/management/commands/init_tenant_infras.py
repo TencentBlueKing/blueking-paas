@@ -33,7 +33,7 @@ from paasng.utils.validators import str2bool
 
 class Command(BaseCommand):
     help = (
-        "根据 yaml 一键初始化租户的集群、增强服务方案 / 资源池、绑定策略与日志配置，"
+        "根据 yaml 一键初始化租户的集群、增强服务方案 / 资源池、绑定策略与日志配置（已存在的数据跳过），"
         "配置格式参考 paasng/plat_admin/initialization/tenant_infras/example.yaml"
     )
 
@@ -44,9 +44,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--dry-run", dest="dry_run", default=True, type=str2bool, help="默认只预览变更，传 --dry-run=false 才写入"
         )
-        parser.add_argument("--overwrite", action="store_true", help="已存在的数据按配置更新，默认跳过")
 
-    def handle(self, file_, dry_run: bool, overwrite: bool, *args, **options):
+    def handle(self, file_, dry_run: bool, *args, **options):
         with file_ as fh:
             raw = yaml.safe_load(fh) or {}
 
@@ -57,9 +56,7 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING("DRY-RUN: no data will be written, use --dry-run=false to apply"))
 
-        initializer = TenantInfrasInitializer(
-            slz.validated_data, overwrite=overwrite, dry_run=dry_run, on_record=self._print_record
-        )
+        initializer = TenantInfrasInitializer(slz.validated_data, dry_run=dry_run, on_record=self._print_record)
         try:
             initializer.run()
         except InitializationError as e:

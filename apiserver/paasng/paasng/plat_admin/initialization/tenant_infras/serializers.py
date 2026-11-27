@@ -102,8 +102,8 @@ class PlanSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="方案名称", max_length=64)
     description = serializers.CharField(help_text="方案简介")
     is_active = serializers.BooleanField(help_text="是否可用", default=True)
-    config = serializers.DictField(help_text="方案配置，更新已有方案时未声明则沿用当前值", required=False)
-    properties = serializers.DictField(help_text="方案属性，更新已有方案时未声明则沿用当前值", required=False)
+    config = serializers.DictField(help_text="方案配置", required=False)
+    properties = serializers.DictField(help_text="方案属性", required=False)
     pre_created_instances = PreCreatedInstanceSLZ(help_text="资源池实例，仅资源池类服务可用", many=True, default=list)
 
     def validate_pre_created_instances(self, instances: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -156,7 +156,7 @@ class TenantInfrasSLZ(serializers.Serializer):
     """租户基础设施初始化配置"""
 
     tenant_id = serializers.CharField(help_text="租户 ID")
-    clusters = serializers.ListField(help_text="新建或更新的集群", child=serializers.DictField(), default=list)
+    clusters = serializers.ListField(help_text="新建的集群", child=serializers.DictField(), default=list)
     shared_clusters = serializers.ListField(
         help_text="已存在的集群，将本租户追加到其可用租户列表", child=serializers.CharField(), default=list
     )

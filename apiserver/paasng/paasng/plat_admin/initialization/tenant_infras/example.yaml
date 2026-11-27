@@ -1,10 +1,10 @@
 # 租户初始化配置示例：python manage.py init_tenant_infras -f example.yaml [--dry-run=false] [--overwrite]
-tenant_id: bk2game
+tenant_id: example
 
 # 新建或更新的集群（集群归属于 tenant_id），字段与平台管理端「添加集群」表单一致
 clusters:
-  - name: bk2game-main
-    description: bk2game 应用集群
+  - name: example-main
+    description: example 应用集群
     cluster_source: bcs  # bcs / native_k8s
     bcs_project_id: abcdef0123456789
     bcs_cluster_id: BCS-K8S-00000
@@ -31,10 +31,10 @@ clusters:
       username: bkapps
       password: your-password
     # 以下为可选项
-    available_tenant_ids: [bk2game]  # 默认为 [tenant_id]
+    available_tenant_ids: [example]  # 默认为 [tenant_id]
     app_address_type: subdomain  # subpath / subdomain
     app_domains:
-      - name: bk2game-apps.example.com
+      - name: example-apps.example.com
         https_enabled: true
     component_preferred_namespace: blueking
     component_image_registry: hub.bktencent.com
@@ -50,7 +50,7 @@ cluster_allocation_policy:
   type: uniform  # uniform / rule_based
   allocation_policy:
     env_specific: false
-    clusters: [bk2game-main]
+    clusters: [example-main]
 
 # 增强服务，key 为服务名称；方案的 config 由对应服务自行校验
 services:

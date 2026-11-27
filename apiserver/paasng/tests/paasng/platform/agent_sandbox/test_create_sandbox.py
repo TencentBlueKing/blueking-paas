@@ -35,6 +35,8 @@ from paasng.platform.agent_sandbox.constants import (
     DEFAULT_MAX_ACTIVE_SANDBOX_COUNT,
     DEFAULT_SANDBOX_CPU,
     DEFAULT_SANDBOX_MEMORY,
+    MAX_SANDBOX_CPU,
+    MAX_SANDBOX_MEMORY,
     SandboxDeleteSource,
     SandboxStatus,
     SandboxWorkloadType,
@@ -45,6 +47,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxCreateTimeout,
     SandboxError,
     SandboxImageValidateError,
+    SandboxResourceLimitExceeded,
 )
 from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings, Volume
 from paasng.platform.agent_sandbox.sandbox import (
@@ -301,6 +304,44 @@ class TestCreateSandboxResources:
         sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="custom-res")
         assert sandbox.cpu == Decimal(4)
         assert sandbox.memory == Decimal(2)
+
+    @pytest.mark.usefixtures("mock_sandbox_provision", "mock_image_validator")
+    @pytest.mark.parametrize(
+        ("cpu", "memory", "expected"),
+        [
+            # 只指定一项时，另一项取默认值
+            (Decimal(1), None, (Decimal(1), DEFAULT_SANDBOX_MEMORY)),
+            # 可以申请超过默认值的资源，等于上限也允许
+            (MAX_SANDBOX_CPU, MAX_SANDBOX_MEMORY, (MAX_SANDBOX_CPU, MAX_SANDBOX_MEMORY)),
+        ],
+    )
+    def test_create_with_requested_resources(self, bk_app, bk_user, cpu, memory, expected):
+        sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="req-res", cpu=cpu, memory=memory)
+
+        sandbox.refresh_from_db()
+        assert (sandbox.cpu, sandbox.memory) == expected
+
+    @pytest.mark.parametrize(("cpu", "memory"), [(Decimal("4.5"), None), (None, Decimal("4.5"))])
+    def test_create_rejected_when_exceeding_limits(self, bk_app, bk_user, mock_sandbox_provision, cpu, memory):
+        """超出平台上限时拒绝创建, 不写库也不下发工作负载"""
+        with pytest.raises(SandboxResourceLimitExceeded) as exc_info:
+            create_sandbox(application=bk_app, creator=bk_user.pk, name="over-res", cpu=cpu, memory=memory)
+
+        assert (exc_info.value.max_cpu, exc_info.value.max_memory) == (MAX_SANDBOX_CPU, MAX_SANDBOX_MEMORY)
+        assert not Sandbox.objects.filter(application=bk_app, name="over-res").exists()
+        mock_sandbox_provision.assert_not_called()
+
+    @pytest.mark.usefixtures("mock_sandbox_provision", "mock_image_validator")
+    def test_app_level_config_is_both_default_and_limit(self, bk_app, bk_user):
+        """应用配置的 cpu / memory 同时作为默认值和上限, 未配置的项仍走平台默认值和上限"""
+        SandboxAppSettings.objects.create(application=bk_app, memory=Decimal(8), tenant_id=bk_app.tenant_id)
+
+        sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="cfg-default")
+        assert (sandbox.cpu, sandbox.memory) == (DEFAULT_SANDBOX_CPU, Decimal(8))
+
+        with pytest.raises(SandboxResourceLimitExceeded) as exc_info:
+            create_sandbox(application=bk_app, creator=bk_user.pk, name="cfg-over", memory=Decimal(9))
+        assert (exc_info.value.max_cpu, exc_info.value.max_memory) == (MAX_SANDBOX_CPU, Decimal(8))
 
 
 class TestActiveSandboxCountLimit:

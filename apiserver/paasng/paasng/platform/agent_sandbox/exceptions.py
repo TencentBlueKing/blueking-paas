@@ -14,6 +14,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from decimal import Decimal
+
 
 class SandboxError(Exception):
     """The base exception for agent sandbox errors."""
@@ -59,6 +61,19 @@ class SandboxActiveCountLimitExceeded(SandboxError):
         super().__init__(message, detail=detail)
         self.limit = limit
         self.current = current
+
+
+class SandboxResourceLimitExceeded(SandboxError):
+    """Raised when the requested cpu/memory exceeds the application's sandbox resource limits.
+
+    :param max_cpu: The CPU limit of the application, in cores.
+    :param max_memory: The memory limit of the application, in GB.
+    """
+
+    def __init__(self, message: str, max_cpu: Decimal, max_memory: Decimal):
+        super().__init__(message)
+        self.max_cpu = max_cpu
+        self.max_memory = max_memory
 
 
 class SandboxFileError(SandboxError):

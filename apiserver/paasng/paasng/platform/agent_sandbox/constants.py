@@ -58,6 +58,7 @@ class SandboxCreateFailureReason(StrStructuredEnum):
     K8S_ERROR = EnumField("k8s_error", label="K8s API 调用失败")
     START_FAILED = EnumField("start_failed", label="工作负载启动失败")
     QUOTA_EXCEEDED = EnumField("quota_exceeded", label="超出应用沙箱数量上限")
+    RESOURCE_EXCEEDED = EnumField("resource_exceeded", label="申请的资源超出应用上限")
     ALREADY_EXISTS = EnumField("already_exists", label="同名沙箱已存在")
     VOLUME_INVALID = EnumField("volume_invalid", label="共享卷挂载不合法")
     UNKNOWN = EnumField("unknown", label="其他未归类的原因")
@@ -99,6 +100,9 @@ SANDBOX_MAX_TTL_SECONDS = 24 * 60 * 60
 DEFAULT_SANDBOX_CPU = Decimal(4)
 DEFAULT_SANDBOX_MEMORY = Decimal(2)
 
+# 创建沙箱时可申请资源的平台上限，单位同上。应用配置了 cpu / memory 时，以配置值为上限
+MAX_SANDBOX_CPU = Decimal(4)
+MAX_SANDBOX_MEMORY = Decimal(4)
 # 单个应用可同时存活的沙箱数量上限的平台默认值
 # 该值可由 app 级配置 SandboxAppSettings.max_active_sandbox_count 覆盖
 DEFAULT_MAX_ACTIVE_SANDBOX_COUNT = 100

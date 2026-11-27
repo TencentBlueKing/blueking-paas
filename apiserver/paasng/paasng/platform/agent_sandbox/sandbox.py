@@ -54,6 +54,8 @@ from paasng.platform.agent_sandbox.constants import (
     DEFAULT_MAX_ACTIVE_SANDBOX_COUNT,
     DEFAULT_SANDBOX_CPU,
     DEFAULT_SANDBOX_MEMORY,
+    MAX_SANDBOX_CPU,
+    MAX_SANDBOX_MEMORY,
     SANDBOX_DEFAULT_TTL_SECONDS,
     SandboxCreateFailureReason,
     SandboxDeleteSource,
@@ -75,6 +77,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxImageValidateError,
     SandboxK8sResourceError,
     SandboxNoClusterError,
+    SandboxResourceLimitExceeded,
     VolumeNotFound,
     VolumeNotMountable,
 )
@@ -101,11 +104,11 @@ _ROUTE_PROBE_TIMEOUT = 2
 
 
 def resolve_sandbox_resources(application: Application) -> tuple[Decimal, Decimal]:
-    """Resolve the CPU/memory limits for an application's sandboxes.
+    """Resolve the default CPU/memory for an application's sandboxes, used when users request nothing.
 
-    Resource limits are not provided by end users. They are decided by an optional
-    per-app config maintained by platform operators; apps without a config (or with a
-    config that leaves cpu/memory unset) fall back to the platform default for that field.
+    The defaults are decided by an optional per-app config maintained by platform operators;
+    apps without a config (or with a config that leaves cpu/memory unset) fall back to the
+    platform default for that field.
 
     :param application: The application that the sandbox belongs to.
     :returns: A ``(cpu, memory)`` tuple, where ``cpu`` is in cores and
@@ -115,6 +118,46 @@ def resolve_sandbox_resources(application: Application) -> tuple[Decimal, Decima
     cpu = config.cpu if config and config.cpu is not None else DEFAULT_SANDBOX_CPU
     memory = config.memory if config and config.memory is not None else DEFAULT_SANDBOX_MEMORY
     return cpu, memory
+
+
+def resolve_sandbox_resource_limits(application: Application) -> tuple[Decimal, Decimal]:
+    """Resolve the max CPU/memory users may request when creating a sandbox.
+
+    A field set in the per-app config is both the default and the limit of that field;
+    otherwise the limit falls back to the platform limit.
+
+    :param application: The application that the sandbox belongs to.
+    :returns: A ``(cpu, memory)`` tuple, where ``cpu`` is in cores and ``memory`` is in GB.
+    """
+    config = SandboxAppSettings.objects.filter(application=application).first()
+    cpu = config.cpu if config and config.cpu is not None else MAX_SANDBOX_CPU
+    memory = config.memory if config and config.memory is not None else MAX_SANDBOX_MEMORY
+    return cpu, memory
+
+
+def resolve_requested_resources(
+    application: Application, cpu: Decimal | None, memory: Decimal | None
+) -> tuple[Decimal, Decimal]:
+    """Resolve the CPU/memory of a new sandbox from the user's request.
+
+    A dimension left unspecified takes the application's default.
+
+    :param application: The application that the sandbox belongs to.
+    :param cpu: The requested CPU in cores, optional.
+    :param memory: The requested memory in GB, optional.
+    :returns: A ``(cpu, memory)`` tuple, where ``cpu`` is in cores and ``memory`` is in GB.
+    :raises SandboxResourceLimitExceeded: If the request exceeds the application's limits.
+    """
+    max_cpu, max_memory = resolve_sandbox_resource_limits(application)
+    if (cpu is not None and cpu > max_cpu) or (memory is not None and memory > max_memory):
+        raise SandboxResourceLimitExceeded(
+            f"requested cpu={cpu}, memory={memory} exceeds the limits of application {application.code}: "
+            f"cpu={max_cpu}, memory={max_memory}",
+            max_cpu=max_cpu,
+            max_memory=max_memory,
+        )
+    default_cpu, default_memory = resolve_sandbox_resources(application)
+    return (default_cpu if cpu is None else cpu), (default_memory if memory is None else memory)
 
 
 def resolve_max_active_sandbox_count(application: Application) -> int:
@@ -155,6 +198,7 @@ _CREATE_FAILURE_REASONS: tuple[tuple[type[BaseException], SandboxCreateFailureRe
     (SandboxImageValidateError, SandboxCreateFailureReason.IMAGE_VALIDATE),
     (SandboxCreateTimeout, SandboxCreateFailureReason.TIMEOUT),
     (SandboxActiveCountLimitExceeded, SandboxCreateFailureReason.QUOTA_EXCEEDED),
+    (SandboxResourceLimitExceeded, SandboxCreateFailureReason.RESOURCE_EXCEEDED),
     (SandboxAlreadyExists, SandboxCreateFailureReason.ALREADY_EXISTS),
     (VolumeNotFound, SandboxCreateFailureReason.VOLUME_INVALID),
     (VolumeNotMountable, SandboxCreateFailureReason.VOLUME_INVALID),
@@ -186,6 +230,8 @@ def create_sandbox(
     ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
     volume_mounts: list[dict] | None = None,
     workload_type: str | None = None,
+    cpu: Decimal | None = None,
+    memory: Decimal | None = None,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
@@ -201,7 +247,10 @@ def create_sandbox(
         (each item: ``{"volume_id": UUID, "mount_path": str}``). Persisted to
         the Sandbox DB record and resolved into Pod spec mounts during provision.
     :param workload_type: Sandbox workload type (``default`` / ``sandbox_instance``), optional.
+    :param cpu: The CPU limit in cores, optional. Defaults to the application's default.
+    :param memory: The memory limit in GB, optional. Defaults to the application's default.
     :raises SandboxActiveCountLimitExceeded: If the application has reached its max number of sandboxes.
+    :raises SandboxResourceLimitExceeded: If the requested cpu/memory exceeds the application's limits.
     """
     started = time.monotonic()
     resolved_workload_type = workload_type or SandboxWorkloadType.DEFAULT.value
@@ -210,6 +259,7 @@ def create_sandbox(
 
     try:
         ensure_sandbox_quota(application)
+        cpu, memory = resolve_requested_resources(application, cpu, memory)
 
         # Pre-validate that the snapshot image exists in the registry before creating resources.
         # This avoids a long timeout when the pod tries to pull a non-existent image.
@@ -217,9 +267,6 @@ def create_sandbox(
         snapshot_image = snapshot or settings.AGENT_SANDBOX_DEFAULT_IMAGE
         if snapshot:
             check_snapshot_image_exists(snapshot_image)
-
-        # 资源限制不由用户指定, 而是按 app 级配置回退平台默认值解析
-        cpu, memory = resolve_sandbox_resources(application)
 
         sandbox_obj = Sandbox.objects.new(
             application=application,
@@ -266,7 +313,7 @@ def _record_create_duration(workload_type: str, cluster: str, result: SandboxReq
         AGENT_SANDBOX_CREATE_DURATION_HISTOGRAM.labels(
             workload_type=workload_type, cluster=cluster, result=result.value
         ).observe(time.monotonic() - started)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.warning("failed to record sandbox create duration metric", exc_info=True)
 
 
@@ -277,7 +324,7 @@ def _record_create_failure(workload_type: str, cluster: str, exc: BaseException,
         AGENT_SANDBOX_CREATE_FAILURES_COUNTER.labels(
             workload_type=workload_type, cluster=cluster, reason=reason.value
         ).inc()
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.warning("failed to record sandbox create failure metric", exc_info=True)
 
     _record_create_duration(workload_type, cluster, SandboxRequestResult.FAILURE, started)
@@ -317,7 +364,7 @@ def _record_lifetime(sandbox_obj: Sandbox, delete_source: SandboxDeleteSource) -
         AGENT_SANDBOX_LIFETIME_HISTOGRAM.labels(
             workload_type=sandbox_obj.workload_type, delete_source=delete_source.value
         ).observe((sandbox_obj.deleted_at - sandbox_obj.started_at).total_seconds())
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.warning("failed to record sandbox lifetime metric", exc_info=True)
 
 

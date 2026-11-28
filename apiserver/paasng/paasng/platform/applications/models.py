@@ -753,6 +753,10 @@ class SMartAppExtraInfo(models.Model):
     def use_cnb(self) -> bool:
         return self.artifact_metadata.use_cnb
 
+    def set_artifact_metadata(self, metadata: SMartAppArtifactMetadata):
+        self.artifact_metadata = metadata
+        self.save(update_fields=["artifact_metadata"])
+
     def set_use_cnb_flag(self, use_cnb: bool):
         self.artifact_metadata.use_cnb = use_cnb
         self.save(update_fields=["artifact_metadata"])

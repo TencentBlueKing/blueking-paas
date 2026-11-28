@@ -20,9 +20,10 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Set, Tuple, cast
+from typing import Callable, List, Set, cast
 
 from paasng.infras.accounts.models import User
+from paasng.platform.applications.entities import SMartAppArtifactMetadata
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
 from paasng.platform.declarative.handlers import get_source_dir_from_desc
 from paasng.platform.modules.models import Module
@@ -56,28 +57,28 @@ def dispatch_package_to_modules(
         uncompress_directory(source_path=tarball_filepath, target_path=workplace)
 
         handler: Callable[[Module, Path, SPStat, User, SMartAppExtraInfo | None], SourcePackage]
-        tasks: List[Tuple[Module, Path, SPStat, User, SMartAppExtraInfo | None]]
         builder_flag = workplace / ".Version"
-        if builder_flag.exists():
-            version = builder_flag.read_text().strip()
-            # prepare optional smart_app_extra for CNB-built packages
-            smart_app_extra: SMartAppExtraInfo | None = None
-            if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
-                smart_app_extra = parse_and_save_cnb_metadata(application, workplace)
-                handler = dispatch_cnb_image_to_registry
-            else:
-                handler = dispatch_slug_image_to_registry
+        # NOTE: .Version 存在即表示 "镜像层" 方案 (slug 包可能是空文件), 不存在才是历史源码包
+        is_image_layers = builder_flag.exists()
+        version = builder_flag.read_text().strip() if is_image_layers else ""
 
-            tasks = [
-                (module, workplace, stat, operator, smart_app_extra)
-                for module in application.modules.filter(name__in=modules)
-            ]
+        smart_app_extra: SMartAppExtraInfo | None = None
+        if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
+            smart_app_extra = parse_and_save_cnb_metadata(application, workplace)
+            source_path, handler = workplace, dispatch_cnb_image_to_registry
         else:
-            tasks = [
-                (module, Path(tarball_filepath), stat, operator, None)
-                for module in application.modules.filter(name__in=modules)
-            ]
-            handler = patch_and_store_package
+            # 非 CNB 制品 (slug 镜像层或无 .Version 标记的历史源码包): 重置制品元数据,
+            # 避免上一次上传残留的 use_cnb / base_image_id / entrypoints 影响后续部署
+            reset_artifact_metadata(application)
+            if is_image_layers:
+                source_path, handler = workplace, dispatch_slug_image_to_registry
+            else:
+                source_path, handler = Path(tarball_filepath), patch_and_store_package
+
+        tasks = [
+            (module, source_path, stat, operator, smart_app_extra)
+            for module in application.modules.filter(name__in=modules)
+        ]
 
         # WARNING: with atomic() 内，子线程无法读取到父事务中的未提交数据
         if _PARALLEL_PATCHING:
@@ -230,6 +231,16 @@ def dispatch_cnb_image_to_registry(
     return source_package
 
 
+def reset_artifact_metadata(application: Application) -> None:
+    """将 S-Mart 应用的制品元数据重置为默认值
+
+    制品元数据挂在应用级 (每个应用一份), 实际记录的是 "最近一次上传的包" 的构建信息. 上传制品时把它重置为默认值,
+    避免上一次上传残留的 use_cnb / base_image_id / module_proc_entrypoints影响后续部署.
+    """
+    smart_app_extra = SMartAppExtraInfo.objects.get(app=application)
+    smart_app_extra.set_artifact_metadata(SMartAppArtifactMetadata())
+
+
 def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SMartAppExtraInfo:
     """解析 cnb 制品的元数据, 并将相关构建元数据写入 SMartAppExtraInfo
 
@@ -238,6 +249,8 @@ def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SM
     - base_image_id 基础镜像 ID. 用于区分不同的基础镜像(run image)
     - 各模块进程的 entrypoints(如果有, 从 artifact.json 解析)
     - 各模块使用的 image_tar(如果有, 从 artifact.json 解析)
+
+    元数据总是由当前包完整推导: 包内未提供的信息一律回落到默认值, 不会继承上一次上传的包留下的值.
 
     artifact.json 格式为:
     {
@@ -253,21 +266,20 @@ def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SM
     }
     """
     smart_app_extra = SMartAppExtraInfo.objects.get(app=application)
-    smart_app_extra.set_use_cnb_flag(True)
+    metadata = SMartAppArtifactMetadata(use_cnb=True)
 
     artifact_json_file = workplace / "artifact.json"
-    if not artifact_json_file.exists():
-        return smart_app_extra
+    if artifact_json_file.exists():
+        artifact_json = json.loads(artifact_json_file.read_text())
+        app_artifacts = artifact_json.get("app_artifacts", {})
+        for module_name in app_artifacts:
+            metadata.module_proc_entrypoints[module_name] = app_artifacts[module_name]["proc_entrypoints"]
+            metadata.module_image_tars[module_name] = app_artifacts[module_name]["image_tar"]
 
-    artifact_json = json.loads(artifact_json_file.read_text())
-    app_artifacts = artifact_json.get("app_artifacts", {})
-    for module_name in app_artifacts:
-        smart_app_extra.set_proc_entrypoints(module_name, app_artifacts[module_name]["proc_entrypoints"])
-        smart_app_extra.set_image_tar(module_name, app_artifacts[module_name]["image_tar"])
+        if base_image_id := get_items(artifact_json, "runtime.base_image_id"):
+            metadata.base_image_id = base_image_id
 
-    if base_image_id := get_items(artifact_json, "runtime.base_image_id"):
-        smart_app_extra.set_base_image_id(base_image_id)
-
+    smart_app_extra.set_artifact_metadata(metadata)
     return smart_app_extra
 
 
